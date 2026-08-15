@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하멜코리아 · 견적 허브</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#eef2f7;--panel:#ffffff;--panel2:#f2f5f9;--line:#dae1ea;--txt:#17202b;--mut:#54637a;--mut2:#8592a4;
+--accent:#2563eb;--win:#16a34a;--loss:#dc2626;--amber:#b45309;--b:#7c5cff;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",Arial,sans-serif;font-size:13.5px}
+.app{display:flex;min-height:100vh}
+.side{width:210px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.side .logo{padding:16px 18px;border-bottom:1px solid var(--line)}
+.side .logo b{font-size:15px}
+.side .logo div{font-size:11px;color:var(--mut2);margin-top:2px}
+.side nav{padding:8px;flex:1;overflow:auto}
+.side nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:500;text-decoration:none;margin:2px 0}
+.side nav a:hover{background:var(--panel2)}
+.side nav a.active{background:var(--accent);color:#fff;font-weight:600}
+.side .conn{padding:10px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--mut2)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--mut2);vertical-align:0}
+.dot.ok{background:var(--win)}.dot.bad{background:var(--loss)}
+.main{flex:1;min-width:0;padding:20px 24px;max-width:1500px}
+h2{font-size:18px;margin:0 0 4px}
+.sub{color:var(--mut2);font-size:12px;margin-bottom:18px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.kpi .l{font-size:11px;color:var(--mut);margin-bottom:6px}.kpi .v{font-size:21px;font-weight:750}
+.kpi .n{font-size:11px;color:var(--mut2);margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.05)}
+.card h3{margin:0 0 3px;font-size:14px}.card .d{color:var(--mut2);font-size:11.5px;margin-bottom:12px}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:8px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.win{background:var(--win);border-color:var(--win);color:#fff}.btn.sm{padding:4px 9px;font-size:11.5px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+input,select,textarea{background:#fff;border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;font-size:13px;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+textarea{width:100%;min-height:150px;resize:vertical;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
+th{color:var(--mut2);font-size:11px;text-transform:uppercase}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.st-접수,.st-견적중,.st-제출,.st-협상{background:rgba(37,99,235,.10);color:var(--accent)}
+.st-수주{background:rgba(22,163,74,.13);color:var(--win)}.st-실주{background:rgba(220,38,38,.11);color:var(--loss)}
+.st-보류,.st-취소{background:rgba(133,146,164,.16);color:var(--mut)}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:120px}
+.col h4{margin:0 0 8px;font-size:12px;color:var(--mut);display:flex;justify-content:space-between}
+.qc{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px;margin-bottom:8px;cursor:pointer;font-size:12px}
+.qc:hover{border-color:var(--accent)}.qc b{font-size:12.5px}.qc .m{color:var(--mut2);font-size:11px;margin-top:3px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fld{display:flex;flex-direction:column;gap:4px}.fld.full{grid-column:1/-1}
+.fld label{font-size:11px;color:var(--mut2)}.fld.miss input,.fld.miss select{border-color:var(--amber)}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--accent);border-radius:9px;padding:12px 16px;font-size:13px;box-shadow:0 8px 28px rgba(20,30,50,.16);z-index:99;max-width:360px}
+.toast.err{border-color:var(--loss)}
+.empty{padding:44px;text-align:center;color:var(--mut2)}
+#modal{display:none;position:fixed;inset:0;z-index:100}
+.modal-bg{position:absolute;inset:0;background:#000b}
+.modal-box{position:relative;max-width:760px;margin:5vh auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;max-height:88vh;overflow:auto}
+.tools{border-top:1px solid var(--line);padding:10px 10px 6px}
+.tools-h{font-size:11px;color:var(--mut2);margin-bottom:8px;font-weight:600}
+.tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tools-grid a{display:block;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 3px;font-size:11px;color:var(--mut);cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tools-grid a:hover{border-color:var(--accent);color:var(--txt)}
+.syslink{display:block;background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:9px 10px;font-size:12px;color:#fff;text-decoration:none;text-align:center;font-weight:600}
+.syslink:hover{filter:brightness(1.08)}
+.pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--mut)}
+.badge.auto{background:rgba(22,163,74,.13);color:var(--win);font-size:10px;padding:1px 6px;border-radius:20px}
+.copybox{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:6px}
+.copybox pre{margin:0;white-space:pre-wrap;font-size:12px;line-height:1.6}
+.intakeGrid{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;margin-bottom:16px}
+.mailcard{position:sticky;top:16px}
+.mailcard textarea{min-height:300px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px 16px;align-items:start}
+.formgrid .full{grid-column:1/-1}
+.formgrid .fld{gap:5px;min-width:0}
+.formgrid .fld label{font-size:11.5px;color:var(--mut);font-weight:600}
+.formgrid .fld input,.formgrid .fld select,.cnt4 .fld input{width:100%}
+.fsec{grid-column:1/-1;font-size:12px;color:var(--txt);font-weight:700;letter-spacing:.2px;margin:9px 0 0;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.fsec:first-child{margin-top:0}
+.cnt4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cnt4 .fld{min-width:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.segb{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:12.5px;cursor:pointer;color:var(--txt);font-weight:500;flex:1;min-width:56px;text-align:center}
+.segb:hover{border-color:var(--accent)}
+.segb.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.ac{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--accent);border-top:none;border-radius:0 0 8px 8px;max-height:264px;overflow-y:auto;box-shadow:0 10px 22px rgba(20,30,50,.14)}
+.ac-item{padding:8px 11px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover{background:var(--panel2);color:var(--accent)}
+.ac-item.ac-add{color:var(--win);font-weight:600;background:rgba(22,163,74,.06)}
+.cap{font-size:11px;color:var(--mut);font-weight:600;margin-bottom:6px}
+.doorbar{display:flex;align-items:center;gap:8px;border:1px dashed var(--accent);border-radius:8px;padding:9px 12px;background:rgba(37,99,235,.05);cursor:pointer;font-size:13px;font-weight:600;color:var(--txt)}
+.doorbox{border:1px solid var(--accent);border-radius:9px;padding:12px;background:rgba(37,99,235,.05);display:grid;gap:10px}
+.qline input,.qline select{padding:6px 8px}
+table.kvt{width:100%;border-collapse:collapse}
+table.kvt th.kv{background:var(--panel2);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:none;width:92px;white-space:nowrap;text-align:left;border:1px solid var(--line);padding:7px 9px}
+table.kvt td{font-size:13px;border:1px solid var(--line);padding:7px 9px;vertical-align:top}
+.pchip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:5px 10px 5px 6px;font-size:12px;cursor:pointer;color:var(--txt);font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.pchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pchip.on .tag{background:rgba(255,255,255,.25);color:#fff}
+.spbox{border:1px solid var(--amber);border-radius:9px;padding:11px;background:rgba(180,83,9,.06)}
+.saverow{display:flex;gap:12px;align-items:center;margin-top:16px;border-top:1px solid var(--line);padding-top:14px;flex-wrap:wrap}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.board{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:960px){.intakeGrid{grid-template-columns:1fr}.mailcard{position:static}.mailcard textarea{min-height:150px}}
+@media(max-width:640px){.formgrid{grid-template-columns:1fr}.cnt4{grid-template-columns:repeat(2,1fr)}}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;background:var(--panel2)}
+.note.done{opacity:.55}.note.done .nb{text-decoration:line-through}
+.nc-지시{border-left:3px solid var(--loss)}.nc-공지{border-left:3px solid var(--accent)}.nc-메모{border-left:3px solid var(--mut2)}
+.delta-up{color:var(--win);font-weight:700}.delta-dn{color:var(--loss);font-weight:700}
+.mono{font-variant-numeric:tabular-nums}
+tr.stale td{background:rgba(180,83,9,.08)}
+@media(max-width:1100px){.mgrid{grid-template-columns:1fr}}
+@media print{.side,.tools,#toastHost,.noprint{display:none!important}.app{display:block}.main{max-width:none;padding:0}.card{break-inside:avoid;box-shadow:none}body{font-size:12px}h2{font-size:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><b>하멜 · 견적 허브</b><div>Inquiry → RFQ → 견적 → 복기</div></div>
+    <nav id="nav">
+      <a data-v="dashboard" class="active">📊 대시보드</a>
+      <a data-v="pipeline">🗂 파이프라인</a>
+      <a data-v="intake">📥 인테이크(AI)</a>
+      <a data-v="rfq">🚚 RFQ·견적비교</a>
+      <a data-v="history">📜 히스토리 검색</a>
+      <a data-v="contacts">👥 연락처·선사</a>
+      <a data-v="rates">💱 요율</a>
+      <a data-v="ports">🌐 포트코드</a>
+      <a data-v="archive">🗄 아카이브</a>
+      <a data-v="import">⬆ 가져오기</a>
+    </nav>
+    <div class="tools" style="padding-bottom:2px">
+      <div class="tools-h">🔗 회사 시스템</div>
+      <a class="syslink" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 ↗</a>
+    </div>
+    <div class="tools">
+      <div class="tools-h">🧰 물류도구</div>
+      <div class="tools-grid">
+        <a onclick="openCBM()">📦 CBM계산</a>
+        <a onclick="openIncoterms()">📄 인코텀즈</a>
+        <a href="https://www.forwarder.kr/curr/cargo_tracing.php" target="_blank" rel="noopener">🚚 화물추적</a>
+        <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
+        <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
+        <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
+        <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
+        <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
+        <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
+        <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
+        <a href="https://www.forwarder.kr/curr/truck_info.php" target="_blank" rel="noopener">📐 차량제원</a>
+        <a href="https://www.forwarder.kr/logis_news" target="_blank" rel="noopener">📰 물류뉴스</a>
+        <a href="https://www.forwarder.kr/holiday/" target="_blank" rel="noopener">📅 국가공휴일</a>
+        <a href="https://www.forwarder.kr/shipping/link.php" target="_blank" rel="noopener">🔗 쉬핑링크</a>
+        <a href="https://www.forwarder.kr/pdf" target="_blank" rel="noopener">📄 PDF편집</a>
+      </div>
+    </div>
+    <div class="conn"><span id="dot" class="dot"></span><span id="connTxt">연결 확인 중…</span></div>
+  </aside>
+  <main class="main" id="main"><div class="empty">로딩 중…</div></main>
+</div>
+<div id="toastHost"></div>
+<div id="modal"></div>
+
+<script>
+/* ================= 설정 ================= */
+const SUPA_URL="https://kppbychtpsrxdgzjkyjp.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcGJ5Y2h0cHNyeGRnempreWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5NzE3ODIsImV4cCI6MjA5ODU0Nzc4Mn0.C1lZa-4sLCvn8gT-DeezQNZgPDonlsXVls0QAuufFyY";
+let SB=null;
+try{ SB=window.supabase.createClient(SUPA_URL,SUPA_KEY); }catch(e){ console.error(e); }
+
+const STAGES=["접수","견적중","제출","협상","수주","실주","보류","취소"];
+const STAFF=["안진오","권영재","김도현","노희수","김진아","전예지"];
+const OPEN=["접수","견적중","제출","협상"];
+const WEIGHT={"접수":0.1,"견적중":0.25,"제출":0.5,"협상":0.75,"수주":1};
+const CH=["LOCAL","OVERSEA","NOMI","PARTNER","공공입찰"];
+
+/* ================= 유틸 ================= */
+const $=s=>document.querySelector(s);
+function toast(msg,err){ const t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg;
+  document.getElementById('toastHost').appendChild(t); setTimeout(()=>t.remove(),err?5000:2500); }
+function fmtW(v){ v=+v||0; if(Math.abs(v)>=1e8)return (v/1e8).toFixed(1)+'억'; if(Math.abs(v)>=1e4)return Math.round(v/1e4).toLocaleString()+'만'; return Math.round(v).toLocaleString(); }
+function pct(v){ return v==null?'–':(v*100).toFixed(1)+'%'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function q(table,build){ if(!SB) throw new Error('no client'); let r=SB.from(table).select('*'); if(build)r=build(r); const {data,error}=await r; if(error)throw error; return data||[]; }
+
+/* ================= 연결 확인 ================= */
+async function checkConn(){
+  try{ const {error}=await SB.from('regions').select('code').limit(1); if(error)throw error;
+    $('#dot').className='dot ok'; $('#connTxt').textContent='Supabase 연결됨'; return true;
+  }catch(e){ $('#dot').className='dot bad'; $('#connTxt').textContent='연결 실패 — 인터넷/키 확인'; return false; }
+}
+
+/* ================= 라우터 ================= */
+const VIEWS={};
+let CURRENT='dashboard';
+function go(v){ CURRENT=v; document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
+document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>go(a.dataset.v)));
+
+/* ================= 대시보드 (월간 실적 장표) ================= */
+let DASH={m:null};
+const ym=d=>String(d||'').slice(0,7);
+function monthsBack(mk,n){ let [y,m]=mk.split('-').map(Number); const out=[]; for(let i=n-1;i>=0;i--){ let mm=m-i,yy=y; while(mm<=0){mm+=12;yy--;} out.push(yy+'-'+String(mm).padStart(2,'0')); } return out; }
+function deltaHTML(cur,prev){ if(prev==null||prev===0||cur==null)return ''; const d=(cur-prev)/Math.abs(prev),up=d>=0; return `<span class="${up?'delta-up':'delta-dn'}">${up?'▲':'▼'}${(Math.abs(d)*100).toFixed(0)}%</span>`; }
+VIEWS.dashboard=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  try{
+    DASH.bk=await q('bookings'); DASH.reqs=await q('quote_requests');
+    try{ DASH.notes=await q('board_notes',b=>b.order('created_at',{ascending:false}).limit(100)); }catch(e){ DASH.notes=[]; }
+    const ms=[...new Set([...DASH.bk.map(b=>ym(b.bkg_date)),...DASH.reqs.map(r=>ym(r.created_at))].filter(Boolean))].sort();
+    const nowM=new Date().toISOString().slice(0,7);
+    if(!DASH.m) DASH.m=ms.includes(nowM)?nowM:(ms[ms.length-1]||nowM);
+    renderDash(ms);
+  }catch(e){ $('#main').innerHTML=`<h2>월간 실적 장표</h2><div class="card"><div class="empty">데이터를 불러오지 못했습니다.<br>${esc(e.message||e)}</div></div>`; }
+};
+window.setDashMonth=function(m){ DASH.m=m; renderDash(); };
+function renderDash(ms){
+  ms=ms||DASH._ms; DASH._ms=ms;
+  const bk=DASH.bk, reqs=DASH.reqs, M=DASH.m;
+  const bkM=k=>bk.filter(b=>ym(b.bkg_date)===k), reqM=k=>reqs.filter(r=>ym(r.created_at)===k);
+  const met=k=>{ const B=bkM(k),R=reqM(k);
+    const rev=B.reduce((a,b)=>a+(+b.revenue||0),0),mgn=B.reduce((a,b)=>a+(+b.margin||0),0);
+    const won=R.filter(r=>r.stage==='수주').length,lost=R.filter(r=>r.stage==='실주').length;
+    return {bkN:B.length,rev,mgn,mrate:rev?mgn/rev:null,reqN:R.length,won,lost,hit:(won+lost)?won/(won+lost):null}; };
+  const cur=met(M);
+  const pk=(()=>{let [y,m]=M.split('-').map(Number);m--;if(m<=0){m=12;y--;}return y+'-'+String(m).padStart(2,'0');})();
+  const prev=met(pk);
+  const trend=monthsBack(M,6).map(k=>({k,...met(k)})); const maxRev=Math.max(1,...trend.map(t=>t.rev));
+  const tile=(l,v,n)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n||''}</div></div>`;
+  const bySales={}; bkM(M).forEach(b=>{const s=b.sales||'(미지정)';(bySales[s]=bySales[s]||{n:0,rev:0,mgn:0});bySales[s].n++;bySales[s].rev+=+b.revenue||0;bySales[s].mgn+=+b.margin||0;});
+  const salesRows=Object.entries(bySales).sort((a,b)=>b[1].rev-a[1].rev);
+  const today=new Date(); const daysSince=d=>Math.floor((today-new Date(d))/86400000);
+  const openReqs=reqs.filter(r=>OPEN.includes(r.stage||'접수')).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const liveBk=bk.filter(b=>ym(b.bkg_date)>=M).sort((a,b)=>String(b.bkg_date).localeCompare(String(a.bkg_date))).slice(0,15);
+  const monthOpts=ms.map(m=>`<option${m===M?' selected':''}>${m}</option>`).join('');
+  $('#main').innerHTML=`
+   <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+     <div><h2 style="margin:0">월간 실적 장표</h2><div class="sub" style="margin:2px 0 0">회의용 정형 장표 · 전 직원 공유 · 실시간</div></div>
+     <div class="row noprint"><span class="d" style="margin:0">기준월</span><select onchange="setDashMonth(this.value)">${monthOpts}</select><button class="btn" onclick="window.print()">🖨 장표 인쇄</button></div>
+   </div>
+   <div class="kpis">
+     ${tile('부킹 건수',cur.bkN+'건',`전월 ${prev.bkN} ${deltaHTML(cur.bkN,prev.bkN)}`)}
+     ${tile('매출',fmtW(cur.rev)+'원',`전월대비 ${deltaHTML(cur.rev,prev.rev)}`)}
+     ${tile('마진',fmtW(cur.mgn)+'원',`전월대비 ${deltaHTML(cur.mgn,prev.mgn)}`)}
+     ${tile('마진율',cur.mrate==null?'–':(cur.mrate*100).toFixed(1)+'%',`전월 ${prev.mrate==null?'–':(prev.mrate*100).toFixed(1)+'%'}`)}
+     ${tile('인콰이어리 접수',cur.reqN+'건','이번 달 신규')}
+     ${tile('수주 / 승률',cur.won+'건',`승률 ${pct(cur.hit)} (${cur.won}/${cur.won+cur.lost})`)}
+   </div>
+   <div class="card"><h3>월별 추이 <span class="d" style="display:inline">— 최근 6개월 (${M} 기준)</span></h3>
+     <div style="overflow:auto"><table><thead><tr><th>월</th><th class="num">부킹</th><th class="num">매출</th><th class="num">마진</th><th class="num">마진율</th><th class="num">인콰이어리</th><th class="num">수주</th><th class="num">승률</th><th style="width:110px">매출</th></tr></thead><tbody>
+       ${trend.map(t=>`<tr${t.k===M?' style="background:rgba(37,99,235,.06);font-weight:600"':''}><td class="mono">${t.k}</td><td class="num mono">${t.bkN}</td><td class="num mono">${fmtW(t.rev)}</td><td class="num mono">${fmtW(t.mgn)}</td><td class="num mono">${t.mrate==null?'–':(t.mrate*100).toFixed(1)+'%'}</td><td class="num mono">${t.reqN}</td><td class="num mono">${t.won}</td><td class="num mono">${pct(t.hit)}</td>
+         <td><div style="background:var(--panel2);border-radius:5px;height:13px"><div style="height:100%;border-radius:5px;background:var(--accent);width:${Math.round(t.rev/maxRev*100)}%"></div></div></td></tr>`).join('')}
+     </tbody></table></div></div>
+   <div class="mgrid">
+     <div class="card"><h3>담당자별 실적 <span class="d" style="display:inline">— ${M}</span></h3>
+       ${salesRows.length?`<table><thead><tr><th>담당</th><th class="num">부킹</th><th class="num">매출</th><th class="num">마진</th><th class="num">마진율</th></tr></thead><tbody>
+         ${salesRows.map(([s,v])=>`<tr><td><b>${esc(s)}</b></td><td class="num mono">${v.n}</td><td class="num mono">${fmtW(v.rev)}</td><td class="num mono">${fmtW(v.mgn)}</td><td class="num mono">${v.rev?(v.mgn/v.rev*100).toFixed(1)+'%':'–'}</td></tr>`).join('')}
+       </tbody></table>`:'<div class="d">이 달 부킹 데이터가 없습니다.</div>'}</div>
+     <div class="card"><h3>단계별 진행 인콰이어리 <span class="d" style="display:inline">— 현재</span></h3>
+       ${OPEN.concat(['수주','실주']).map(s=>{const n=reqs.filter(r=>(r.stage||'접수')===s).length;return `<div class="row" style="margin:6px 0"><div style="width:56px;color:var(--mut)">${s}</div><div style="flex:1;background:var(--panel2);border-radius:6px;height:18px"><div style="height:100%;border-radius:6px;background:${s==='수주'?'var(--win)':s==='실주'?'var(--loss)':'var(--accent)'};width:${Math.min(n*20,100)}%"></div></div><div style="width:34px;text-align:right" class="mono">${n}</div></div>`;}).join('')}</div>
+   </div>
+   <div class="card"><h3>🔴 현행 인콰이어리 현황 <span class="pill">${openReqs.length}</span> <span class="d" style="display:inline">— 진행중 · 오래된 순 (7일↑ 경고)</span></h3>
+     ${openReqs.length?`<div style="overflow:auto;max-height:340px"><table><thead><tr><th>경과</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th><th class="num">견적</th></tr></thead><tbody>
+       ${openReqs.slice(0,40).map(r=>{const dd=daysSince(r.created_at);return `<tr class="${dd>=7?'stale':''}" style="cursor:pointer" onclick="openReq('${r.id}')"><td class="mono" style="${dd>=7?'color:var(--loss);font-weight:700':'color:var(--mut)'}">${dd}일</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.channel||'')}</td><td>${esc(r.owner||r.assigned_to||'')}</td><td><span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span></td><td class="num mono">${r.sell_krw?fmtW(r.sell_krw):'–'}</td></tr>`;}).join('')}
+     </tbody></table></div>`:'<div class="d">진행중 인콰이어리가 없습니다.</div>'}</div>
+   <div class="card"><h3>🚢 현행·예정 부킹 <span class="d" style="display:inline">— ${M} 이후 · 최근 15건</span></h3>
+     ${liveBk.length?`<div style="overflow:auto;max-height:340px"><table><thead><tr><th>주차</th><th>BKG#</th><th>ETD</th><th>화주</th><th>레인</th><th>담당</th><th class="num">매출</th><th class="num">마진</th></tr></thead><tbody>
+       ${liveBk.map(b=>`<tr><td class="mono">${b.wk||''}</td><td>${esc(b.bkg_no||'')}</td><td class="mono" style="white-space:nowrap">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(b.pol||'?')}→${esc(b.pod||'?')}</td><td>${esc(b.sales||'')}</td><td class="num mono">${b.revenue?fmtW(b.revenue):'–'}</td><td class="num mono">${b.margin?fmtW(b.margin):'–'}</td></tr>`).join('')}
+     </tbody></table></div>`:'<div class="d">해당 기간 부킹이 없습니다.</div>'}</div>
+   <div class="card"><h3>📌 지시 · 메모 보드 <span class="d" style="display:inline">— 전 직원 공유 · 회의 대체</span></h3>
+     <div class="row noprint" style="margin-bottom:12px">
+       <select id="ntCat">${['메모','지시','공지'].map(c=>`<option>${c}</option>`).join('')}</select>
+       <select id="ntAuthor"><option value="">작성자</option>${STAFF.map(s=>`<option>${s}</option>`).join('')}</select>
+       <select id="ntAssignee"><option value="">대상(전체)</option>${STAFF.map(s=>`<option>${s}</option>`).join('')}</select>
+       <input id="ntBody" placeholder="지시/메모 내용 입력 후 Enter 또는 등록" style="flex:1;min-width:220px" onkeydown="if(event.key==='Enter')addNote()">
+       <button class="btn primary" onclick="addNote()">등록</button>
+     </div>
+     <div id="noteList"></div></div>`;
+  renderNotes();
+}
+function renderNotes(){
+  const el=$('#noteList'); if(!el)return; const ns=DASH.notes||[];
+  if(!ns.length){ el.innerHTML='<div class="d">등록된 지시·메모가 없습니다. 위에서 첫 메모를 남겨보세요.</div>'; return; }
+  el.innerHTML=ns.map(n=>{const d=String(n.created_at||'').replace('T',' ').slice(5,16);
+    return `<div class="note nc-${n.category||'메모'}${n.done?' done':''}">
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <span class="tag ${n.category==='지시'?'st-실주':n.category==='공지'?'st-접수':'st-보류'}">${esc(n.category||'메모')}</span>
+          <span class="nb" style="margin-left:6px">${esc(n.body||'')}</span>
+          <div class="d" style="margin:4px 0 0">${esc(n.author||'?')}${n.assignee?` → <b style="color:var(--txt)">${esc(n.assignee)}</b>`:''} · ${esc(d)}</div>
+        </div>
+        <div class="row noprint" style="gap:6px">
+          <button class="btn sm" onclick="toggleNote('${n.id}',${n.done?'false':'true'})">${n.done?'되돌리기':'완료'}</button>
+          <button class="btn sm" onclick="delNote('${n.id}')">삭제</button>
+        </div>
+      </div></div>`;}).join('');
+}
+window.addNote=async function(){
+  const body=($('#ntBody')?.value||'').trim(); if(!body){toast('내용을 입력하세요',true);return;}
+  const row={category:$('#ntCat').value,author:$('#ntAuthor').value||null,assignee:$('#ntAssignee').value||null,body,done:false};
+  try{ const {error}=await SB.from('board_notes').insert(row); if(error)throw error;
+    DASH.notes=await q('board_notes',b=>b.order('created_at',{ascending:false}).limit(100)); $('#ntBody').value=''; renderNotes(); toast('등록됨');
+  }catch(e){ toast(e.message||e,true); }
+};
+window.toggleNote=async function(id,done){ const v=(done==='true'||done===true); try{ const {error}=await SB.from('board_notes').update({done:v}).eq('id',id); if(error)throw error; const n=(DASH.notes||[]).find(x=>x.id===id); if(n)n.done=v; renderNotes(); }catch(e){ toast(e.message||e,true); } };
+window.delNote=async function(id){ try{ const {error}=await SB.from('board_notes').delete().eq('id',id); if(error)throw error; DASH.notes=(DASH.notes||[]).filter(x=>x.id!==id); renderNotes(); }catch(e){ toast(e.message||e,true); } };
+
+/* ================= 파이프라인 (요약 + 표) ================= */
+let PIPE=[], PIPEF={stage:''};
+VIEWS.pipeline=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  try{ PIPE=await q('quote_requests',r=>r.order('created_at',{ascending:false})); renderPipe(); }
+  catch(e){ $('#main').innerHTML=`<h2>파이프라인</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+window.setPipeStage=function(s){ PIPEF.stage=(PIPEF.stage===s?'':s); renderPipe(); };
+function renderPipe(){
+  const reqs=PIPE; const cnt=s=>reqs.filter(r=>(r.stage||'접수')===s).length;
+  const today=new Date(); const days=d=>Math.floor((today-new Date(d))/86400000);
+  const kw=($('#pq')?.value||'').trim().toLowerCase();
+  let list=reqs.filter(r=>{ if(PIPEF.stage&&(r.stage||'접수')!==PIPEF.stage)return false;
+    if(kw&&!((r.job_no||'')+(r.shipper||'')+(r.origin_port||'')+(r.dest_port||'')+(r.channel||'')+(r.owner||'')).toLowerCase().includes(kw))return false; return true; });
+  const openN=reqs.filter(r=>OPEN.includes(r.stage||'접수')).length, won=cnt('수주'), lost=cnt('실주');
+  const hit=(won+lost)?won/(won+lost):null;
+  const pipeVal=reqs.filter(r=>OPEN.includes(r.stage||'접수')).reduce((a,r)=>a+((+r.sell_krw||0)*(WEIGHT[r.stage||'접수']||0)),0);
+  const tile=(l,v,n)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n||''}</div></div>`;
+  const chip=s=>`<button class="pchip${PIPEF.stage===s?' on':''}" onclick="setPipeStage('${s}')"><span class="tag st-${s}" style="padding:1px 7px">${s}</span> <b>${cnt(s)}</b></button>`;
+  $('#main').innerHTML=`<h2>파이프라인</h2><div class="sub">상단 단계별 요약 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      ${tile('진행중',openN+'건','오픈 인콰이어리')}
+      ${tile('가중 파이프라인',fmtW(pipeVal)+'원','기대매출')}
+      ${tile('수주 / 실주',won+' / '+lost,'승률 '+pct(hit))}
+      ${tile('전체 Job',reqs.length+'건','누적')}
+    </div>
+    <div class="card"><div class="cap" style="margin-bottom:8px">단계 필터 (클릭)</div><div class="row" style="gap:6px;flex-wrap:wrap">${STAGES.map(chip).join('')}${PIPEF.stage?`<button class="btn sm" onclick="setPipeStage('${PIPEF.stage}')">필터해제</button>`:''}</div></div>
+    <div class="card"><div class="row" style="margin-bottom:10px"><input id="pq" placeholder="Job#·화주·레인·거래구분·담당 검색" style="flex:1;min-width:220px" oninput="renderPipe()"><span class="pill">${list.length}건</span></div>
+      <div style="overflow:auto;max-height:64vh"><table><thead><tr><th>Job#</th><th>단계</th><th>거래구분</th><th>운송</th><th>화주</th><th>레인</th><th>담당</th><th class="num">Sell</th><th>마감</th><th class="num">경과</th></tr></thead><tbody>
+      ${list.map(r=>{const dd=days(r.created_at);const st=r.stage||'접수';return `<tr style="cursor:pointer" onclick="openReq('${r.id}')">
+        <td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td>
+        <td><span class="tag st-${st}">${st}</span></td>
+        <td>${esc(r.channel||'')}</td>
+        <td style="white-space:nowrap">${esc(r.ship_kind||'')}${(r.is_oog||r.is_fr||r.is_rf)?` <span style="color:var(--amber);font-size:10px">${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}</span>`:''}</td>
+        <td><b>${esc(r.shipper||'')}</b>${r.shipper_contact?`<div class="d" style="margin:0">${esc(r.shipper_contact)}</div>`:''}</td>
+        <td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td>
+        <td>${esc(r.owner||r.assigned_to||'')}</td>
+        <td class="num mono">${r.sell_krw?(+r.sell_krw).toLocaleString():'-'}</td>
+        <td style="white-space:nowrap">${esc(r.deadline||'')}</td>
+        <td class="num mono" style="${OPEN.includes(st)&&dd>=7?'color:var(--loss);font-weight:700':'color:var(--mut)'}">${OPEN.includes(st)?dd+'일':''}</td></tr>`;}).join('')||'<tr><td colspan="10" class="d">해당 조건의 Job이 없습니다.</td></tr>'}
+      </tbody></table></div></div>`;
+}
+window.openReq=async function(id){
+  try{ const rows=await q('quote_requests',r=>r.eq('id',id)); const r=rows[0]; if(!r)return; window.__req=r;
+    const vq=await q('vendor_quotes',b=>b.eq('quote_request_id',id).order('price'));
+    try{ QLINES=await q('quote_lines',b=>b.eq('quote_request_id',id).order('created_at')); }catch(e){ QLINES=[]; }
+    const f=(l,v)=>`<div class="fld"><label>${l}</label><div>${esc(v||'-')}</div></div>`;
+    const cnt=[r.cntr_20dv&&`20DV×${r.cntr_20dv}`,r.cntr_40hq&&`40HQ×${r.cntr_40hq}`,r.cntr_20fr&&`20FR×${r.cntr_20fr}`,r.cntr_40fr&&`40FR×${r.cntr_40fr}`].filter(Boolean).join(', ');
+    $('#main').innerHTML=`<h2>${r.job_no?`<span style="color:var(--accent)">${esc(r.job_no)}</span> · `:''}${esc(r.shipper||'(화주)')} <span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span>${(r.is_oog||r.is_fr||r.is_rf)?` <span style="font-size:12px;color:var(--amber)">[${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}]</span>`:''}</h2>
+     <div class="sub">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')} · ${esc(r.channel||'')} · ${esc(r.ship_kind||'')}${r.commodity?' · '+esc(r.commodity):''}${r.special_note?' · '+esc(r.special_note):''}</div>
+     <div class="row"><button class="btn sm" onclick="go('pipeline')">← 목록</button><button class="btn win sm" onclick="openBooking('${id}')">✅ 수주·부킹 전환</button><button class="btn primary sm" onclick="openVendorMail('${id}')">📧 협력사 메일</button><button class="btn sm" onclick="copyJobText()">📋 사비스/BL 복사</button><a class="btn sm" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener" style="text-decoration:none">💳 AP·결재 ↗</a></div>
+     <div class="card" style="margin-top:12px"><h3>인콰이어리 상세</h3>
+      ${(()=>{const kv=[['거래구분',r.channel],['HML 담당',r.owner||r.assigned_to],['운송구분',r.ship_kind],['방향',r.direction],['Trans/Mode',[r.cargo_type,r.mode].filter(Boolean).join(' / ')],['인코텀즈',r.incoterms],['화주',r.shipper],['화주 담당',r.shipper_contact],['POL',r.origin_port],['POD',r.dest_port],['Pick-up',r.pickup_addr],['Delivery',r.delivery_addr],['품목',r.commodity],['컨테이너',cnt],['중량',r.weight],['Volume',r.volume_cbm?r.volume_cbm+' CBM':''],['치수',r.dimensions],['마감',r.deadline],['BKG#',r.bkg_no],['선정선사',r.selected_carrier],['수주일',r.won_at?String(r.won_at).slice(0,10):''],['실주사유',r.win_loss_reason]];
+        let t='';for(let i=0;i<kv.length;i+=2){const a=kv[i],b=kv[i+1];t+=`<tr><th class="kv">${a[0]}</th><td>${esc(a[1]||'-')}</td><th class="kv">${b?b[0]:''}</th><td>${b?esc(b[1]||'-'):''}</td></tr>`;}
+        return `<div style="overflow:auto"><table class="kvt">${t}</table></div>`;})()}
+      <div class="row" style="margin-top:12px">단계 변경:
+        <select id="stg">${STAGES.map(s=>`<option${(r.stage||'접수')===s?' selected':''}>${s}</option>`).join('')}</select>
+        <button class="btn primary sm" onclick="setStage('${id}')">저장</button></div>
+      ${r.notes?`<div class="copybox" style="margin-top:10px"><pre>${esc(r.notes)}</pre></div>`:''}</div>
+     <div class="card"><h3>💰 견적 라인 <span class="d" style="display:inline">— 타입/사이즈별 Sell·Buy · 인콰이어리 후 계속 업데이트</span></h3><div id="qlines"></div></div>
+     <div class="card"><h3>벤더 견적 (${vq.length})</h3>${vq.length?`<table><thead><tr><th>벤더</th><th class="num">견적가</th><th class="num">T/T</th><th>선정</th></tr></thead><tbody>
+       ${vq.map(v=>`<tr><td>${esc(v.carrier||v.vendor)}</td><td class="num">${v.price?(+v.price).toLocaleString():'-'} ${esc(v.currency||'')}</td><td class="num">${v.transit_days||'-'}</td><td>${v.is_selected?'✅':''}</td></tr>`).join('')}
+       </tbody></table>`:'<div class="d">RFQ 탭에서 벤더 견적을 수집·비교하세요.</div>'}</div>`;
+    renderQuoteLines(id);
+  }catch(e){ toast(e.message||e,true); }
+};
+function jobText(r){
+  const cnt=[r.cntr_20dv&&`20DV×${r.cntr_20dv}`,r.cntr_40hq&&`40HQ×${r.cntr_40hq}`,r.cntr_20fr&&`20FR×${r.cntr_20fr}`,r.cntr_40fr&&`40FR×${r.cntr_40fr}`].filter(Boolean).join(', ');
+  const sp=[r.is_oog&&'OOG',r.is_fr&&'FR',r.is_rf&&'RF'].filter(Boolean).join('·');
+  return [
+    `Job#: ${r.job_no||''}`,
+    `화주: ${r.shipper||''}${r.shipper_contact?' / '+r.shipper_contact:''}`,
+    `거래구분: ${r.channel||''}`,
+    `방향/운송구분/Trans: ${r.direction||''} / ${r.ship_kind||''} / ${r.cargo_type||''}`,
+    r.pickup_addr?`Pick-up: ${r.pickup_addr}`:null,
+    r.delivery_addr?`Delivery: ${r.delivery_addr}`:null,
+    `POL→POD: ${r.origin_port||''} → ${r.dest_port||''}`,
+    `인코텀즈: ${r.incoterms||''}`,
+    `컨테이너: ${cnt||'-'}`,
+    `품목: ${r.commodity||''}`,
+    `중량/Vol/치수: ${r.weight||''} / ${r.volume_cbm?r.volume_cbm+'CBM':''} / ${r.dimensions||''}`,
+    sp?`특수화물: ${sp}${r.special_note?' ('+r.special_note+')':''}`:null,
+    `견적(Sell): ${r.sell_krw?Number(r.sell_krw).toLocaleString()+'원':''}`,
+    `마감/카고레디: ${r.deadline||''}`,
+    `담당: ${r.owner||r.assigned_to||''}`
+  ].filter(Boolean).join('\n');
+}
+window.copyJobText=async function(){ const txt=jobText(window.__req||{});
+  try{ await navigator.clipboard.writeText(txt); toast('복사됨 · 사비스/BL/세금계산서에 붙여넣기'); }
+  catch(e){ try{ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('복사됨 · 붙여넣기'); }catch(e2){ showModal(`<h3>사비스/BL용 정보</h3><div class="copybox"><pre>${esc(txt)}</pre></div><div class="d">복사가 막혀 있으면 위 내용을 직접 선택해 복사하세요.</div>`); } } };
+let VMAIL={};
+function ymd6(){ const d=new Date(); return String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function rfqSubject(r){ const lane=`${r.origin_port||'?'} - ${r.dest_port||'?'}`; const proj=r.special_note||(r.volume_cbm?r.volume_cbm+'CBM':''); return `[ 하멜코리아 ] RFQ / ${lane} / ${r.commodity||'-'} / ${proj||'-'} / 견적 요청의 건 - ${ymd6()}`; }
+function rfqBody(r,coName,coContact,hml){ const vol=r.volume_cbm?r.volume_cbm+' CBM':''; const nm=hml||r.owner||r.assigned_to||'';
+  return `날짜 [ ${new Date().toISOString().slice(0,10)} ]
+수신 : ${coName||'[회사이름]'} / ${coContact||'담당자 성함 + 직함'}
+발신 : 하멜코리아 / ${nm}
+
+1. 평소 업무 협조에 진심으로 감사드립니다.
+
+2. 아래와 같이 표제의 건 견적 요청드리오니, 회신 부탁드립니다.
+
+            Account / 화주 : ${r.shipper||''}
+            Commodity : ${r.commodity||''}
+             POL : ${r.origin_port||''}
+             POD : ${r.dest_port||''}
+             Volume : ${vol}
+              Weight : ${r.weight||''}
+              Cargo Ready : ${r.deadline||''}
+
+               Target Schedule :
+
+
+     감사합니다.
+
+하멜코리아 (HAMEL KOREA)
+담당 ${nm}`;
+}
+function vmBody(r){ return rfqBody(r,'',''); }
+function vendorMailHTML(){ const r=VMAIL.r; const cons=(VMAIL.cons||[]).filter(c=>c.major_category===VMAIL.type);
+  const su=rfqSubject(r);
+  return `<h3>📧 협력사 견적요청 메일</h3><div class="d">${esc(r.job_no||'')} · ${esc(r.shipper||'')} · 대상 구분 선택 → 업체 체크 → 메일 앱으로 발송</div>
+    <div class="seg" style="margin:10px 0;max-width:320px">${['운송사','콘솔','협력사'].map(t=>`<button type="button" class="segb${VMAIL.type===t?' on':''}" onclick="vmType('${t}')">${t}</button>`).join('')}</div>
+    <div style="max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px;margin-bottom:10px">
+      ${cons.length?cons.map(c=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 6px;font-size:12.5px;cursor:pointer"><input type="checkbox" class="vmk" value="${esc(c.email)}"> <b>${esc(c.company_name||'')}</b> <span style="color:var(--mut)">${esc(c.contact_name||'')} · ${esc(c.email)}</span></label>`).join(''):'<div class="d">이 구분에 이메일 보유 업체가 없습니다. 연락처에서 추가하세요.</div>'}
+    </div>
+    <div class="fld" style="margin-bottom:8px"><label>제목</label><input id="vmSu" value="${esc(su)}"></div>
+    <div class="fld" style="margin-bottom:10px"><label>본문</label><textarea id="vmBd" style="min-height:210px">${esc(vmBody(r))}</textarea></div>
+    <div class="row"><button class="btn primary" onclick="vmSend('mail')">✉ 메일 앱 열기</button><button class="btn" onclick="vmSend('gmail')">Gmail로 작성</button><button class="btn" onclick="vmCopy()">본문 복사</button></div>`;
+}
+window.openVendorMail=async function(id){
+  let r=window.__req; if(!r||r.id!==id){ try{ const rows=await q('quote_requests',b=>b.eq('id',id)); r=rows[0]; }catch(e){} }
+  if(!r){ toast('데이터 없음',true); return; }
+  let cons=[]; try{ cons=await q('contacts',b=>b.in('major_category',['운송사','콘솔','협력사']).limit(500)); }catch(e){}
+  VMAIL={r,cons:cons.filter(c=>c.email),type:'운송사'}; showModal(vendorMailHTML());
+};
+window.vmType=function(t){ VMAIL.type=t; showModal(vendorMailHTML()); };
+window.vmSend=function(kind){
+  const emails=[...document.querySelectorAll('.vmk:checked')].map(c=>c.value);
+  if(!emails.length){ toast('수신 업체를 1곳 이상 선택',true); return; }
+  const su=$('#vmSu').value, bd=$('#vmBd').value, to=encodeURIComponent(emails.join(','));
+  if(kind==='gmail') window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodeURIComponent(su)}&body=${encodeURIComponent(bd)}`,'_blank');
+  else location.href=`mailto:${to}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(bd)}`;
+};
+window.vmCopy=async function(){ const txt=$('#vmSu').value+'\n\n'+$('#vmBd').value;
+  try{ await navigator.clipboard.writeText(txt); toast('본문 복사됨'); }catch(e){ try{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('복사됨');}catch(e2){toast('복사 실패',true);} } };
+window.setStage=async function(id){ try{ const stage=$('#stg').value;
+  const {error}=await SB.from('quote_requests').update({stage}).eq('id',id); if(error)throw error; toast('단계 저장됨'); openReq(id);
+}catch(e){ toast(e.message||e,true);} };
+window.openBooking=function(id){
+  const r=window.__req; if(!r||r.id!==id){ toast('Job 상세에서 실행하세요',true); return; }
+  const s=(QLINES||[]).reduce((a,l)=>a+((+l.sell||0)*(+l.qty||0)),0), b=(QLINES||[]).reduce((a,l)=>a+((+l.buy||0)*(+l.qty||0)),0);
+  showModal(`<h3>✅ 수주 · 부킹 전환</h3><div class="d">확정 시 단계=수주로 바뀌고 <b>부킹 원장(실적)</b>에 한 행이 생성됩니다. (${esc(r.job_no||'')} · ${esc(r.shipper||'')})</div>
+    <div class="formgrid" style="margin-top:12px">
+      <div class="fld"><label>BKG#</label><input id="bk_no" placeholder="선사 부킹번호"></div>
+      <div class="fld"><label>부킹일</label><input id="bk_date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fld"><label>주차(wk)</label><input id="bk_wk" inputmode="numeric"></div>
+      <div class="fld"><label>영업담당</label><input id="bk_sales" value="${esc(r.owner||r.assigned_to||'')}"></div>
+      <div class="fld"><label>매출(KRW)</label><input id="bk_rev" inputmode="numeric" value="${s||''}"></div>
+      <div class="fld"><label>원가(KRW)</label><input id="bk_pur" inputmode="numeric" value="${b||''}"></div>
+      <div class="fld"><label>선정 선사</label><input id="bk_car" value="${esc(r.selected_carrier||'')}"></div>
+      <div class="fld"><label>비고</label><input id="bk_note"></div>
+    </div>
+    <div class="d" style="margin-top:8px">※ 매출/원가는 견적 라인 합계로 채웠습니다. 통화가 USD 등이면 <b>KRW 환산값</b>으로 수정 후 저장하세요.</div>
+    <div class="row" style="margin-top:12px"><button class="btn win" onclick="saveBooking('${id}')">수주·부킹 확정</button></div>`);
+};
+window.saveBooking=async function(id){
+  const r=window.__req; const g=x=>($('#'+x).value||'').trim();
+  const rev=num(g('bk_rev')), pur=num(g('bk_pur'));
+  const brow={wk:num(g('bk_wk')),bkg_no:g('bk_no')||null,bkg_date:g('bk_date')||null,sales:g('bk_sales')||null,shipper:r.shipper,pol:r.origin_port,pod:r.dest_port,trans:r.cargo_type,mode:r.mode,direction:r.direction,cntr_20dv:r.cntr_20dv,cntr_40hq:r.cntr_40hq,cntr_20fr:r.cntr_20fr,cntr_40fr:r.cntr_40fr,revenue:rev,purchase:pur,margin:(rev!=null&&pur!=null)?rev-pur:null,note:g('bk_note')||null,source:'hub'};
+  try{
+    const {error}=await SB.from('bookings').insert(brow); if(error)throw error;
+    const {error:e2}=await SB.from('quote_requests').update({stage:'수주',bkg_no:g('bk_no')||null,selected_carrier:g('bk_car')||null,won_at:new Date().toISOString()}).eq('id',id); if(e2)throw e2;
+    toast('수주·부킹 확정 완료'); closeModal(); openReq(id);
+  }catch(e){ toast(e.message||e,true); }
+};
+
+/* ===== 견적 라인 (타입/사이즈별 Sell·Buy) ===== */
+let QLINES=[];
+const QTYPES=['20DV','40HQ','40HC','20FR','40FR','20OT','40OT','LCL(R.TON)','AIR(kg)','BULK(R.TON)','TRUCK','기타'];
+function renderQuoteLines(reqId){
+  const el=$('#qlines'); if(!el)return; const ls=QLINES||[];
+  const sumS=ls.reduce((a,l)=>a+((+l.sell||0)*(+l.qty||0)),0), sumB=ls.reduce((a,l)=>a+((+l.buy||0)*(+l.qty||0)),0);
+  const mgn=sumS-sumB, mr=sumS?mgn/sumS:null;
+  const curs=['USD','KRW','EUR','CNY'];
+  const row=l=>`<tr class="qline"><td><input value="${esc(l.cntr_type||'')}" list="qtypes" onchange="updLine('${l.id}','cntr_type',this.value)" style="width:110px"></td>
+    <td><input inputmode="numeric" value="${l.qty??''}" onchange="updLine('${l.id}','qty',this.value)" style="width:56px;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.sell??''}" onchange="updLine('${l.id}','sell',this.value)" style="width:100px;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.buy??''}" onchange="updLine('${l.id}','buy',this.value)" style="width:100px;text-align:right"></td>
+    <td><select onchange="updLine('${l.id}','currency',this.value)">${curs.map(c=>`<option${l.currency===c?' selected':''}>${c}</option>`).join('')}</select></td>
+    <td class="num mono">${(((+l.sell||0)-(+l.buy||0))*(+l.qty||1)).toLocaleString()}</td>
+    <td><input value="${esc(l.note||'')}" onchange="updLine('${l.id}','note',this.value)" placeholder="비고" style="width:110px"></td>
+    <td><button class="btn sm" onclick="delLine('${l.id}')">삭제</button></td></tr>`;
+  el.innerHTML=`<datalist id="qtypes">${QTYPES.map(t=>`<option value="${t}">`).join('')}</datalist>
+    <div style="overflow:auto"><table class="qline"><thead><tr><th>타입/사이즈</th><th class="num">수량</th><th class="num">Sell 단가</th><th class="num">Buy 단가</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
+    <tbody>${ls.map(row).join('')}
+    <tr class="qline" style="background:rgba(37,99,235,.04)"><td><input id="ql_type" list="qtypes" placeholder="예: 40HQ" style="width:110px"></td>
+     <td><input id="ql_qty" inputmode="numeric" value="1" style="width:56px;text-align:right"></td>
+     <td><input id="ql_sell" inputmode="numeric" style="width:100px;text-align:right"></td>
+     <td><input id="ql_buy" inputmode="numeric" style="width:100px;text-align:right"></td>
+     <td><select id="ql_cur">${curs.map(c=>`<option>${c}</option>`).join('')}</select></td>
+     <td></td><td><input id="ql_note" placeholder="비고" style="width:110px"></td>
+     <td><button class="btn primary sm" onclick="addLine('${reqId}')">＋ 추가</button></td></tr>
+    </tbody></table></div>
+    <div class="row" style="margin-top:10px;gap:18px"><b>합계 Sell ${sumS.toLocaleString()}</b><b>Buy ${sumB.toLocaleString()}</b><b style="color:var(--win)">마진 ${mgn.toLocaleString()} · ${mr==null?'–':(mr*100).toFixed(1)+'%'}</b><span class="d" style="margin:0">※ 통화 혼용 시 합계는 숫자 단순합(참고용)</span></div>`;
+}
+window.addLine=async function(reqId){
+  const type=($('#ql_type').value||'').trim(); if(!type){toast('타입/사이즈를 입력하세요',true);return;}
+  const rowd={quote_request_id:reqId,cntr_type:type,qty:num($('#ql_qty').value)||1,sell:num($('#ql_sell').value),buy:num($('#ql_buy').value),currency:$('#ql_cur').value,note:($('#ql_note').value||'').trim()||null};
+  try{ const {error}=await SB.from('quote_lines').insert(rowd); if(error)throw error;
+    QLINES=await q('quote_lines',b=>b.eq('quote_request_id',reqId).order('created_at')); renderQuoteLines(reqId); syncReqTotals(reqId); toast('라인 추가됨');
+  }catch(e){ toast(e.message||e,true); }
+};
+window.updLine=async function(id,field,val){
+  const v=['qty','sell','buy'].includes(field)?num(val):val;
+  try{ const {error}=await SB.from('quote_lines').update({[field]:v}).eq('id',id); if(error)throw error;
+    const l=(QLINES||[]).find(x=>x.id===id); const reqId=l?l.quote_request_id:(window.__req&&window.__req.id); if(l)l[field]=v; renderQuoteLines(reqId); syncReqTotals(reqId);
+  }catch(e){ toast(e.message||e,true); }
+};
+window.delLine=async function(id){
+  const l=(QLINES||[]).find(x=>x.id===id); const reqId=l?l.quote_request_id:(window.__req&&window.__req.id);
+  try{ const {error}=await SB.from('quote_lines').delete().eq('id',id); if(error)throw error;
+    QLINES=(QLINES||[]).filter(x=>x.id!==id); renderQuoteLines(reqId); syncReqTotals(reqId); toast('라인 삭제됨');
+  }catch(e){ toast(e.message||e,true); }
+};
+async function syncReqTotals(reqId){
+  const ls=QLINES||[]; const s=ls.reduce((a,l)=>a+((+l.sell||0)*(+l.qty||0)),0), b=ls.reduce((a,l)=>a+((+l.buy||0)*(+l.qty||0)),0);
+  try{ await SB.from('quote_requests').update({sell_krw:s||null,buy_krw:b||null}).eq('id',reqId); if(window.__req){window.__req.sell_krw=s;window.__req.buy_krw=b;} }catch(e){}
+}
+
+/* ================= 인테이크 (AI 추출) ================= */
+const PORTS={'부산':'BUSAN','인천':'INCHEON','광양':'GWANGYANG','평택':'PYEONGTAEK','울산':'ULSAN','마산':'MASAN','청도':'QINGDAO','칭다오':'QINGDAO','상해':'SHANGHAI','상하이':'SHANGHAI','제벨알리':'JEBEL ALI','담맘':'DAMMAM','두바이':'DUBAI','아부다비':'ABUDHABI','소하르':'SOHAR','안트워프':'ANTWERP','로테르담':'ROTTERDAM','함부르크':'HAMBURG','마이애미':'MIAMI','하이퐁':'HAIPHONG','싱가포르':'SINGAPORE'};
+const PORT_EN=['BUSAN','INCHEON','GWANGYANG','PYEONGTAEK','ULSAN','MASAN','QINGDAO','SHANGHAI','JEBEL ALI','DAMMAM','DUBAI','ABUDHABI','SOHAR','ANTWERP','ROTTERDAM','HAMBURG','MIAMI','HAIPHONG','SINGAPORE','JEBEL'];
+function findPorts(t){ const f=[]; for(const k in PORTS){let i=t.indexOf(k);while(i>=0){f.push({p:i,port:PORTS[k]});i=t.indexOf(k,i+1);}}
+  const up=t.toUpperCase(); PORT_EN.forEach(p=>{let i=up.indexOf(p);while(i>=0){f.push({p:i,port:p==='JEBEL'?'JEBEL ALI':p});i=up.indexOf(p,i+1);}});
+  f.sort((a,b)=>a.p-b.p); const u=[]; f.forEach(x=>{if(!u.some(y=>y.port===x.port&&Math.abs(y.p-x.p)<3))u.push(x);}); return u; }
+function num(v){ if(v==null)return null; const s=String(v).replace(/[,\s₩]/g,'').replace(/%$/,''); if(s==='')return null; const n=parseFloat(s); return isNaN(n)?null:n; }
+function parseInq(t){
+  const o={stage:'접수'};
+  o.channel = /입찰|공고|나라장터|조달|공단/.test(t)?'공공입찰' : /nomi|노미|지정/i.test(t)?'NOMI' : /해외|oversea|삼국간|현지|co-?load|코로드/i.test(t)?'OVERSEA' : /파트너|partner/i.test(t)?'PARTNER' : 'LOCAL';
+  o.ship_kind = /항공|air|에어/i.test(t)?'항공' : /특송|courier|express|dhl|fedex|국제특송/i.test(t)?'특송' : /콘솔|lcl/i.test(t)?'콘솔' : /벌크|중량물|break\s*bulk|초중량|bbk|프로젝트/i.test(t)?'벌크' : /내륙|트럭|육상|domestic/i.test(t)?'내륙운송' : '해상';
+  const mode=/항공|air|에어/i.test(t)?'AIR':'SEA';
+  o.direction=/수입|import|반입/i.test(t)?'IMPORT':'EXPORT';
+  if(/lcl|콘솔/i.test(t))o.cargo_type='LCL'; else if(/로로|ro-?ro/i.test(t))o.cargo_type='RORO';
+  else if(o.ship_kind==='벌크'||/벌크|중량물|bulk/i.test(t))o.cargo_type='BB'; else if(mode==='AIR')o.cargo_type='AIR'; else o.cargo_type='FCL';
+  const inc=t.match(/\b(FOB|CIF|CFR|CNF|EXW|DAP|DDP|CIP|FCA)\b/i); if(inc)o.incoterms=inc[1].toUpperCase().replace('CNF','CFR');
+  const ps=findPorts(t); if(ps[0])o.origin_port=ps[0].port; if(ps[1])o.dest_port=ps[1].port;
+  const hm=t.match(/(?:화주|shipper|고객사?|업체|발주처|발주기관)\s*[:：]?\s*([가-힣A-Za-z0-9()㈜]{2,20})/);
+  if(hm)o.shipper=hm[1].replace(/(이고|입니다|은|는|이|가)$/,'');
+  else{const c=t.match(/([가-힣A-Za-z0-9]{2,12}(?:㈜|\(주\)|주식회사|물류|통운|산업|중공업|건설|식품|전자|화학|해운|비전|인더스트리|공사|공단))/);if(c)o.shipper=c[1];}
+  const w=t.match(/([0-9][0-9,\.]*)\s*(톤|ton|t\b|mt)/i); if(w)o.weight=w[1].replace(/,/g,'')+'T';
+  const dim=t.match(/([0-9]+(?:\.[0-9]+)?)\s*[x×*]\s*([0-9]+(?:\.[0-9]+)?)\s*[x×*]\s*([0-9]+(?:\.[0-9]+)?)/); if(dim)o.dimensions=`${dim[1]}x${dim[2]}x${dim[3]}`;
+  const money=n=>{const m=t.match(new RegExp('('+n+')[^0-9]{0,12}([0-9][0-9,\\.]{2,})\\s*(억|만)?','i'));if(!m)return null;let v=parseFloat(m[2].replace(/,/g,''));if(isNaN(v))return null;if(m[3]==='억')v*=1e8;else if(m[3]==='만')v*=1e4;return Math.round(v);};
+  o.sell_krw=money('견적|운임|offer|sell|단가|금액');
+  const dm=t.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)||t.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if(dm)o.deadline=dm[0];
+  o.notes=`[원문] ${t.slice(0,300)}\n[모드] ${mode} / ${o.direction}`;
+  return o;
+}
+let JOBW={};
+const FMETA={
+  ship_kind:['운송구분','seg',['해상','항공','벌크','콘솔','내륙운송','특송']],
+  channel:['거래구분','seg',CH], owner:['HML 담당자','select',STAFF],
+  shipper:['화주','shipper'], shipper_contact:['화주 담당자(이름)','text'], stage:['단계','select',STAGES],
+  cargo_type:['Trans','seg',['FCL','LCL','BB','RORO','AIR']],
+  direction:['방향','seg',['EXPORT','IMPORT']], incoterms:['인코텀즈','select',['','EXW','FCA','FOB','CFR','CIF','CPT','CIP','DAP','DPU','DDU','DDP']],
+  pickup_addr:['Pick-up 주소 (집화지·공장)','text'], delivery_addr:['Delivery 주소 (도착지·창고)','text'],
+  origin_port:['POL','port'], dest_port:['POD','port'],
+  deadline:['마감/카고레디','text'],
+  commodity:['품목','text'], weight:['중량(kg/t)','text'], volume_cbm:['Volume(CBM)','num'], dimensions:['치수 L×W×H','text'],
+  cntr_20dv:['20DV','num'], cntr_40hq:['40HQ','num'], cntr_20fr:['20FR','num'], cntr_40fr:['40FR','num'],
+};
+let PORTDB=[],SHIPPERS=[];
+const JOB_REQ=['channel','shipper','owner'];
+async function loadIntakeRefs(){
+  if(!PORTDB.length){ try{ PORTDB=await q('ports',b=>b.order('code')); }catch(e){} }
+  if(!SHIPPERS.length){ try{
+    const [bk,rq,cn]=await Promise.all([q('bookings'),q('quote_requests'),q('contacts',b=>b.in('major_category',['실화주']).limit(1000))]);
+    const set=new Set();
+    bk.forEach(b=>{ if(b.shipper) set.add(String(b.shipper).trim()); });
+    rq.forEach(r=>{ if(r.shipper) set.add(String(r.shipper).trim()); });
+    cn.forEach(c=>{ if(c.company_name) set.add(String(c.company_name).trim()); });
+    SHIPPERS=[...set].filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko'));
+  }catch(e){} }
+}
+function parseCont(t,o){
+  const cmap={GP:'DV',HC:'HQ',DC:'DV'}; let m;
+  const reC=/(\d{1,3})?\s*[x×*]?\s*(20|40)\s*['’″"]?\s*(HQ|HC|DV|GP|DC|FR|OT|RF)?\s*[x×*]?\s*(\d{1,3})?\s*(대|개|units?|ea)?/gi;
+  while((m=reC.exec(t))){ const size=m[2]; let type=(m[3]||'').toUpperCase(); type=cmap[type]||type||(size==='40'?'HQ':'DV');
+    const qty=parseInt(m[1]||m[4]); if(!qty||qty>500) continue; const col=size+type;
+    const key= col==='20HQ'?'cntr_20dv': col==='40DV'?'cntr_40hq': (['20DV','40HQ','20FR','40FR'].includes(col)?'cntr_'+col.toLowerCase():(size==='40'?'cntr_40hq':'cntr_20dv'));
+    o[key]=String((parseInt(o[key]||0))+qty); }
+}
+function fillFromEmail(t){
+  const o=parseInq(t), f={};
+  ['channel','ship_kind','shipper','origin_port','dest_port','cargo_type','incoterms','direction','weight','deadline'].forEach(k=>{ if(o[k]) f[k]=o[k]; });
+  if(o.sell_krw) f.sell_krw=o.sell_krw;
+  f.mode=/항공|air|에어/i.test(t)?'AIR':'SEA';
+  parseCont(t,f);
+  if(/oog|out\s*of\s*gauge|초과|중량물|over\s*dimension|break\s*bulk|브레이크벌크/i.test(t)) f.is_oog=true;
+  if(/flat\s*rack|플랫랙|플렛랙|\bfr\b/i.test(t)) f.is_fr=true;
+  if(/reefer|냉동|냉장|\brf\b/i.test(t)) f.is_rf=true;
+  const cm=t.match(/(?:품목|commodity|화물명|item)\s*[:：]\s*([^\n,]{2,30})/i); if(cm) f.commodity=cm[1].trim();
+  const em=t.match(/[\w.+-]+@[\w-]+\.[\w][\w.-]*/); if(em) f._email=em[0];
+  const ph=t.match(/(0\d{1,2})[-\s.]?(\d{3,4})[-\s.]?(\d{4})/); if(ph) f._phone=ph[0];
+  const pn=t.match(/([가-힣]{2,4})\s*(?:드림|올림|배상|팀장|과장|대리|부장|차장|사원|주임|이사|대표|매니저)/); if(pn){ f._contact=pn[1]; f.shipper_contact=pn[1]; }
+  f.notes='[원문]\n'+t.slice(0,600);
+  return f;
+}
+function jobInput(k,full){
+  const m=FMETA[k]; const l=m[0], type=m[1], opts=m[2];
+  const v=JOBW[k]==null?'':JOBW[k]; const req=JOB_REQ.includes(k); const auto=v!==''&&!req;
+  let ctrl;
+  if(type==='seg'){ ctrl=`<div class="seg">${(opts||[]).map(o=>`<button type="button" class="segb${String(o)===String(v)?' on':''}" onclick="segPick('${k}','${o}')">${o}</button>`).join('')}</div>`; }
+  else if(type==='select'){ const optlist=(req&&!(opts||[]).includes(''))?['',...opts]:(opts||[]);
+    ctrl=`<select onchange="JOBW['${k}']=this.value">${optlist.map(o=>`<option${String(o)===String(v)?' selected':''}>${o}</option>`).join('')}</select>`; }
+  else if(type==='port') ctrl=`<div class="ac"><input autocomplete="off" placeholder="코드/항구명 (예: DEHAM)" value="${esc(v)}" oninput="acOpen(this,'ports','${k}')" onfocus="acOpen(this,'ports','${k}')" onblur="acClose(this)"><div class="ac-list" hidden></div></div>`;
+  else if(type==='shipper') ctrl=`<div class="ac"><input autocomplete="off" placeholder="이름 일부 입력 → 후보" value="${esc(v)}" oninput="acOpen(this,'shippers','${k}')" onfocus="acOpen(this,'shippers','${k}')" onblur="acClose(this)"><div class="ac-list" hidden></div></div>`;
+  else ctrl=`<input ${type==='num'?'inputmode="numeric"':''} value="${esc(v)}" oninput="JOBW['${k}']=this.value">`;
+  return `<div class="fld${full?' full':''}${req&&!v?' miss':''}"><label>${l}${req?' <span style="color:var(--loss)">*</span>':(auto&&type!=='seg'?' <span class="badge auto">자동</span>':'')}</label>${ctrl}</div>`;
+}
+window.segPick=function(k,val){ JOBW[k]=val; renderJobForm(); };
+function acSource(src){ return src==='ports'?PORTDB.map(p=>({v:p.code,t:p.code+' · '+p.name})):SHIPPERS.map(s=>({v:s,t:s})); }
+window.acOpen=function(inp,src,key){
+  const val=inp.value; JOBW[key]= src==='ports'? val.toUpperCase() : val;
+  const list=inp.parentNode.querySelector('.ac-list'); if(!list)return;
+  const q=val.trim().toLowerCase();
+  const items=acSource(src).filter(o=>!q||o.t.toLowerCase().includes(q));
+  let html=items.slice(0,60).map(o=>`<div class="ac-item" data-v="${esc(o.v)}" onmousedown="acPick(event,this,'${key}')">${esc(o.t)}</div>`).join('');
+  if(src==='shippers' && q && !acSource('shippers').some(o=>o.v.toLowerCase()===q))
+    html+=`<div class="ac-item ac-add" onmousedown="acAddContact(event,'${encodeURIComponent(val.trim())}')">➕ '${esc(val.trim())}' 신규 거래처 추가</div>`;
+  if(!html){ list.hidden=true; list.innerHTML=''; return; }
+  list.innerHTML=html; list.hidden=false;
+};
+window.acPick=function(ev,el,key){ ev.preventDefault();
+  const val=el.getAttribute('data-v'); const wrap=el.closest('.ac'); const inp=wrap.querySelector('input');
+  inp.value=val; JOBW[key]=val; const list=wrap.querySelector('.ac-list'); list.hidden=true; list.innerHTML=''; };
+window.acClose=function(inp){ const list=inp.parentNode.querySelector('.ac-list'); if(list)setTimeout(()=>{list.hidden=true;},150); };
+window.acPort=function(inp){ const list=inp.parentNode.querySelector('.ac-list'); if(!list)return;
+  const q=inp.value.trim().toLowerCase();
+  const items=PORTDB.map(p=>({v:p.code,t:p.code+' · '+p.name})).filter(o=>!q||o.t.toLowerCase().includes(q));
+  if(!items.length){ list.hidden=true; list.innerHTML=''; return; }
+  list.innerHTML=items.slice(0,60).map(o=>`<div class="ac-item" data-v="${esc(o.v)}" onmousedown="acPickPlain(event,this)">${esc(o.t)}</div>`).join('');
+  list.hidden=false; };
+window.acPickPlain=function(ev,el){ ev.preventDefault(); const wrap=el.closest('.ac'); const inp=wrap.querySelector('input'); inp.value=el.getAttribute('data-v'); const list=wrap.querySelector('.ac-list'); list.hidden=true; list.innerHTML=''; };
+function portTerm(v){ v=(v||'').trim(); if(!v)return ''; const p=PORTDB.find(x=>x.code===v.toUpperCase());
+  if(p){ const en=(p.name.match(/[A-Za-z][A-Za-z .'\-]+/g)||[]).sort((a,b)=>b.length-a.length)[0]; return (en||p.name).trim(); }
+  return v; }
+function renderJobForm(){
+  const cx='display:inline-flex;align-items:center;gap:6px;color:var(--txt);cursor:pointer;font-size:13px;font-weight:500';
+  const sec=t=>`<div class="fsec">${t}</div>`;
+  const sp=`<div class="full spbox">
+      <div class="row" style="gap:18px;margin-bottom:9px">
+        <label style="${cx}"><input type="checkbox" ${JOBW.is_oog?'checked':''} onchange="JOBW.is_oog=this.checked"> OOG(초과)</label>
+        <label style="${cx}"><input type="checkbox" ${JOBW.is_fr?'checked':''} onchange="JOBW.is_fr=this.checked"> Flat Rack</label>
+        <label style="${cx}"><input type="checkbox" ${JOBW.is_rf?'checked':''} onchange="JOBW.is_rf=this.checked"> Reefer</label>
+      </div>
+      <input style="width:100%" placeholder="특수 메모: 초과치수·중량·장비(크레인/SPMT)" value="${esc(JOBW.special_note||'')}" oninput="JOBW.special_note=this.value">
+    </div>`;
+  const autoDoor=['EXW','FCA','DAP','DPU','DDU','DDP'].includes(JOBW.incoterms||'')||JOBW.ship_kind==='특송'||JOBW.ship_kind==='내륙운송';
+  const doorOn=JOBW._door===undefined?autoDoor:JOBW._door;
+  const doorbar=`<label class="full doorbar"><input type="checkbox" ${doorOn?'checked':''} onchange="JOBW._door=this.checked;renderJobForm()"> 🚪 문전(Door) Pick-up / Delivery 주소 입력 ${autoDoor?'<span class="d" style="display:inline;margin:0">· 이 조건은 문전 배송 권장</span>':''}</label>`;
+  const doorbox=doorOn?`<div class="full doorbox">
+      <div class="fld"><label>📍 Pick-up 주소 (집화지·공장)</label><input value="${esc(JOBW.pickup_addr||'')}" oninput="JOBW.pickup_addr=this.value" placeholder="예: 경기도 안산시 …"></div>
+      <div class="fld"><label>📍 Delivery 주소 (도착지·창고)</label><input value="${esc(JOBW.delivery_addr||'')}" oninput="JOBW.delivery_addr=this.value" placeholder="예: Hamburg, DE …"></div>
+    </div>`:'';
+  $('#jobForm').innerHTML=`<div class="formgrid">
+    ${sec('🚦 운송구분 · 거래구분')}
+    ${jobInput('ship_kind',true)}
+    ${jobInput('channel',true)}
+    ${sec('📮 담당 · 화주')}
+    ${jobInput('owner')}${jobInput('stage')}
+    ${jobInput('shipper',true)}
+    <div class="full" style="margin-top:-14px"><button type="button" class="btn sm" onclick="newContactIntake()" style="font-size:11px">＋ 신규 화주면 거래처로 등록</button></div>
+    ${jobInput('shipper_contact',true)}
+    ${sec('🚢 컨테이너 · 조건 · 레인')}
+    ${jobInput('cargo_type',true)}
+    ${jobInput('direction')}${jobInput('incoterms')}
+    ${jobInput('origin_port')}${jobInput('dest_port')}
+    ${jobInput('deadline',true)}
+    ${doorbar}
+    ${doorbox}
+    ${sec('📦 화물')}
+    ${jobInput('commodity',true)}
+    ${jobInput('weight')}${jobInput('volume_cbm')}
+    ${jobInput('dimensions',true)}
+    <div class="full"><div class="cap">컨테이너 수량 (FCL · 대)</div><div class="cnt4">${['cntr_20dv','cntr_40hq','cntr_20fr','cntr_40fr'].map(k=>jobInput(k)).join('')}</div></div>
+    ${sec('⚠ 특수화물 (수동)')}
+    ${sp}
+    ${sec('📝 비고 / 원문')}
+    <div class="full"><textarea oninput="JOBW.notes=this.value" style="min-height:56px" placeholder="특이사항·원문 메모">${esc(JOBW.notes||'')}</textarea></div>
+    <div class="full" style="background:rgba(37,99,235,.06);border:1px dashed var(--accent);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--mut)">💡 견적 단가(타입/사이즈별 Sell·Buy)는 저장 후 <b>파이프라인 → Job 상세</b>에서 라인으로 입력·업데이트합니다.</div>
+  </div>`;
+}
+VIEWS.intake=async function(){
+  if(!JOBW||!Object.keys(JOBW).length) JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT'};
+  await loadIntakeRefs();
+  $('#main').innerHTML=`<h2>인테이크 · Job 생성</h2><div class="sub">왼쪽에 이메일 붙여넣기 → 자동채움, 오른쪽 카드에서 확인·수정 → 저장 시 Job# 자동부여·팀 공유</div>
+   <div class="intakeGrid">
+     <div class="card mailcard">
+       <h3>✉ 이메일 · 메시지</h3>
+       <div class="d">붙여넣고 [읽어채우기]를 누르면 오른쪽 폼이 자동으로 채워집니다. 없으면 오른쪽에서 바로 입력하세요.</div>
+       <textarea id="emailRaw" placeholder="이메일/메시지 전체를 여기에 붙여넣기…"></textarea>
+       <div class="row" style="margin-top:10px"><button class="btn primary" onclick="fillJob()">🤖 읽어채우기</button><button class="btn" onclick="exJob()">예시</button><button class="btn" onclick="resetJob()">비우기</button></div>
+     </div>
+     <div class="card">
+       <h3>📋 Job 입력 <span class="d" style="display:inline">— 필수: 채널·화주·담당자</span></h3>
+       <div id="jobForm"></div>
+       <div class="saverow"><button class="btn win" onclick="saveJob()" style="padding:10px 18px;font-size:14px">＋ Job 생성 · 저장</button><span class="d" style="margin:0">견적 전이어도 저장 가능 · 저장 시 Job#가 자동 부여되고 팀 전체에 공유됩니다.</span></div>
+     </div>
+   </div>
+   <div class="card"><h3>📋 최근 Job 현황판 <span class="d" style="display:inline">— 누가 넣었든 팀이 함께 봅니다 (협업 개시)</span></h3><div id="jobBoard"><div class="d">불러오는 중…</div></div></div>`;
+  renderJobForm(); loadJobBoard();
+};
+async function loadJobBoard(){
+  const el=$('#jobBoard'); if(!el) return;
+  try{ const rows=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(30));
+    if(!rows.length){ el.innerHTML='<div class="d">아직 등록된 Job이 없습니다. 위에서 첫 Job을 생성하세요.</div>'; return; }
+    el.innerHTML=`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th></tr></thead><tbody>
+      ${rows.map(r=>{const d=String(r.created_at||'').replace('T',' ').slice(0,16); const st=r.stage||'접수';
+        return `<tr style="cursor:pointer" onclick="openReq('${r.id}')"><td style="color:var(--mut);white-space:nowrap">${esc(d)}</td>
+        <td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td>
+        <td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.channel||'')}</td>
+        <td>${esc(r.owner||r.assigned_to||'')}</td><td><span class="tag st-${st}">${st}</span>${(r.is_oog||r.is_fr||r.is_rf)?` <span style="font-size:9px;color:var(--amber)">${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}</span>`:''}</td></tr>`;}).join('')}
+      </tbody></table></div>`;
+  }catch(e){ el.innerHTML=`<div class="empty">${esc(e.message||e)}</div>`; }
+}
+window.fillJob=function(){ const t=$('#emailRaw').value.trim(); if(!t){toast('이메일을 붙여넣으세요',true);return;}
+  Object.assign(JOBW,fillFromEmail(t)); renderJobForm(); toast('자동 채움 완료 — 빈칸·특수화물은 수동 확인'); };
+window.exJob=function(){ $('#emailRaw').value=`안녕하세요. 부산에서 함부르크로 40HQ 2대 + 40FR 1대(초과중량 OOG, 발전기) 수출 견적 부탁드립니다.\n화주: 효성중공업, FOB, 카고레디 9/5. 품목: Generator.`; };
+window.resetJob=function(){ JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT'}; const e=$('#emailRaw'); if(e)e.value=''; renderJobForm(); };
+window.saveJob=async function(){
+  const o=JOBW; for(const r of JOB_REQ){ if(!o[r]){toast(`'${r==='channel'?'채널':r==='shipper'?'화주':'담당자'}'은(는) 필수입니다`,true);return;} }
+  const ci=v=>{const n=num(v);return n==null?null:Math.round(n);};
+  const row={ship_kind:o.ship_kind,channel:o.channel,shipper:o.shipper,shipper_contact:o.shipper_contact,owner:o.owner,assigned_to:o.owner,stage:o.stage||'접수',
+    origin_port:o.origin_port,dest_port:o.dest_port,cargo_type:o.cargo_type,mode:(o.ship_kind==='내륙운송'?'LAND':['항공','특송'].includes(o.ship_kind)?'AIR':'SEA'),direction:o.direction,incoterms:o.incoterms,
+    pickup_addr:o.pickup_addr,delivery_addr:o.delivery_addr,
+    deadline:o.deadline,commodity:o.commodity,weight:o.weight,volume_cbm:num(o.volume_cbm),dimensions:o.dimensions,
+    cntr_20dv:ci(o.cntr_20dv),cntr_40hq:ci(o.cntr_40hq),cntr_20fr:ci(o.cntr_20fr),cntr_40fr:ci(o.cntr_40fr),
+    is_oog:!!o.is_oog,is_fr:!!o.is_fr,is_rf:!!o.is_rf,special_note:o.special_note,
+    notes:o.notes,mail_type:'intake',status:'검수대기'};
+  try{ const {data,error}=await SB.from('quote_requests').insert(row).select('job_no').single(); if(error)throw error;
+    showModal(`<h3>✅ Job 생성 완료</h3><div style="font-size:24px;font-weight:750;margin:12px 0;color:var(--win)">${esc(data.job_no)}</div>
+      <div class="d">${esc(o.shipper)} · ${esc(o.origin_port||'?')}→${esc(o.dest_port||'?')} · ${esc(o.channel)}<br>파이프라인/RFQ에서 이어서 관리하세요.</div>`);
+    resetJob(); loadJobBoard();
+  }catch(e){ toast(e.message||e,true); }
+};
+
+/* ================= RFQ ================= */
+let RFQ={inq:null,vendors:[],cmp:[]};
+VIEWS.rfq=async function(){
+  try{
+    const reqs=await q('quote_requests',r=>r.in('stage',OPEN).order('created_at',{ascending:false}));
+    $('#main').innerHTML=`<h2>RFQ · 견적비교</h2><div class="sub">인콰이어리 선택 → 선사 RFQ 초안 → 벤더견적 수집·비교 → 반영</div>
+     <div class="card"><h3>① 대상 인콰이어리</h3>
+       <select id="rfqPick" onchange="rfqPick()"><option value="">— 진행중 인콰이어리 선택 —</option>
+         ${reqs.map(r=>`<option value="${r.id}">${esc(r.shipper||'?')} · ${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')} · ${r.stage}</option>`).join('')}</select>
+       <div id="rfqInfo" class="d" style="margin-top:8px"></div></div>
+     <div id="rfqBody"></div>`;
+    RFQ.reqs=reqs;
+  }catch(e){ $('#main').innerHTML=`<h2>RFQ</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+window.rfqPick=async function(){
+  const id=$('#rfqPick').value; if(!id){$('#rfqBody').innerHTML='';return;}
+  const r=RFQ.reqs.find(x=>x.id===id); RFQ.inq=r;
+  $('#rfqInfo').textContent=`${r.origin_port||'?'}→${r.dest_port||'?'} · ${r.cargo_type||''} · ${r.incoterms||''}`;
+  // 벤더 후보: carrier_desk (전체) + contacts 선사·협력사
+  let desk=[],cons=[];
+  try{ desk=await q('carrier_desk',b=>b.limit(500)); }catch(e){}
+  try{ cons=await q('contacts',b=>b.in('major_category',['선사','운송사','콘솔','협력사']).limit(500)); }catch(e){}
+  const pod=(r.dest_port||'').toUpperCase();
+  const cand=[...desk.map(d=>({name:d.carrier,contact:d.contact_name,email:d.email,region:d.region,src:'desk'})),
+    ...cons.map(c=>({name:c.company_name,contact:c.contact_name,email:c.email,region:c.country_region,src:'contact'}))]
+    .filter(v=>v.email);
+  RFQ.cand=cand;
+  $('#rfqBody').innerHTML=`
+   <div class="row" style="margin-bottom:12px"><button class="btn primary" onclick="openRateModal('${(r.origin_port||'').replace(/'/g,'')}','${(r.dest_port||'').replace(/'/g,'')}')">💱 요율표 비교 (${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')})</button>
+     <span class="d" style="margin:0">받은 견적을 넣으면 바인딩 요율표 대비 즉시 판정</span></div>
+   <div class="card"><h3>② 대상 선사 선택 <span class="pill">${cand.length}곳 후보</span></h3>
+     <div class="d">이메일 있는 후보만 표시 · 체크 후 RFQ 생성</div>
+     <div style="max-height:260px;overflow:auto"><table><thead><tr><th>✓</th><th>선사/업체</th><th>담당</th><th>이메일</th><th>지역</th></tr></thead><tbody>
+      ${cand.map((v,i)=>`<tr><td><input type="checkbox" class="vk" data-i="${i}"${pod&&(v.region||'').toUpperCase().includes(pod)?' checked':''}></td>
+       <td>${esc(v.name)}</td><td>${esc(v.contact||'')}</td><td style="color:var(--mut)">${esc(v.email)}</td><td>${esc(v.region||'')}</td></tr>`).join('')||'<tr><td colspan=5 style="color:var(--mut2)">이메일 있는 선사 후보가 없습니다. 연락처를 먼저 가져오세요.</td></tr>'}
+      </tbody></table></div>
+     <div class="row" style="margin-top:10px"><button class="btn primary" onclick="rfqGen()">📧 RFQ 초안 생성</button></div></div>
+   <div id="rfqDrafts"></div>
+   <div class="card"><h3>③ 견적 수집·비교</h3><div class="d">회신 견적 입력 → 최저가 자동 → 반영</div>
+     <div id="cmpArea"><div class="d">RFQ 생성 시 대상 선사가 나타납니다.</div></div></div>`;
+};
+window.rfqGen=function(){
+  const r=RFQ.inq; const chosen=[...document.querySelectorAll('.vk:checked')].map(c=>RFQ.cand[+c.dataset.i]);
+  if(!chosen.length){toast('선사를 1곳 이상 선택',true);return;}
+  RFQ.chosen=chosen;
+  const su=rfqSubject(r);
+  const body=v=>rfqBody(r,v.name,v.contact);
+  $('#rfqDrafts').innerHTML=`<div class="card"><h3>RFQ 초안 <span class="pill">${chosen.length}곳</span></h3>`+
+    chosen.map(v=>{const b=body(v);const mt=`mailto:${encodeURIComponent(v.email)}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(b)}`;
+      const gm=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(v.email)}&su=${encodeURIComponent(su)}&body=${encodeURIComponent(b)}`;
+      return `<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:10px"><b>${esc(v.name)}</b> <span style="color:var(--mut2)">${esc(v.email)}</span>
+       <div class="row" style="margin:6px 0"><a class="btn primary sm" href="${mt}">✉ 메일 열기</a><a class="btn sm" href="${gm}" target="_blank">Gmail</a></div>
+       <div class="copybox"><pre>${esc(su+'\n\n'+b)}</pre></div></div>`;}).join('')+`</div>`;
+  RFQ.cmp=chosen.map(v=>({name:v.name}));
+  $('#cmpArea').innerHTML=`<table><thead><tr><th>선사</th><th class="num">견적가</th><th>통화</th><th class="num">T/T</th><th>유효</th></tr></thead><tbody>
+    ${chosen.map((v,i)=>`<tr data-i="${i}"><td>${esc(v.name)}</td><td class="num"><input class="cp" style="width:110px;text-align:right"></td>
+     <td><select class="cc"><option>USD</option><option>KRW</option></select></td>
+     <td class="num"><input class="ct" style="width:60px;text-align:right"></td><td><input class="cv" style="width:110px"></td></tr>`).join('')}
+    </tbody></table>
+    <div class="row" style="margin-top:10px;align-items:end"><div class="fld"><label>마진 %</label><input id="mgn" value="10" style="width:70px"></div>
+     <button class="btn" onclick="rfqCalc()">비교·계산</button><div id="cmpRes" class="d"></div>
+     <button class="btn win" onclick="rfqApply()">이 인콰이어리에 반영·저장</button></div>`;
+};
+window.rfqCalc=function(){
+  const rows=[...document.querySelectorAll('#cmpArea tbody tr')];
+  const data=rows.map(tr=>({name:RFQ.cmp[+tr.dataset.i].name,p:num(tr.querySelector('.cp').value),cur:tr.querySelector('.cc').value,t:num(tr.querySelector('.ct').value),v:tr.querySelector('.cv').value}));
+  const withP=data.filter(d=>d.p!=null); if(!withP.length){$('#cmpRes').textContent='견적가를 입력하세요';return;}
+  const min=Math.min(...withP.map(d=>d.p)); const best=withP.find(d=>d.p===min);
+  rows.forEach(tr=>{const d=data[+tr.dataset.i];tr.querySelector('.cp').style.color=d.p===min?'#2fb673':'';});
+  const mgn=parseFloat($('#mgn').value||'0')/100; RFQ.best={vendor:best.name,cost:min,cur:best.cur,quote:Math.round(min*(1+mgn)),data};
+  $('#cmpRes').innerHTML=`최저가 <b style="color:var(--win)">${esc(best.name)} ${min.toLocaleString()} ${best.cur}</b> · 제안 <b>${Math.round(min*(1+mgn)).toLocaleString()} ${best.cur}</b>`;
+};
+window.rfqApply=async function(){
+  if(!RFQ.best){toast('먼저 비교·계산',true);return;} const r=RFQ.inq;
+  try{
+    // vendor_quotes 저장
+    const vq=RFQ.best.data.filter(d=>d.p!=null).map(d=>({quote_request_id:r.id,carrier:d.name,vendor:d.name,price:d.p,currency:d.cur,transit_days:d.t?Math.round(d.t):null,valid_to:null,is_selected:d.name===RFQ.best.vendor,note:d.v}));
+    if(vq.length){const {error}=await SB.from('vendor_quotes').insert(vq); if(error)throw error;}
+    const upd={buy_krw:RFQ.best.cur==='KRW'?RFQ.best.cost:null,sell_krw:RFQ.best.cur==='KRW'?RFQ.best.quote:null,selected_carrier:RFQ.best.vendor,stage:'제출'};
+    const {error:e2}=await SB.from('quote_requests').update(upd).eq('id',r.id); if(e2)throw e2;
+    toast('반영·저장 완료 (단계=제출)'); go('pipeline');
+  }catch(e){ toast(e.message||e,true); }
+};
+
+/* ================= 히스토리 검색 ================= */
+VIEWS.history=async function(){
+  $('#main').innerHTML=`<h2>히스토리 검색</h2><div class="sub">과거 견적 원장(공표가·실제가·수주/실주·사유) + 부킹 이력</div>
+   <div class="card"><div class="row"><input id="hq" placeholder="화주·POD·선사 검색" style="flex:1" oninput="histSearch()"><button class="btn" onclick="histSearch()">검색</button></div></div>
+   <div id="histOut"><div class="empty">검색어를 입력하거나 그냥 검색을 누르세요</div></div>`;
+  histSearch();
+};
+window.histSearch=async function(){
+  const kw=($('#hq')?.value||'').trim();
+  try{
+    let hb=b=>b.order('apply_date',{ascending:false}).limit(200);
+    if(kw) hb=b=>b.or(`shipper.ilike.%${kw}%,pod.ilike.%${kw}%,carrier.ilike.%${kw}%`).order('apply_date',{ascending:false}).limit(200);
+    const hist=await q('quote_history',hb);
+    let bb=b=>b.order('bkg_date',{ascending:false}).limit(200);
+    if(kw) bb=b=>b.or(`shipper.ilike.%${kw}%,pod.ilike.%${kw}%`).order('bkg_date',{ascending:false}).limit(200);
+    const bk=await q('bookings',bb);
+    $('#histOut').innerHTML=`
+     <div class="card"><h3>견적 원장 <span class="pill">${hist.length}</span></h3>${hist.length?`<div style="overflow:auto"><table><thead><tr><th>적용일</th><th>화주</th><th>POD</th><th>선사</th><th class="num">공표가</th><th class="num">실제가</th><th>결과</th><th>실주사유</th></tr></thead><tbody>
+       ${hist.map(h=>`<tr><td>${esc(h.apply_date||'')}</td><td>${esc(h.shipper||'')}</td><td>${esc(h.pod||'')}</td><td>${esc(h.carrier||'')}</td><td class="num">${h.published_price||'-'}</td><td class="num">${h.actual_price||'-'}</td><td><span class="tag st-${/수주/.test(h.result||'')?'수주':/실주/.test(h.result||'')?'실주':'접수'}">${esc(h.result||'')}</span></td><td style="color:var(--mut)">${esc(h.loss_reason||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="d">결과 없음</div>'}</div>
+     <div class="card"><h3>부킹 이력 <span class="pill">${bk.length}</span></h3>${bk.length?`<div style="overflow:auto"><table><thead><tr><th>일자</th><th>BKG#</th><th>화주</th><th>레인</th><th class="num">매출</th><th class="num">마진</th></tr></thead><tbody>
+       ${bk.map(b=>`<tr><td>${esc(b.bkg_date||'')}</td><td>${esc(b.bkg_no||'')}</td><td>${esc(b.shipper||'')}</td><td>${esc(b.pol||'')}→${esc(b.pod||'')}</td><td class="num">${b.revenue?(+b.revenue).toLocaleString():'-'}</td><td class="num">${b.margin?(+b.margin).toLocaleString():'-'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="d">결과 없음</div>'}</div>`;
+  }catch(e){ $('#histOut').innerHTML=`<div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+
+/* ================= 연락처·선사 ================= */
+const CON_MAJ=['선사','운송사','콘솔','협력사','실화주'];
+const DESK_MAJ=['컨테이너','벌크','항공','콘솔','협력사'];
+let CON=[],DESK=[];
+let conF={major:'',sub:'',sort:'company_name',dir:1};
+let deskF={major:'',trade:'',sort:'carrier',dir:1};
+const uniqSort=(arr,f)=>[...new Set(arr.map(f).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ko'));
+function selOpts(list,cur){ return ['<option value="">전체</option>',...list.map(o=>`<option${String(o)===String(cur)?' selected':''}>${esc(o)}</option>`)].join(''); }
+function sortArrow(state,key){ return state.sort===key?(state.dir>0?' ▲':' ▼'):''; }
+VIEWS.contacts=async function(){
+  $('#main').innerHTML=`<h2>연락처 · 선사</h2><div class="sub">거래처 마스터 + 선사 데스크 · 대분류/중분류로 분류·정렬</div>
+   <div class="card"><div class="row"><input id="cq" placeholder="회사·담당·이메일 검색(양쪽 공통)" style="flex:1;min-width:200px" oninput="conRender()"><button class="btn" onclick="conRender()">검색</button><button class="btn primary" onclick="newContactBlank()">➕ 거래처 추가</button></div></div>
+   <div id="conCard"></div><div id="deskCard"></div>`;
+  try{
+    CON=await q('contacts',b=>b.limit(1000));
+    DESK=await q('carrier_desk',b=>b.limit(1000));
+    conRender();
+  }catch(e){ $('#conCard').innerHTML=`<div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+window.setConF=function(k,v){ conF[k]=v; if(k==='major')conF.sub=''; conRender(); };
+window.setDeskF=function(k,v){ deskF[k]=v; conRender(); };
+window.conSort=function(key){ if(conF.sort===key)conF.dir*=-1; else{conF.sort=key;conF.dir=1;} conRender(); };
+window.deskSort=function(key){ if(deskF.sort===key)deskF.dir*=-1; else{deskF.sort=key;deskF.dir=1;} conRender(); };
+window.conRender=function(){
+  const kw=($('#cq')?.value||'').trim().toLowerCase();
+  const cmp=(a,b,s)=>String(a[s.sort]||'').localeCompare(String(b[s.sort]||''),'ko')*s.dir;
+  // ── 거래처 ──
+  let con=CON.filter(c=>{
+    if(conF.major && c.major_category!==conF.major) return false;
+    if(conF.sub && c.sub_category!==conF.sub) return false;
+    if(kw && !((c.company_name||'')+(c.contact_name||'')+(c.email||'')).toLowerCase().includes(kw)) return false;
+    return true; });
+  con.sort((a,b)=>cmp(a,b,conF));
+  const subList=uniqSort(CON.filter(c=>!conF.major||c.major_category===conF.major),c=>c.sub_category);
+  const cH=(key,lbl)=>`<th style="cursor:pointer" onclick="conSort('${key}')">${lbl}${sortArrow(conF,key)}</th>`;
+  $('#conCard').innerHTML=`<div class="card"><h3>거래처 <span class="pill">${con.length}/${CON.length}</span></h3>
+    <div class="row" style="margin-bottom:10px">
+      <select onchange="setConF('major',this.value)">${selOpts(CON_MAJ,conF.major)}</select>
+      <select onchange="setConF('sub',this.value)">${selOpts(subList,conF.sub)}</select>
+      ${(conF.major||conF.sub||kw)?`<button class="btn sm" onclick="conF={major:'',sub:'',sort:conF.sort,dir:conF.dir};document.getElementById('cq').value='';conRender()">필터해제</button>`:''}
+    </div>
+    ${con.length?`<div style="overflow:auto;max-height:440px"><table><thead><tr>${cH('major_category','대분류')}${cH('sub_category','중분류')}${cH('company_name','회사')}${cH('contact_name','담당')}<th>이메일</th>${cH('country_region','지역')}${cH('grade','등급')}<th></th></tr></thead><tbody>
+      ${con.map(c=>`<tr><td><span class="pill">${esc(c.major_category||'')}</span></td><td style="color:var(--mut)">${esc(c.sub_category||'')}</td><td><b>${esc(c.company_name||'')}</b></td><td>${esc(c.contact_name||'')}</td><td style="color:var(--mut)">${esc(c.email||'')}</td><td>${esc(c.country_region||'')}</td><td>${esc(c.grade||'')}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="editContact('${c.id}')">수정</button></td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="d">조건에 맞는 거래처가 없습니다.</div>'}</div>`;
+  // ── 선사 데스크 ──
+  let desk=DESK.filter(d=>{
+    if(deskF.major && d.major_category!==deskF.major) return false;
+    if(deskF.trade && d.region!==deskF.trade) return false;
+    if(kw && !((d.carrier||'')+(d.contact_name||'')+(d.email||'')).toLowerCase().includes(kw)) return false;
+    return true; });
+  desk.sort((a,b)=>cmp(a,b,deskF));
+  const tradeList=uniqSort(DESK.filter(d=>!deskF.major||d.major_category===deskF.major),d=>d.region);
+  const dH=(key,lbl)=>`<th style="cursor:pointer" onclick="deskSort('${key}')">${lbl}${sortArrow(deskF,key)}</th>`;
+  $('#deskCard').innerHTML=`<div class="card"><h3>선사 데스크 <span class="pill">${desk.length}/${DESK.length}</span></h3>
+    <div class="row" style="margin-bottom:10px">
+      <select onchange="setDeskF('major',this.value)">${selOpts(DESK_MAJ,deskF.major)}</select>
+      <select onchange="setDeskF('trade',this.value)">${selOpts(tradeList,deskF.trade)}</select>
+      ${(deskF.major||deskF.trade)?`<button class="btn sm" onclick="deskF={major:'',trade:'',sort:deskF.sort,dir:deskF.dir};conRender()">필터해제</button>`:''}
+    </div>
+    ${desk.length?`<div style="overflow:auto;max-height:440px"><table><thead><tr>${dH('major_category','대분류')}${dH('region','트레이드')}${dH('carrier','선사')}${dH('role','구분')}${dH('contact_name','담당')}<th>직위</th><th>이메일</th><th>비고</th></tr></thead><tbody>
+      ${desk.map(d=>`<tr><td><span class="pill">${esc(d.major_category||'')}</span></td><td>${esc(d.region||'')}</td><td><b>${esc(d.carrier||'')}</b></td><td style="color:var(--mut)">${esc(d.role||'')}</td><td>${esc(d.contact_name||'')}</td><td style="color:var(--mut)">${esc(d.title||'')}</td><td style="color:var(--mut)">${esc(d.email||'')}</td><td style="color:var(--mut)">${esc(d.note||'')}</td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="d">조건에 맞는 데스크가 없습니다.</div>'}</div>`;
+};
+
+/* ================= 신규/편집 거래처 (공용 모달) ================= */
+let NCPRE={};
+function contactModalHTML(pre){ pre=pre||{}; const maj=pre.major||'실화주'; const editing=!!pre.id;
+  return `<h3>${editing?'✏ 거래처 수정':'➕ 신규 거래처 추가'}</h3><div class="d">저장 시 <b>연락처·선사 → 거래처</b>에 ${editing?'반영':'바로 등록'}됩니다.</div>
+   <div class="formgrid" style="margin-top:12px">
+     <div class="fld full"><label>대분류</label><div class="seg" id="nc_major" data-val="${esc(maj)}">${CON_MAJ.map(m=>`<button type="button" class="segb${maj===m?' on':''}" onclick="ncSeg(this,'${m}')">${m}</button>`).join('')}</div></div>
+     <div class="fld"><label>회사명 *</label><input id="nc_company" value="${esc(pre.company||'')}"></div>
+     <div class="fld"><label>중분류</label><input id="nc_sub" value="${esc(pre.sub||'')}" placeholder="국내포워더·실화주·운송사 등"></div>
+     <div class="fld"><label>담당자</label><input id="nc_contact" value="${esc(pre.contact||'')}"></div>
+     <div class="fld"><label>이메일</label><input id="nc_email" value="${esc(pre.email||'')}"></div>
+     <div class="fld"><label>전화</label><input id="nc_phone" value="${esc(pre.phone||'')}"></div>
+     <div class="fld"><label>휴대폰</label><input id="nc_mobile" value="${esc(pre.mobile||'')}"></div>
+     <div class="fld"><label>지역</label><input id="nc_region" value="${esc(pre.region||'')}"></div>
+     <div class="fld"><label>등급</label><input id="nc_grade" value="${esc(pre.grade||'')}" placeholder="A/B/C"></div>
+     <div class="fld full"><label>메모</label><input id="nc_notes" value="${esc(pre.notes||'')}"></div>
+   </div>
+   <div class="row" style="margin-top:14px"><button class="btn win" onclick="saveNewContact()">${editing?'수정 저장':'거래처 저장'}</button>${editing?`<button class="btn" onclick="delContact('${pre.id}')" style="color:var(--loss)">삭제</button>`:''}</div>`;
+}
+window.ncSeg=function(btn,val){ const g=btn.parentNode; [...g.querySelectorAll('.segb')].forEach(b=>b.classList.toggle('on',b===btn)); g.dataset.val=val; };
+window.openContactModal=function(){ showModal(contactModalHTML(NCPRE)); };
+window.newContactBlank=function(){ NCPRE={major:'실화주',_from:'contacts'}; openContactModal(); };
+window.newContactIntake=function(){ NCPRE={company:JOBW.shipper||'',email:JOBW._email||'',phone:JOBW._phone||'',contact:JOBW._contact||'',major:'실화주',sub:'실화주',_from:'intake'}; openContactModal(); };
+window.acAddContact=function(ev,encq){ ev.preventDefault(); const name=decodeURIComponent(encq); NCPRE={company:name,email:JOBW._email||'',phone:JOBW._phone||'',contact:JOBW._contact||'',major:'실화주',sub:'실화주',_from:'intake'}; openContactModal(); };
+window.editContact=function(id){ const c=(CON||[]).find(x=>x.id===id); if(!c){toast('대상 없음',true);return;}
+  NCPRE={id:c.id,major:c.major_category,sub:c.sub_category,company:c.company_name,contact:c.contact_name,email:c.email,phone:c.phone,mobile:c.mobile,region:c.country_region,grade:c.grade,notes:c.notes,_from:'contacts'}; openContactModal(); };
+window.saveNewContact=async function(){
+  const g=id=>($('#'+id)?.value||'').trim();
+  const major=document.getElementById('nc_major')?.dataset.val||'실화주';
+  const company=g('nc_company'); if(!company){ toast('회사명을 입력하세요',true); return; }
+  const row={major_category:major,sub_category:g('nc_sub')||null,company_name:company,contact_name:g('nc_contact')||null,email:g('nc_email')||null,phone:g('nc_phone')||null,mobile:g('nc_mobile')||null,country_region:g('nc_region')||null,grade:g('nc_grade')||null,notes:g('nc_notes')||null};
+  const from=NCPRE._from, id=NCPRE.id;
+  try{ let error;
+    if(id){ ({error}=await SB.from('contacts').update(row).eq('id',id)); }
+    else{ ({error}=await SB.from('contacts').insert(row)); }
+    if(error)throw error;
+    toast((id?'거래처 수정 완료 · ':'거래처 등록 완료 · ')+company); closeModal();
+    if(!id && !SHIPPERS.includes(company)) SHIPPERS.unshift(company);
+    if(from==='intake'){ JOBW.shipper=company; if($('#jobForm'))renderJobForm(); }
+    if(CURRENT==='contacts'){ try{ CON=await q('contacts',b=>b.limit(1000)); }catch(e){} if(typeof conRender==='function')conRender(); }
+  }catch(e){ toast(e.message||e,true); }
+};
+window.delContact=async function(id){
+  try{ const {error}=await SB.from('contacts').delete().eq('id',id); if(error)throw error;
+    CON=(CON||[]).filter(x=>x.id!==id); toast('거래처 삭제됨'); closeModal();
+    if(CURRENT==='contacts'&&typeof conRender==='function')conRender();
+  }catch(e){ toast(e.message||e,true); }
+};
+
+/* ================= 포트코드 관리 ================= */
+VIEWS.ports=async function(){
+  try{ PORTDB=await q('ports',b=>b.order('code')); }catch(e){ PORTDB=[]; }
+  const regions=[...new Set(PORTDB.map(p=>p.region).filter(Boolean))];
+  $('#main').innerHTML=`<h2>포트코드 관리</h2><div class="sub">UN/LOCODE · 국가2자+항구3자 (예: KRPUS 부산, DEHAM 함부르크) · 인테이크 POL/POD 자동완성에 연동</div>
+   <div class="card"><h3>➕ 포트코드 추가</h3>
+     <div class="row">
+       <input id="pcCode" placeholder="코드 5자 (DEHAM)" maxlength="5" style="width:140px;text-transform:uppercase">
+       <input id="pcName" placeholder="항구명 (함부르크 Hamburg)" style="flex:1;min-width:200px">
+       <input id="pcCountry" placeholder="국가2자 (DE)" maxlength="2" style="width:110px;text-transform:uppercase">
+       <select id="pcRegion"><option value="">지역(선택)</option>${regions.map(r=>`<option>${esc(r)}</option>`).join('')}</select>
+       <button class="btn primary" onclick="addPort()">추가</button>
+     </div>
+     <div class="d" style="margin-top:8px">이미 있는 코드는 무시됩니다. HMM/선사 기준 UN/LOCODE로 입력하세요.</div>
+   </div>
+   <div class="card"><h3>포트 목록 <span id="portCount" class="pill"></span></h3>
+     <div class="row" style="margin-bottom:10px">
+       <input id="pq" placeholder="코드·항구명·국가 검색 (첫글자만 입력해도 필터)" style="flex:1;min-width:220px" oninput="renderPortList()">
+       <select id="prg" onchange="renderPortList()"><option value="">전체 지역</option>${regions.map(r=>`<option>${esc(r)}</option>`).join('')}</select>
+     </div>
+     <div id="portList"></div>
+   </div>`;
+  renderPortList();
+};
+function renderPortList(){
+  const el=$('#portList'); if(!el)return;
+  const kw=($('#pq')?.value||'').trim().toLowerCase(), rg=$('#prg')?.value||'';
+  const list=PORTDB.filter(p=>{ if(rg&&p.region!==rg)return false; if(kw&&!((p.code||'')+(p.name||'')+(p.country||'')).toLowerCase().includes(kw))return false; return true; });
+  const cnt=$('#portCount'); if(cnt)cnt.textContent=`${list.length}/${PORTDB.length}`;
+  el.innerHTML=list.length?`<div style="overflow:auto;max-height:520px"><table><thead><tr><th>코드</th><th>항구명</th><th>국가</th><th>지역</th><th></th></tr></thead><tbody>
+    ${list.map(p=>`<tr><td class="mono"><b style="color:var(--accent)">${esc(p.code)}</b></td><td>${esc(p.name)}</td><td class="mono">${esc(p.country||'')}</td><td>${esc(p.region||'')}</td><td style="text-align:right"><button class="btn sm noprint" onclick="delPort('${esc(p.code)}')">삭제</button></td></tr>`).join('')}
+  </tbody></table></div>`:'<div class="d">검색 결과가 없습니다.</div>';
+}
+window.addPort=async function(){
+  const code=($('#pcCode').value||'').trim().toUpperCase(), name=($('#pcName').value||'').trim();
+  const country=($('#pcCountry').value||'').trim().toUpperCase()||null, region=$('#pcRegion').value||null;
+  if(code.length!==5){ toast('코드는 5자여야 합니다 (예: DEHAM)',true); return; }
+  if(!name){ toast('항구명을 입력하세요',true); return; }
+  try{ const {error}=await SB.from('ports').insert({code,name,country,region}); if(error)throw error;
+    PORTDB=await q('ports',b=>b.order('code')); $('#pcCode').value='';$('#pcName').value='';$('#pcCountry').value=''; renderPortList(); toast('추가됨 · '+code);
+  }catch(e){ toast(/duplicate|already exists/i.test(e.message||'')?'이미 존재하는 코드입니다':(e.message||e),true); }
+};
+window.delPort=async function(code){
+  try{ const {error}=await SB.from('ports').delete().eq('code',code); if(error)throw error;
+    PORTDB=PORTDB.filter(p=>p.code!==code); renderPortList(); toast('삭제됨 · '+code);
+  }catch(e){ toast(e.message||e,true); }
+};
+
+/* ================= 아카이브 · CSV 내보내기 ================= */
+function csvCell(v){ v=v==null?'':String(v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function downloadCSV(filename,headers,rows){
+  const lines=[headers.map(csvCell).join(',')].concat(rows.map(r=>r.map(csvCell).join(',')));
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+const today10=()=>new Date().toISOString().slice(0,10);
+let ARCH=[];
+const ARCH_COLS=[['Job#','job_no'],['생성일',r=>String(r.created_at||'').slice(0,10)],['단계','stage'],['거래구분','channel'],['운송구분','ship_kind'],['방향','direction'],['Trans','cargo_type'],['Mode','mode'],['인코텀즈','incoterms'],
+  ['화주','shipper'],['화주담당','shipper_contact'],['HML담당',r=>r.owner||r.assigned_to],['POL','origin_port'],['POD','dest_port'],['Pickup','pickup_addr'],['Delivery','delivery_addr'],
+  ['품목','commodity'],['중량','weight'],['Volume(CBM)','volume_cbm'],['치수','dimensions'],['20DV','cntr_20dv'],['40HQ','cntr_40hq'],['20FR','cntr_20fr'],['40FR','cntr_40fr'],
+  ['OOG',r=>r.is_oog?'Y':''],['FR',r=>r.is_fr?'Y':''],['RF',r=>r.is_rf?'Y':''],['특수메모','special_note'],
+  ['Sell합계','sell_krw'],['Buy합계','buy_krw'],['마진',r=>(r.sell_krw!=null&&r.buy_krw!=null)?(r.sell_krw-r.buy_krw):''],['BKG#','bkg_no'],['수주일',r=>String(r.won_at||'').slice(0,10)],['선정선사','selected_carrier'],['실주사유','win_loss_reason']];
+const cellVal=(r,c)=>{const v=typeof c[1]==='function'?c[1](r):r[c[1]];return v==null?'':v;};
+VIEWS.archive=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  try{ ARCH=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(3000));
+    $('#main').innerHTML=`<h2>아카이브 · 마스터 원장</h2><div class="sub">Job 한 건 = 한 행 · 엑셀 가로형 · CSV 내보내기 (모든 기록을 표로 이어서 관리)</div>
+     <div class="card"><div class="row">
+       <input id="aq" placeholder="Job#·화주·POL·POD 검색" style="flex:1;min-width:200px" oninput="renderArchive()">
+       <select id="astg" onchange="renderArchive()"><option value="">전체 단계</option>${STAGES.map(s=>`<option>${s}</option>`).join('')}</select>
+       <span id="archCount" class="pill"></span>
+       <button class="btn primary" onclick="exportArchive()">⬇ Jobs CSV</button>
+       <button class="btn" onclick="exportBookings()">⬇ 부킹 CSV</button>
+       <button class="btn" onclick="exportLines()">⬇ 견적라인 CSV</button>
+     </div></div>
+     <div class="card"><div id="archTable"></div></div>`;
+    renderArchive();
+  }catch(e){ $('#main').innerHTML=`<h2>아카이브</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+window.renderArchive=function(){
+  const kw=($('#aq')?.value||'').trim().toLowerCase(), stg=$('#astg')?.value||'';
+  const list=ARCH.filter(r=>{ if(stg&&(r.stage||'접수')!==stg)return false;
+    if(kw&&!((r.job_no||'')+(r.shipper||'')+(r.origin_port||'')+(r.dest_port||'')).toLowerCase().includes(kw))return false; return true; });
+  ARCH._f=list; const cc=$('#archCount'); if(cc)cc.textContent=`${list.length}건`;
+  $('#archTable').innerHTML=`<div style="overflow:auto;max-height:66vh"><table style="font-size:12px"><thead><tr>${ARCH_COLS.map(c=>`<th style="white-space:nowrap">${c[0]}</th>`).join('')}</tr></thead><tbody>
+    ${list.map(r=>`<tr style="cursor:pointer" onclick="openReq('${r.id}')">${ARCH_COLS.map(c=>`<td style="white-space:nowrap">${esc(cellVal(r,c))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${ARCH_COLS.length}" class="d">결과 없음</td></tr>`}
+    </tbody></table></div>`;
+};
+window.exportArchive=function(){ const list=ARCH._f||ARCH; downloadCSV(`HML_아카이브_${today10()}.csv`,ARCH_COLS.map(c=>c[0]),list.map(r=>ARCH_COLS.map(c=>cellVal(r,c)))); toast(`Jobs CSV ${list.length}건 다운로드`); };
+window.exportBookings=async function(){ try{ const bk=await q('bookings',b=>b.order('bkg_date',{ascending:false}).limit(5000));
+  const cols=['wk','bkg_date','bkg_no','sales','shipper','pol','pod','trans','mode','direction','cntr_20dv','cntr_40hq','cntr_20fr','cntr_40fr','revenue','purchase','margin','note','source'];
+  downloadCSV(`HML_부킹_${today10()}.csv`,cols,bk.map(r=>cols.map(c=>r[c]==null?'':r[c]))); toast(`부킹 CSV ${bk.length}건`); }catch(e){ toast(e.message||e,true); } };
+window.exportLines=async function(){ try{ const ls=await q('quote_lines',b=>b.order('created_at').limit(20000)); const jn={}; ARCH.forEach(r=>jn[r.id]=r.job_no);
+  const cols=['Job#','타입/사이즈','수량','Sell','Buy','통화','비고'];
+  downloadCSV(`HML_견적라인_${today10()}.csv`,cols,ls.map(l=>[jn[l.quote_request_id]||'',l.cntr_type,l.qty,l.sell,l.buy,l.currency,l.note])); toast(`견적라인 CSV ${ls.length}건`); }catch(e){ toast(e.message||e,true); } };
+
+/* ================= 요율 + 견적 비교 ================= */
+function verdictHTML(recv,min){ if(recv==null||min==null) return ''; const d=(recv-min)/min;
+  return d<=0 ? `<span style="color:var(--win);font-weight:700">표 최저가 이하 ✓ (${(d*100).toFixed(1)}%)</span>`
+              : `<span style="color:var(--loss);font-weight:700">표 최저 대비 +${(d*100).toFixed(1)}% 높음</span>`; }
+async function rateLookup(pol,pod,ct,recv){
+  pol=portTerm(pol); pod=portTerm(pod);
+  if(!pod){ return '<div class="d">POD를 입력하세요.</div>'; }
+  let rows=[];
+  try{ let b=SB.from('rate_cards').select('*').ilike('pod',`%${pod}%`);
+    if(pol) b=b.ilike('pol',`%${pol}%`); if(ct) b=b.eq('container_type',ct);
+    const {data,error}=await b.order('freight_usd').limit(200); if(error)throw error; rows=data||[];
+  }catch(e){ return `<div class="empty">${esc(e.message||e)}</div>`; }
+  if(!rows.length) return `<div class="empty">해당 레인(${esc(pod)}${ct?' / '+ct:''})의 요율표 데이터가 없습니다.<br><span style="font-size:11px">요율표는 '가져오기'에서 rate_cards.csv를 적재하면 채워집니다.</span></div>`;
+  const min=Math.min(...rows.map(r=>+r.freight_usd));
+  const body=rows.map(r=>{const fr=+r.freight_usd; const dr=recv!=null?((recv-fr)/fr):null;
+    return `<tr><td>${esc(r.carrier)}${r.rate_type?` <span style="color:var(--mut2);font-size:11px">${esc(r.rate_type)}</span>`:''}</td><td>${esc(r.pol)}→${esc(r.pod)}</td><td>${esc(r.container_type)}</td><td class="num"${fr===min?' style="color:var(--win);font-weight:700"':''}>${fr.toLocaleString()}</td><td style="color:var(--mut)">${esc(r.valid_to||'')}</td>${recv!=null?`<td class="num" style="color:${dr<=0?'var(--win)':'var(--loss)'}">${dr>0?'+':''}${(dr*100).toFixed(1)}%</td>`:''}</tr>`;}).join('');
+  return `<div class="d">표 최저가 <b style="color:var(--win)">USD ${min.toLocaleString()}</b>${recv!=null?` · 받은견적 <b>USD ${recv.toLocaleString()}</b> → ${verdictHTML(recv,min)}`:''} · ${rows.length}건</div>
+    <div style="overflow:auto;max-height:320px"><table><thead><tr><th>선사</th><th>레인</th><th>CNTR</th><th class="num">USD</th><th>유효</th>${recv!=null?'<th class="num">견적Δ</th>':''}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function showModal(html){ const m=$('#modal'); m.innerHTML=`<div class="modal-bg" onclick="closeModal()"></div><div class="modal-box">${html}<div style="margin-top:14px"><button class="btn" onclick="closeModal()">닫기</button></div></div>`; m.style.display='block'; }
+window.closeModal=function(){ const m=$('#modal'); m.style.display='none'; m.innerHTML=''; };
+window.openRateModal=function(pol,pod){
+  showModal(`<h3>💱 요율표 비교</h3><div class="d">받은 견적(USD)을 넣으면 바인딩 요율표 대비 저가/고가를 바로 판정합니다.</div>
+    <div class="row" style="margin:10px 0">
+      <div class="ac" style="width:150px"><input id="mPol" autocomplete="off" placeholder="POL 코드/항명(선택)" value="${esc(pol||'')}" oninput="acPort(this)" onfocus="acPort(this)" onblur="acClose(this)"><div class="ac-list" hidden></div></div>
+      <div class="ac" style="width:170px"><input id="mPod" autocomplete="off" placeholder="POD 코드/항명" value="${esc(pod||'')}" oninput="acPort(this)" onfocus="acPort(this)" onblur="acClose(this)"><div class="ac-list" hidden></div></div>
+      <select id="mCt"><option value="">전체</option><option>20DV</option><option>40DV</option><option>40HC</option></select>
+      <input id="mRecv" placeholder="받은견적 USD" style="width:130px">
+      <button class="btn primary" onclick="runRateModal()">비교</button></div>
+    <div id="mOut" class="d">POD를 넣고 비교를 누르세요.</div>`);
+  if(pod) runRateModal();
+};
+window.runRateModal=async function(){ $('#mOut').innerHTML='불러오는 중…';
+  $('#mOut').innerHTML=await rateLookup($('#mPol').value.trim(),$('#mPod').value.trim(),$('#mCt').value,num($('#mRecv').value)); };
+window.runRateInline=async function(){ $('#rOut').innerHTML='불러오는 중…';
+  $('#rOut').innerHTML=await rateLookup($('#rPol').value.trim(),$('#rPod').value.trim(),$('#rCt').value,num($('#rRecv').value)); };
+VIEWS.rates=async function(){
+  try{ if(!PORTDB.length){ try{ PORTDB=await q('ports',b=>b.order('code')); }catch(e){} }
+    const rc=await q('rate_cards',b=>b.order('created_at',{ascending:false}).limit(50)); const rg=await q('regions');
+    const {count}=await SB.from('rate_cards').select('*',{count:'exact',head:true});
+    $('#main').innerHTML=`<h2>요율 · 견적 비교</h2><div class="sub">바인딩 요율표(프라이싱 3Q) 대비 받은 견적 즉시 비교 · POL/POD는 포트코드 자동완성</div>
+     <div class="card"><h3>💱 견적 비교</h3><div class="d">POD·컨테이너·받은견적(USD) 입력 → 표 최저가 대비 저가/고가 판정 + 선사별 요율 · 코드(예: DEHAM) 또는 항구명으로 입력</div>
+       <div class="row" style="align-items:flex-start"><div class="ac" style="width:150px"><input id="rPol" autocomplete="off" placeholder="POL 코드/항명(선택)" oninput="acPort(this)" onfocus="acPort(this)" onblur="acClose(this)"><div class="ac-list" hidden></div></div>
+         <div class="ac" style="width:180px"><input id="rPod" autocomplete="off" placeholder="POD 코드/항명 (예: DEHAM)" oninput="acPort(this)" onfocus="acPort(this)" onblur="acClose(this)"><div class="ac-list" hidden></div></div>
+         <select id="rCt"><option value="">전체</option><option>20DV</option><option>40DV</option><option>40HC</option></select>
+         <input id="rRecv" placeholder="받은견적 USD" style="width:140px"><button class="btn primary" onclick="runRateInline()">비교</button></div>
+       <div id="rOut" style="margin-top:12px"></div></div>
+     <div class="card"><h3>지역 구분 <span class="pill">${rg.length}</span></h3><table><tbody>${rg.map(r=>`<tr><td style="width:150px"><b>${esc(r.code)}</b></td><td style="color:var(--mut)">${esc(r.description||'')}</td></tr>`).join('')}</tbody></table></div>
+     <div class="card"><h3>요율표 <span class="pill">${count||0}건 적재</span></h3>${rc.length?`<div style="overflow:auto"><table><thead><tr><th>지역</th><th>POL</th><th>POD</th><th>선사</th><th>CNTR</th><th class="num">USD</th></tr></thead><tbody>
+       ${rc.map(r=>`<tr><td>${esc(r.region||'')}</td><td>${esc(r.pol||'')}</td><td>${esc(r.pod||'')}</td><td>${esc(r.carrier||'')}${r.rate_type?' '+esc(r.rate_type):''}</td><td>${esc(r.container_type||'')}</td><td class="num">${r.freight_usd?(+r.freight_usd).toLocaleString():'-'}</td></tr>`).join('')}</tbody></table></div><div class="d" style="margin-top:8px">최근 50건 · 전체는 위 '견적 비교'로 조회</div>`
+       :'<div class="d">요율표 미적재. \'가져오기\'에서 rate_cards.csv를 올리거나, 잠시 후 적재됩니다.</div>'}</div>`;
+  }catch(e){ $('#main').innerHTML=`<h2>요율</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+
+/* ================= 가져오기 (CSV → Supabase) ================= */
+const COERCE={
+  contacts:{automation_linked:'bool'},
+  carrier_desk:{},
+  quote_history:{apply_date:'date',published_price:'num',actual_price:'num',discount_rate:'num',competitor_est:'num'},
+  bookings:{wk:'int',cntr_20dv:'int',cntr_40hq:'int',cntr_20fr:'int',cntr_40fr:'int',revenue:'num',purchase:'num',margin:'num',bkg_date:'date'},
+  regions:{}, rate_cards:{freight_usd:'num',valid_to:'date'}
+};
+function parseCSV(text){ text=text.replace(/^﻿/,''); const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else{if(c==='"')q=true;else if(c===','){row.push(f);f='';}else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}else if(c!=='\r')f+=c;}}
+  if(f.length||row.length){row.push(f);rows.push(row);} return rows; }
+function coerce(table,obj){ const map=COERCE[table]||{}; const o={};
+  for(const k in obj){ let v=obj[k]; if(v===''){o[k]=null;continue;}
+    const t=map[k];
+    if(t==='num'||t==='int'){const n=parseFloat(String(v).replace(/[,%$\s]/g,''));o[k]=isNaN(n)?null:(t==='int'?Math.round(n):n);}
+    else if(t==='bool')o[k]=/^(true|1|o|y|예)$/i.test(String(v).trim());
+    else if(t==='date'){o[k]=String(v).slice(0,10)||null;}
+    else o[k]=v; }
+  return o; }
+VIEWS.import=function(){
+  $('#main').innerHTML=`<h2>가져오기</h2><div class="sub">기존 히스토리 CSV를 허브(Supabase)로 적재 — 대화에서 받은 파일을 각 항목에 올리세요</div>
+   <div class="card"><h3>기존 데이터 적재</h3><div class="d">파일명은 자유. 표는 헤더가 컬럼명과 일치해야 합니다(전달드린 CSV는 이미 일치).</div>
+     ${['contacts','carrier_desk','quote_history','bookings','regions','rate_cards'].map(t=>
+       `<div class="row" style="margin:8px 0"><div style="width:130px"><b>${t}</b></div>
+         <input type="file" accept=".csv" onchange="importCSV('${t}',this)"><span id="imp_${t}" class="d" style="margin:0"></span></div>`).join('')}
+     <div class="d" style="margin-top:10px">※ 중복 방지를 위해 같은 파일을 두 번 올리지 마세요(regions는 code 기준 덮어쓰기).</div></div>`;
+};
+window.importCSV=async function(table,input){
+  const f=input.files[0]; if(!f)return; const st=$('#imp_'+table); st.textContent='읽는 중…';
+  const text=await f.text(); const rows=parseCSV(text).filter(r=>r.length&&r.some(c=>c!==''));
+  if(rows.length<2){st.textContent='행 없음';return;}
+  const head=rows[0].map(h=>h.trim()); const objs=rows.slice(1).map(r=>{const o={};head.forEach((h,i)=>o[h]=(r[i]||'').trim());return coerce(table,o);});
+  try{ let done=0;
+    for(let i=0;i<objs.length;i+=100){ const chunk=objs.slice(i,i+100);
+      let res; if(table==='regions')res=await SB.from(table).upsert(chunk,{onConflict:'code'}); else res=await SB.from(table).insert(chunk);
+      if(res.error)throw res.error; done+=chunk.length; st.textContent=`${done}/${objs.length} 적재…`; }
+    st.textContent=`✅ ${objs.length}건 적재 완료`; toast(`${table}: ${objs.length}건 적재`);
+  }catch(e){ st.textContent='❌ '+(e.message||e); toast(e.message||e,true); }
+};
+
+/* ================= 물류도구 ================= */
+window.openCBM=function(){
+  showModal(`<h3>📦 CBM · R.TON 계산기</h3><div class="d">치수(cm)·수량·중량 입력 → CBM과 운임톤(R.TON) 자동 계산</div>
+    <div class="row" style="margin:10px 0">
+      <input id="cbmL" placeholder="가로 L(cm)" style="width:100px"><input id="cbmW" placeholder="세로 W(cm)" style="width:100px">
+      <input id="cbmH" placeholder="높이 H(cm)" style="width:100px"><input id="cbmQ" placeholder="수량" value="1" style="width:70px">
+      <input id="cbmKg" placeholder="총중량(kg)" style="width:100px"><button class="btn primary" onclick="runCBM()">계산</button></div>
+    <div id="cbmOut" class="d">값을 넣고 계산을 누르세요.</div>`);
+};
+window.runCBM=function(){
+  const L=num($('#cbmL').value),W=num($('#cbmW').value),H=num($('#cbmH').value),Q=num($('#cbmQ').value)||1,KG=num($('#cbmKg').value);
+  if(L==null||W==null||H==null){ $('#cbmOut').textContent='가로·세로·높이를 입력하세요.'; return; }
+  const cbm=(L*W*H/1e6)*Q; const rton=KG!=null?Math.max(cbm,KG/1000):cbm;
+  $('#cbmOut').innerHTML=`<div style="font-size:15px">CBM = <b style="color:var(--accent)">${cbm.toFixed(3)} m³</b>`
+    +(KG!=null?` · 중량톤 ${(KG/1000).toFixed(3)} → <b style="color:var(--win)">R.TON ${rton.toFixed(3)}</b>`:'')+`</div>
+    <div class="d" style="margin-top:6px">R.TON = max(CBM, 중량톤) · 1 CBM = ${(cbm/Q).toFixed(3)}m³/개 × ${Q}개</div>`;
+};
+window.openIncoterms=function(){
+  const rows=[['EXW','공장인도','수입자','수출자 공장에서 인수, 이후 전부 수입자'],
+   ['FCA','운송인인도','수출자→지정지','지정장소/운송인 인도까지 수출자'],
+   ['FAS','선측인도','수출자→선측','선측까지 수출자, 적재부터 수입자'],
+   ['FOB','본선인도','수출자→적재','본선 적재까지 수출자(해상)'],
+   ['CFR','운임포함','수출자→도착항운임','운임 수출자, 위험은 적재시 이전'],
+   ['CIF','운임보험포함','수출자→운임+보험','CFR+최소보험(해상)'],
+   ['CPT','운송비지급','수출자→도착지운임','운임 수출자, 위험은 인도시 이전'],
+   ['CIP','운송비보험지급','수출자→운임+보험','CPT+보험'],
+   ['DAP','도착지인도','수출자→도착지','양하 전까지 수출자'],
+   ['DPU','양하인도','수출자→양하','도착지 양하까지 수출자'],
+   ['DDP','관세지급인도','수출자 전부','수입통관·관세까지 수출자']];
+  showModal(`<h3>📄 인코텀즈 2020 요약</h3><div class="d">누가 어디까지 비용·위험을 부담하는가</div>
+    <table><thead><tr><th>조건</th><th>명칭</th><th>부담</th><th>요지</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td style="color:var(--mut)">${r[2]}</td><td style="font-size:11.5px">${r[3]}</td></tr>`).join('')}
+    </tbody></table>`);
+};
+
+/* ================= 시작 ================= */
+(async function(){ const ok=SB?await checkConn():false; go('dashboard'); })();
+</script>
+</body>
+</html>
