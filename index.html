@@ -213,6 +213,7 @@ tr.stale td{background:rgba(180,83,9,.08)}
         <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
         <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
         <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
+        <a onclick="openPartners()" style="cursor:pointer">🤝 Partners</a>
       </div>
     </div>
     <div class="conn"><span id="dot" class="dot"></span><span id="connTxt">연결 확인 중…</span></div>
@@ -1212,6 +1213,7 @@ VIEWS.contacts=async function(){
   }catch(e){ $('#conCard').innerHTML=`<div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
 };
 window.setConF=function(k,v){ conF[k]=v; if(k==='major')conF.sub=''; conRender(); };
+window.openPartners=function(){ conF.major='협력사'; conF.sub='XLP'; go('contacts'); };
 window.setDeskF=function(k,v){ deskF[k]=v; conRender(); };
 window.conSort=function(key){ if(conF.sort===key)conF.dir*=-1; else{conF.sort=key;conF.dir=1;} conRender(); };
 window.deskSort=function(key){ if(deskF.sort===key)deskF.dir*=-1; else{deskF.sort=key;deskF.dir=1;} conRender(); };
