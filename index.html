@@ -198,6 +198,7 @@ tr.stale td{background:rgba(180,83,9,.08)}
     <div class="tools" style="padding-bottom:2px">
       <div class="tools-h">🔗 회사 시스템</div>
       <a class="syslink" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 ↗</a>
+      <a class="syslink" href="https://moqv.kr" target="_blank" rel="noopener">🌐 MOQV.KR ↗</a>
     </div>
     <div class="tools">
       <div class="tools-h">🧰 물류도구</div>
@@ -1168,7 +1169,7 @@ function modeTag(m){ const k=MODEK[m]||m||''; if(!k)return '<span class="d" styl
 let HMODE='';
 VIEWS.history=async function(){
   $('#main').innerHTML=`<h2>히스토리 검색</h2><div class="sub">과거 견적 원장(공표가·실제가·수주/실주·사유) + 부킹 이력 · 화주/실화주·POL/POD·모드 구분</div>
-   <div class="card"><div class="row"><input id="hq" placeholder="화주·POL·POD·선사 검색" style="flex:1;min-width:200px" oninput="histSearch()"><button class="btn" onclick="histSearch()">검색</button>
+   <div class="card"><div class="row"><input id="hq" placeholder="화주·POL·POD·선사 검색 (포트코드 가능, 예: KRPUS · USSAV)" style="flex:1;min-width:200px" oninput="histSearch()"><button class="btn" onclick="histSearch()">검색</button>
      <span class="d" style="margin:0 0 0 8px">모드</span>${['','SEA','AIR','LAND'].map(m=>`<button class="pchip${HMODE===m?' on':''}" onclick="HMODE='${m}';histSearch()">${m===''?'전체':MODEK[m]}</button>`).join('')}</div></div>
    <div id="histOut"><div class="empty">검색어를 입력하거나 그냥 검색을 누르세요</div></div>`;
   histSearch();
@@ -1177,7 +1178,7 @@ window.histSearch=async function(){
   const kw=($('#hq')?.value||'').trim();
   try{
     let hb=b=>b.order('apply_date',{ascending:false}).limit(300);
-    if(kw) hb=b=>b.or(`shipper.ilike.%${kw}%,pod.ilike.%${kw}%,carrier.ilike.%${kw}%`).order('apply_date',{ascending:false}).limit(300);
+    if(kw) hb=b=>b.or(`shipper.ilike.%${kw}%,pod.ilike.%${kw}%,region.ilike.%${kw}%,carrier.ilike.%${kw}%`).order('apply_date',{ascending:false}).limit(300);
     const hist=await q('quote_history',hb);
     let bb=b=>b.order('bkg_date',{ascending:false}).limit(500);
     if(kw) bb=b=>b.or(`shipper.ilike.%${kw}%,pol.ilike.%${kw}%,pod.ilike.%${kw}%`).order('bkg_date',{ascending:false}).limit(500);
