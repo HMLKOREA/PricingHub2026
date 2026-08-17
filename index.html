@@ -165,6 +165,8 @@ table.kvt td{font-size:13px;border:1px solid var(--line);padding:7px 9px;vertica
 .sopcol{border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px 9px}
 .soph{font-size:11.5px;font-weight:750;color:var(--accent);margin-bottom:5px;border-bottom:1px solid var(--line);padding-bottom:3px}
 .sopi{font-size:11px;color:var(--txt);padding:2px 0;line-height:1.35}
+.qlblock{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:10px;background:var(--panel2)}
+.qlblock .qlh{font-size:12.5px;font-weight:750;margin-bottom:6px;color:var(--txt)}
 .saverow{display:flex;gap:12px;align-items:center;margin-top:16px;border-top:1px solid var(--line);padding-top:14px;flex-wrap:wrap}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.board{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:960px){.intakeGrid{grid-template-columns:1fr}.mailcard{position:static}.mailcard textarea{min-height:150px}}
@@ -628,36 +630,49 @@ window.saveBooking=async function(id){
 
 /* ===== 견적 라인 (타입/사이즈별 Sell·Buy) ===== */
 let QLINES=[];
-const QTYPES=['20DV','40HQ','40HC','20FR','40FR','20OT','40OT','LCL(R.TON)','AIR(kg)','BULK(R.TON)','TRUCK','기타'];
+const QTYPES_F=['O/F','BAF','CAF','LSS','EBS','PSS','20DV','40HQ','LCL(R.TON)','AIR(kg)','BULK(R.TON)','기타'];
+const QTYPES_L=['THC','DOF(B/L)','WFG','CCC','DOC','HANDLING','PFS','PSC','FSC','SEAL','CFS','드레이지','부두세','기타'];
+const QCATS=[['FREIGHT','🚢 운임 (Freight)','USD',QTYPES_F],['LOCAL','🏭 로컬차지 (Local)','KRW',QTYPES_L]];
+const QCURS=['USD','KRW','EUR','CNY'];
+function qlineRow(l){
+  return `<tr class="qline"><td><input value="${esc(l.cntr_type||'')}" list="qtypes_${l.category||'FREIGHT'}" onchange="updLine('${l.id}','cntr_type',this.value)" style="width:120px"></td>
+    <td><input inputmode="numeric" value="${l.qty??''}" onchange="updLine('${l.id}','qty',this.value)" style="width:52px;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.sell??''}" onchange="updLine('${l.id}','sell',this.value)" style="width:92px;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.buy??''}" onchange="updLine('${l.id}','buy',this.value)" style="width:92px;text-align:right"></td>
+    <td><select onchange="updLine('${l.id}','currency',this.value)">${QCURS.map(c=>`<option${l.currency===c?' selected':''}>${c}</option>`).join('')}</select></td>
+    <td class="num mono">${(((+l.sell||0)-(+l.buy||0))*(+l.qty||1)).toLocaleString()} ${esc(l.currency||'')}</td>
+    <td><input value="${esc(l.note||'')}" onchange="updLine('${l.id}','note',this.value)" placeholder="비고" style="width:100px"></td>
+    <td><button class="btn sm" onclick="delLine('${l.id}')">✕</button></td></tr>`;
+}
+function qlineBlock(reqId,cat,title,defCur,types){
+  const ls=(QLINES||[]).filter(l=>(l.category||'FREIGHT')===cat);
+  const sK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.sell||0)*(+l.qty||0),l.currency),0));
+  const bK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.buy||0)*(+l.qty||0),l.currency),0));
+  return `<div class="qlblock"><div class="qlh">${title} <span class="d" style="margin:0;font-weight:500">· 기본 ${defCur}</span></div>
+    <datalist id="qtypes_${cat}">${types.map(t=>`<option value="${t}">`).join('')}</datalist>
+    <div style="overflow:auto"><table class="qline"><thead><tr><th>항목</th><th class="num">수량</th><th class="num">Sell</th><th class="num">Buy</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
+    <tbody>${ls.map(qlineRow).join('')||''}
+    <tr class="qline" style="background:rgba(37,99,235,.04)"><td><input id="ql_type_${cat}" list="qtypes_${cat}" placeholder="항목" style="width:120px"></td>
+     <td><input id="ql_qty_${cat}" inputmode="numeric" value="1" style="width:52px;text-align:right"></td>
+     <td><input id="ql_sell_${cat}" inputmode="numeric" style="width:92px;text-align:right"></td>
+     <td><input id="ql_buy_${cat}" inputmode="numeric" style="width:92px;text-align:right"></td>
+     <td><select id="ql_cur_${cat}">${QCURS.map(c=>`<option${c===defCur?' selected':''}>${c}</option>`).join('')}</select></td>
+     <td></td><td><input id="ql_note_${cat}" placeholder="비고" style="width:100px"></td>
+     <td><button class="btn primary sm" onclick="addLine('${reqId}','${cat}')">＋</button></td></tr>
+    </tbody></table></div>
+    <div class="d" style="text-align:right;margin:4px 2px 0">소계(원 환산) Sell ₩${sK.toLocaleString()} · Buy ₩${bK.toLocaleString()}</div></div>`;
+}
 function renderQuoteLines(reqId){
   const el=$('#qlines'); if(!el)return; const ls=QLINES||[];
   const sumS=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.sell||0)*(+l.qty||0),l.currency),0)), sumB=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.buy||0)*(+l.qty||0),l.currency),0));
   const mgn=sumS-sumB, mr=sumS?mgn/sumS:null;
-  const curs=['USD','KRW','EUR','CNY'];
-  const row=l=>`<tr class="qline"><td><input value="${esc(l.cntr_type||'')}" list="qtypes" onchange="updLine('${l.id}','cntr_type',this.value)" style="width:110px"></td>
-    <td><input inputmode="numeric" value="${l.qty??''}" onchange="updLine('${l.id}','qty',this.value)" style="width:56px;text-align:right"></td>
-    <td><input inputmode="numeric" value="${l.sell??''}" onchange="updLine('${l.id}','sell',this.value)" style="width:100px;text-align:right"></td>
-    <td><input inputmode="numeric" value="${l.buy??''}" onchange="updLine('${l.id}','buy',this.value)" style="width:100px;text-align:right"></td>
-    <td><select onchange="updLine('${l.id}','currency',this.value)">${curs.map(c=>`<option${l.currency===c?' selected':''}>${c}</option>`).join('')}</select></td>
-    <td class="num mono">${(((+l.sell||0)-(+l.buy||0))*(+l.qty||1)).toLocaleString()}</td>
-    <td><input value="${esc(l.note||'')}" onchange="updLine('${l.id}','note',this.value)" placeholder="비고" style="width:110px"></td>
-    <td><button class="btn sm" onclick="delLine('${l.id}')">삭제</button></td></tr>`;
-  el.innerHTML=`<datalist id="qtypes">${QTYPES.map(t=>`<option value="${t}">`).join('')}</datalist>
-    <div style="overflow:auto"><table class="qline"><thead><tr><th>타입/사이즈</th><th class="num">수량</th><th class="num">Sell 단가</th><th class="num">Buy 단가</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
-    <tbody>${ls.map(row).join('')}
-    <tr class="qline" style="background:rgba(37,99,235,.04)"><td><input id="ql_type" list="qtypes" placeholder="예: 40HQ" style="width:110px"></td>
-     <td><input id="ql_qty" inputmode="numeric" value="1" style="width:56px;text-align:right"></td>
-     <td><input id="ql_sell" inputmode="numeric" style="width:100px;text-align:right"></td>
-     <td><input id="ql_buy" inputmode="numeric" style="width:100px;text-align:right"></td>
-     <td><select id="ql_cur">${curs.map(c=>`<option>${c}</option>`).join('')}</select></td>
-     <td></td><td><input id="ql_note" placeholder="비고" style="width:110px"></td>
-     <td><button class="btn primary sm" onclick="addLine('${reqId}')">＋ 추가</button></td></tr>
-    </tbody></table></div>
-    <div class="row" style="margin-top:10px;gap:18px"><b>합계(원 환산) Sell ₩${sumS.toLocaleString()}</b><b>Buy ₩${sumB.toLocaleString()}</b><b style="color:var(--win)">마진 ₩${mgn.toLocaleString()} · ${mr==null?'–':(mr*100).toFixed(1)+'%'}</b><span class="d" style="margin:0">※ 기준환율 USD ${FX.USD}·EUR ${FX.EUR}·CNY ${FX.CNY} (요율 화면에서 변경)</span></div>`;
+  el.innerHTML=`${QCATS.map(c=>qlineBlock(reqId,c[0],c[1],c[2],c[3])).join('')}
+    <div class="row" style="margin-top:12px;gap:18px;border-top:2px solid var(--line);padding-top:10px;flex-wrap:wrap"><b>총계(원 환산) Sell ₩${sumS.toLocaleString()}</b><b>Buy ₩${sumB.toLocaleString()}</b><b style="color:var(--win)">마진 ₩${mgn.toLocaleString()} · ${mr==null?'–':(mr*100).toFixed(1)+'%'}</b><span class="d" style="margin:0">※ O/F는 USD, 로컬차지는 KRW로 입력 · 총계는 기준환율(USD ${FX.USD}·EUR ${FX.EUR}·CNY ${FX.CNY})로 원 환산</span></div>`;
 }
-window.addLine=async function(reqId){
-  const type=($('#ql_type').value||'').trim(); if(!type){toast('타입/사이즈를 입력하세요',true);return;}
-  const rowd={quote_request_id:reqId,cntr_type:type,qty:num($('#ql_qty').value)||1,sell:num($('#ql_sell').value),buy:num($('#ql_buy').value),currency:$('#ql_cur').value,note:($('#ql_note').value||'').trim()||null};
+window.addLine=async function(reqId,cat){
+  cat=cat||'FREIGHT';
+  const type=(($('#ql_type_'+cat)||{}).value||'').trim(); if(!type){toast('항목을 입력하세요',true);return;}
+  const rowd={quote_request_id:reqId,category:cat,cntr_type:type,qty:num(($('#ql_qty_'+cat)||{}).value)||1,sell:num(($('#ql_sell_'+cat)||{}).value),buy:num(($('#ql_buy_'+cat)||{}).value),currency:($('#ql_cur_'+cat)||{}).value||(cat==='LOCAL'?'KRW':'USD'),note:(($('#ql_note_'+cat)||{}).value||'').trim()||null};
   try{ const {error}=await SB.from('quote_lines').insert(rowd); if(error)throw error;
     QLINES=await q('quote_lines',b=>b.eq('quote_request_id',reqId).order('created_at')); renderQuoteLines(reqId); syncReqTotals(reqId); toast('라인 추가됨');
   }catch(e){ toast(e.message||e,true); }
