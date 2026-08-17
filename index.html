@@ -194,7 +194,7 @@ tr.stale td{background:rgba(180,83,9,.08)}
       <a data-v="rfq">🚚 RFQ·견적비교</a>
       <a data-v="history">📜 히스토리 검색</a>
       <a data-v="contacts">👥 연락처·선사</a>
-      <a data-v="partners">🌏 해외파트너</a>
+      <a data-v="partners">🌏 파트너</a>
       <a data-v="rates">💱 요율</a>
       <a data-v="ports">🌐 포트코드</a>
       <a data-v="archive">🗄 아카이브</a>
@@ -218,7 +218,6 @@ tr.stale td{background:rgba(180,83,9,.08)}
         <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
         <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
         <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
-        <a onclick="openPartners()" style="cursor:pointer">🤝 Partners</a>
       </div>
     </div>
     <div class="conn"><span id="dot" class="dot"></span><span id="connTxt">연결 확인 중…</span></div>
@@ -1218,7 +1217,7 @@ VIEWS.contacts=async function(){
   }catch(e){ $('#conCard').innerHTML=`<div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
 };
 window.setConF=function(k,v){ conF[k]=v; if(k==='major')conF.sub=''; conRender(); };
-window.openPartners=function(){ conF.major='협력사'; conF.sub='XLP'; go('contacts'); };
+window.openPartners=function(){ PDIR.mode='mine'; go('partners'); };
 window.setDeskF=function(k,v){ deskF[k]=v; conRender(); };
 window.conSort=function(key){ if(conF.sort===key)conF.dir*=-1; else{conF.sort=key;conF.dir=1;} conRender(); };
 window.deskSort=function(key){ if(deskF.sort===key)deskF.dir*=-1; else{deskF.sort=key;deskF.dir=1;} conRender(); };
@@ -1575,21 +1574,46 @@ const PDIR_MAP={PARTNER_CD:'partner_cd',PARTNER_NM:'name',BIZ_TYPE:'biz_type',TA
 const PDIR_INT=['contact_cnt','visits','likes'];
 const PDIR_REGIONS=['','유럽','동북아','북미','중동·북아프리카','서남아','중남미','동남아','아프리카','CIS','오세아니아','미분류'];
 const PDIR_TR={'동북아':'아시아','동남아':'아시아','서남아':'인도','유럽':'구주','중동·북아프리카':'중동','북미':'미주','중남미':'중남미','오세아니아':'호주','CIS':'구주','아프리카':'아프리카'};
-let PDIR={q:'',region:'',rows:[]};
+let PDIR={q:'',region:'',rows:[],mode:'mine',msub:''}; let PMINE=[];
 VIEWS.partners=async function(){
-  $('#main').innerHTML=`<h2>🌏 해외파트너 디렉토리 <span class="pill" id="pdirCount">…</span></h2>
-   <div class="sub">포워더케이알 기준 수집 · 업체명·국가·이메일 검색 → 필요 시 [＋연락처] 승격. RFQ 추천은 큐레이션(선사데스크·XLP·Pick)만 사용.</div>
-   <div class="card"><div class="row">
+  $('#main').innerHTML=`<h2>🌏 파트너 <span class="pill" id="pdirCount"></span></h2>
+   <div class="sub">내 파트너(연락처 · RFQ 추천 연동) + 포워더케이알 디렉토리(검색·승격)를 한 곳에서 운영</div>
+   <div class="seg" style="max-width:400px;margin-bottom:12px">
+     <button class="segb${PDIR.mode!=='dir'?' on':''}" onclick="PDIR.mode='mine';VIEWS.partners()">👥 내 파트너</button>
+     <button class="segb${PDIR.mode==='dir'?' on':''}" onclick="PDIR.mode='dir';VIEWS.partners()">🌏 디렉토리(포워더케이알)</button>
+   </div>
+   <div id="pbody"></div>`;
+  if(PDIR.mode==='dir') renderPdir(); else renderPmine();
+};
+window.renderPmine=async function(){
+  const el=document.getElementById('pbody'); if(!el)return;
+  if(!PMINE.length){ try{ PMINE=await q('contacts',b=>b.eq('major_category','협력사').order('company_name').limit(3000)); }catch(e){} }
+  const subCount=s=>PMINE.filter(c=>(c.sub_category||'(미분류)')===s).length;
+  const subs=[...new Set(PMINE.map(c=>c.sub_category||'(미분류)'))].sort((a,b)=>subCount(b)-subCount(a));
+  const kw=(document.getElementById('pmq')?.value||'').trim().toLowerCase();
+  let rows=PMINE.filter(c=>!PDIR.msub||(c.sub_category||'(미분류)')===PDIR.msub);
+  if(kw) rows=rows.filter(c=>((c.company_name||'')+(c.contact_name||'')+(c.email||'')+(c.country_region||'')+(c.trade_route||'')).toLowerCase().includes(kw));
+  const cnt=document.getElementById('pdirCount'); if(cnt)cnt.textContent=PMINE.length+'개사';
+  el.innerHTML=`<div class="card"><div class="row"><input id="pmq" value="${esc(kw)}" placeholder="업체·담당·이메일·국가 검색" style="flex:1;min-width:200px" oninput="renderPmine()"><button class="btn primary" onclick="newContactBlank()">＋ 파트너 추가</button></div>
+     <div class="row" style="margin-top:8px;flex-wrap:wrap">${['',...subs].map(s=>`<button class="pchip${(PDIR.msub||'')===(s==='(미분류)'?'(미분류)':s)?' on':''}" data-s="${esc(s)}" onclick="PDIR.msub=this.dataset.s;renderPmine()">${s===''?'전체 '+PMINE.length:esc(s)+' '+subCount(s)}</button>`).join('')}</div>
+   </div>
+   <div class="card"><div class="d">${rows.length}건${PDIR.msub?' · 중분류: '+esc(PDIR.msub):''}</div><div style="overflow:auto"><table><thead><tr><th>업체</th><th>중분류</th><th>담당</th><th>국가/권역</th><th>이메일</th><th></th></tr></thead><tbody>
+     ${rows.map(c=>`<tr><td><b>${esc(c.company_name||'')}</b></td><td><span class="pill">${esc(c.sub_category||'')}</span></td><td>${esc(c.contact_name||'')}</td><td>${esc(c.country_region||'')}${c.trade_route?` · <span style="color:var(--accent)">${esc(c.trade_route)}</span>`:''}</td><td style="color:var(--mut)">${esc(c.email||'')}</td><td style="white-space:nowrap"><button class="btn sm" onclick="editContact('${c.id}')">수정</button></td></tr>`).join('')||'<tr><td colspan=6 class="d">결과 없음</td></tr>'}
+   </tbody></table></div></div>`;
+};
+function renderPdir(){
+  const el=document.getElementById('pbody'); if(!el)return;
+  el.innerHTML=`<div class="card"><div class="row">
      <input id="pdq" value="${esc(PDIR.q)}" placeholder="업체명·국가·이메일 검색" style="flex:1;min-width:200px" oninput="pdirDeb()"><button class="btn" onclick="pdirSearch()">검색</button>
      <span class="d" style="margin:0 0 0 6px">권역</span>${PDIR_REGIONS.map(r=>`<button class="pchip${PDIR.region===r?' on':''}" onclick="PDIR.region='${r}';pdirSearch()">${r===''?'전체':r}</button>`).join('')}
-   </div></div>
+   </div><div class="d" style="margin-top:6px">디렉토리는 참고·검색용. 필요한 업체만 [＋연락처]로 승격하면 RFQ 추천에 편입됩니다.</div></div>
    <div class="card" style="border-color:var(--accent)"><div class="row" style="align-items:center">
      <div style="flex:1;min-width:200px"><b>📥 master CSV 가져오기</b><div class="d" style="margin:2px 0 0">hamel_partner_master.csv를 올리면 브라우저→Supabase로 바로 적재(partner_cd 기준 갱신, 재업로드 안전).</div></div>
      <input type="file" accept=".csv" onchange="importPartners(this)"><span id="pdirImp" class="d" style="margin:0"></span>
    </div></div>
    <div id="pdirOut"><div class="empty">검색어/권역을 선택하거나 그냥 검색을 누르세요.</div></div>`;
   pdirSearch();
-};
+}
 let _pdt=null; window.pdirDeb=function(){ clearTimeout(_pdt); _pdt=setTimeout(pdirSearch,300); };
 window.pdirSearch=async function(){
   const kw=($('#pdq')?.value||'').trim(); PDIR.q=kw;
