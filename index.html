@@ -158,6 +158,13 @@ table.kvt td{font-size:13px;border:1px solid var(--line);padding:7px 9px;vertica
 .ld-dim h5{margin:0 0 8px;font-size:11.5px;font-weight:750;color:var(--loss);display:flex;align-items:center;gap:6px}
 .ld-dim.ok h5{color:var(--win)}.ld-dim.soft h5{color:var(--txt)}
 @media(max-width:720px){.ld-two{grid-template-columns:1fr}}
+.sopbox{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:6px 12px}
+.sopbox summary{cursor:pointer;font-size:12.5px;font-weight:750;padding:5px 0;color:var(--txt)}
+.sopgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+@media(max-width:760px){.sopgrid{grid-template-columns:1fr 1fr}}
+.sopcol{border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px 9px}
+.soph{font-size:11.5px;font-weight:750;color:var(--accent);margin-bottom:5px;border-bottom:1px solid var(--line);padding-bottom:3px}
+.sopi{font-size:11px;color:var(--txt);padding:2px 0;line-height:1.35}
 .saverow{display:flex;gap:12px;align-items:center;margin-top:16px;border-top:1px solid var(--line);padding-top:14px;flex-wrap:wrap}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.board{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:960px){.intakeGrid{grid-template-columns:1fr}.mailcard{position:static}.mailcard textarea{min-height:150px}}
@@ -706,7 +713,7 @@ const FMETA={
   ship_kind:['운송구분','seg',['해상','항공','벌크','콘솔','내륙운송','특송']],
   channel:['거래구분','seg',CH], owner:['HML 담당자','select',STAFF],
   shipper:['화주','shipper'], shipper_contact:['화주 담당자(이름)','text'], stage:['단계','select',STAGES],
-  cargo_type:['Trans','seg',['FCL','LCL','BB','RORO','AIR']],
+  cargo_type:['Trans','seg',['FCL','LCL','AIR','BREAKBULK','RORO','BULK']],
   direction:['방향','seg',['EXPORT','IMPORT']], incoterms:['인코텀즈','select',['','EXW','FCA','FOB','CFR','CIF','CPT','CIP','DAP','DPU','DDU','DDP']],
   pickup_addr:['Pick-up 주소 (집화지·공장)','text'], delivery_addr:['Delivery 주소 (도착지·창고)','text'],
   origin_port:['POL','port'], dest_port:['POD','port'],
@@ -823,8 +830,35 @@ function cntrMatrixHTML(){
 }
 function cntSummary(r){ return Object.keys(CNTR_LABEL).filter(k=>r[k]).map(k=>CNTR_LABEL[k]+'×'+r[k]).join(', '); }
 /* ── 적재 상세 (신규 레이아웃) ── */
-function isFCLType(){ return JOBW.cargo_type==='FCL'||JOBW.cargo_type==='RORO'; }
+function isFCLType(){ return JOBW.cargo_type==='FCL'; }
+function cargoMode(){ const t=JOBW.cargo_type; if(t==='BULK')return 'BULK'; if(t==='FCL')return 'FCL'; return 'PIECE'; } // LCL/AIR/BREAKBULK/RORO/BB
 function anySpecial(){ JOBW.spec=JOBW.spec||{}; const c=SPEC_SIZE.some(k=>JOBW.spec[k]); const otfr=(+JOBW.cntr_20ot||0)+(+JOBW.cntr_40ot||0)+(+JOBW.cntr_20fr||0)+(+JOBW.cntr_40fr||0); return c||otfr>0; }
+function ldVolumeHTML(){
+  return `<div class="full"><div class="cap">📐 Volume — Breakbulk/RORO/Bulk/콘솔/항공 기준</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 84px;gap:8px">
+     <div class="fld"><label>Package (수량)</label><input placeholder="예: 45 PKG" value="${esc(JOBW.vol_pkg||'')}" oninput="JOBW.vol_pkg=this.value"></div>
+     <div class="fld"><label>Weight (Ton)</label><input inputmode="decimal" placeholder="예: 5,000" value="${esc(JOBW.vol_ton||'')}" oninput="JOBW.vol_ton=this.value"></div>
+     <div class="fld"><label>CBM</label><input inputmode="decimal" placeholder="예: 320" value="${esc(JOBW.vol_cbm||'')}" oninput="JOBW.vol_cbm=this.value"></div>
+     <div class="fld"><label>RT/FT</label><input placeholder="RT/FT" value="${esc(JOBW.vol_unit||'')}" oninput="JOBW.vol_unit=this.value"></div>
+   </div></div>`;
+}
+function ldPackingHTML(){
+  return `<div class="full"><div class="cap">📎 패킹리스트 (붙여넣기 · 표/텍스트)</div>
+   <textarea placeholder="패킹리스트를 붙여넣으세요 — 품목·치수·수량·중량 (표 그대로 붙여도 됨)" style="min-height:60px" oninput="JOBW.packing_list=this.value">${esc(JOBW.packing_list||'')}</textarea></div>`;
+}
+const BULK_SOP=[
+  ["1. Booking",["화물 정보 확인 (Size/Weight/Pack)","Heavy Cargo·장축화물 여부","선박 스케줄·Laycan 확인","선주/Broker 운임·조건 협의","Fixture Note(FN) 작성·공유"]],
+  ["2. 선적 준비",["선적 방식(직상차/그라운딩)","터미널·선사 작업 가능 여부","내륙운송 일정 조율","수출신고·선적서류 준비","Survey·하역업체 Arrange","화물 반입 일정 확인"]],
+  ["3. 직상차 확인",["Heavy(40T↑)·장축(15m↑)","직상차·선박 작업시간 확인","터미널·하역사·운송사 사전공유","그라운딩 화물과 구분","지연/변경 즉시 공유"]],
+  ["4. Loading",["선박 ETA·접안 일정","화물 반입·Loading 진행","현장 작업 이상 여부","Mate's Receipt 확인"]],
+  ["5. Documentation",["SI 제출","Draft B/L 확인","선적완료·Sailing 안내","B/L 발행"]],
+  ["6. Billing",["협력업체 비용 확인","화주 Invoice 발행","정산·File Closing"]],
+];
+function sopPanelHTML(){
+  return `<div class="full"><details class="sopbox"><summary>📋 BULK / 중량물 SOP — 단계 확인용 (팀 공유)</summary>
+   <div class="sopgrid">${BULK_SOP.map(s=>`<div class="sopcol"><div class="soph">${esc(s[0])}</div>${s[1].map(it=>`<div class="sopi">☐ ${esc(it)}</div>`).join('')}</div>`).join('')}</div>
+  </details></div>`;
+}
 function ldNeedDim(){ return !isFCLType()||anySpecial(); }
 function ldCommodityHTML(){
   return `<div class="full ld-cm">
@@ -874,12 +908,28 @@ function renderJobForm(){
   const cx='display:inline-flex;align-items:center;gap:6px;color:var(--txt);cursor:pointer;font-size:13px;font-weight:500';
   const sec=t=>`<div class="fsec">${t}</div>`;
   JOBW.spec=JOBW.spec||{};
-  const isFCL=isFCLType();
-  const ldLeft=`<div class="ld-sub"><h4>🧱 컨테이너 수량 · 중량</h4>
-      ${isFCL?ldCntrGridHTML():'<div class="ld-note" style="margin:0 0 2px">LCL/항공/벌크는 컨테이너 없음 — 오른쪽 특수화물 체크 후 아래 치수표에 낱개 입력</div>'}
-      ${ldDgHTML()}
-      <div class="ld-note ld-grow">표준 DRY/REEFER는 수량·대당중량만 · OT/FR은 아래 치수 필수 · DG는 위험물 여부</div></div>`;
-  const ldRight=`<div class="ld-sub"><h4>⚠️ 특수화물 · 벌크 <span class="d" style="margin:0;font-size:10px;font-weight:600">해당 시 체크</span></h4>${ldSpecPanelHTML()}</div>`;
+  const cmode=cargoMode();
+  const dimTable=`<div class="crowhead"><span>L(cm)</span><span>W(cm)</span><span>H(cm)</span><span>수량</span><span>중량(kg)</span><span style="text-align:right">CBM</span><span></span></div>
+      <div id="cargoRows">${cargoRowsHTML()}</div>
+      <div class="row" style="justify-content:space-between;margin-top:6px"><button type="button" class="btn sm" onclick="cgAdd()">＋ 화물 추가</button><div id="cargoTotal" class="d" style="margin:0;font-weight:600">${cargoTotalText()}</div></div>`;
+  let cargoSection;
+  if(cmode==='BULK'){
+    cargoSection=`${ldCommodityHTML()}
+      ${ldVolumeHTML()}
+      ${ldPackingHTML()}
+      <div class="full ld-note" style="background:rgba(180,83,9,.06);border:1px solid #fed7aa;border-radius:8px;padding:8px 10px">🛢 Bulk 화물 — 대표(메인)카고와 Volume만 입력하면 됩니다. 컨테이너·특수화물 입력 없음 · 세부는 비고/원문과 SOP로 관리.</div>`;
+  } else if(cmode==='PIECE'){
+    const ldRight=`<div class="ld-sub"><h4>⚠️ 특수화물 <span class="d" style="margin:0;font-size:10px;font-weight:600">해당 시 체크</span></h4>${ldSpecPanelHTML()}</div>`;
+    cargoSection=`${ldCommodityHTML()}
+      ${ldVolumeHTML()}
+      <div class="full ld-two"><div class="ld-sub"><h4>📐 메인카고 Dimension (직접 입력)</h4>${dimTable}<div class="ld-note ld-grow">Breakbulk/RORO는 텀이 달라 Volume(Package/Ton/CBM)로 관리 · 메인카고 치수 직접 입력</div></div>${ldRight}</div>
+      ${ldPackingHTML()}`;
+  } else {
+    const ldLeft=`<div class="ld-sub"><h4>🧱 컨테이너 수량 · 중량</h4>${ldCntrGridHTML()}${ldDgHTML()}<div class="ld-note ld-grow">표준 DRY/REEFER는 수량·대당중량만 · OT/FR은 아래 치수 필수 · DG는 위험물 여부</div></div>`;
+    const ldRight=`<div class="ld-sub"><h4>⚠️ 특수화물 · 벌크 <span class="d" style="margin:0;font-size:10px;font-weight:600">해당 시 체크</span></h4>${ldSpecPanelHTML()}</div>`;
+    cargoSection=`${ldCommodityHTML()}<div class="full ld-two">${ldLeft}${ldRight}</div>${ldDimHTML()}`;
+  }
+  const showSOP=['BREAKBULK','RORO','BULK'].includes(JOBW.cargo_type)||JOBW.ship_kind==='벌크';
   const autoDoor=['EXW','FCA','DAP','DPU','DDU','DDP'].includes(JOBW.incoterms||'')||['특송','내륙운송','항공','콘솔'].includes(JOBW.ship_kind)||['LCL','AIR'].includes(JOBW.cargo_type);
   const doorOn=JOBW._door===undefined?autoDoor:JOBW._door;
   const doorbar=`<label class="full doorbar"><input type="checkbox" ${doorOn?'checked':''} onchange="JOBW._door=this.checked;renderJobForm()"> 🚪 DOOR Pick-up / Delivery 주소 입력 ${autoDoor?'<span class="d" style="display:inline;margin:0">· DOOR 배송 권장 조건</span>':''}</label>`;
@@ -903,9 +953,8 @@ function renderJobForm(){
     ${doorbar}
     ${doorbox}
     ${sec('📦 적재 상세')}
-    ${ldCommodityHTML()}
-    <div class="full ld-two">${ldLeft}${ldRight}</div>
-    ${ldDimHTML()}
+    ${cargoSection}
+    ${showSOP?sopPanelHTML():''}
     ${sec('📝 비고 / 원문')}
     <div class="full"><textarea oninput="JOBW.notes=this.value" style="min-height:56px" placeholder="특이사항·원문 메모">${esc(JOBW.notes||'')}</textarea></div>
     <div class="full" style="background:rgba(37,99,235,.06);border:1px dashed var(--accent);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--mut)">💡 견적 단가(타입/사이즈별 Sell·Buy)는 저장 후 <b>파이프라인 → Job 상세</b>에서 라인으로 입력·업데이트합니다.</div>
@@ -918,8 +967,14 @@ VIEWS.intake=async function(){
    <div class="intakeGrid">
      <div class="card mailcard">
        <h3>✉ 이메일 · 메시지</h3>
-       <div class="d">붙여넣고 [읽어채우기]를 누르면 오른쪽 폼이 자동으로 채워집니다. 없으면 오른쪽에서 바로 입력하세요.</div>
-       <textarea id="emailRaw" placeholder="이메일/메시지 전체를 여기에 붙여넣기…"></textarea>
+       <div class="d">이메일 본문을 <b>복사→붙여넣기</b>(표 보존) · <b>표 스크린샷 붙여넣기/업로드</b> · <b>.eml 파일</b> — AI가 읽어 채웁니다.</div>
+       <textarea id="emailRaw" placeholder="이메일/메시지/표를 붙여넣기… (Ctrl+V로 표·이미지도 가능)" onpaste="onIntakePaste(event)" oninput="intakeText(this.value)"></textarea>
+       <div id="inThumb" style="display:none;margin-top:8px"></div>
+       <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:8px">
+         <label class="btn sm" style="cursor:pointer">🖼 이미지<input type="file" accept="image/*" style="display:none" onchange="onImagePick(this)"></label>
+         <label class="btn sm" style="cursor:pointer">📎 .eml<input type="file" accept=".eml,message/rfc822" style="display:none" onchange="onEmlPick(this)"></label>
+         <span id="inMode" class="d" style="margin:0"></span>
+       </div>
        <div class="row" style="margin-top:10px"><button id="btnFillJob" class="btn primary" onclick="fillJob()">🤖 AI 읽어채우기</button><button class="btn" onclick="exJob()">예시</button><button class="btn" onclick="resetJob()">비우기</button></div>
        <div id="fillStatus" class="d" style="margin-top:6px;display:none"></div>
      </div>
@@ -946,19 +1001,41 @@ async function loadJobBoard(){
   }catch(e){ el.innerHTML=`<div class="empty">${esc(e.message||e)}</div>`; }
 }
 /* ── Edge Function 호출 (서버에서 Claude 파싱, 키는 서버 시크릿) ── */
-async function callParse(task,text,context){
+async function callParse(task,payload,context){
+  const p=(typeof payload==='string')?{text:payload}:(payload||{});
   const res=await fetch(`${SUPA_URL}/functions/v1/parse-intake`,{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${SUPA_KEY}`,'apikey':SUPA_KEY},
-    body:JSON.stringify({task,text,context:context||null})
+    body:JSON.stringify({task,...p,context:context||null})
   });
   let j=null; try{ j=await res.json(); }catch(e){}
   return j||{ok:false,error:'NO_JSON',status:res.status};
 }
+/* ── 인테이크 입력 상태(텍스트/HTML표/이미지) ── */
+let RAWIN={text:'',html:'',image:null};
+window.intakeText=function(v){ RAWIN.text=v; if(!v)RAWIN.html=''; };
+function setInMode(msg){ const el=$('#inMode'); if(el) el.innerHTML=msg?('· '+msg):''; }
+function showThumb(du){ const el=$('#inThumb'); if(!el)return; if(du){ el.style.display='block'; el.innerHTML=`<img src="${du}" style="max-height:110px;border:1px solid var(--line);border-radius:8px;vertical-align:middle"> <button class="btn sm" onclick="clearImage()">이미지 제거</button>`; } else { el.style.display='none'; el.innerHTML=''; } }
+window.clearImage=function(){ RAWIN.image=null; showThumb(null); setInMode(''); };
+function readImageFile(file){ if(!file)return; const r=new FileReader(); r.onload=()=>{ const m=/^data:([^;]+);base64,(.*)$/.exec(r.result||''); if(m){ RAWIN.image={media_type:m[1],data:m[2],dataUrl:r.result}; RAWIN.html=''; showThumb(r.result); setInMode('🖼 이미지 1장 — AI 비전으로 읽음'); } }; r.readAsDataURL(file); }
+window.onImagePick=function(input){ const f=input.files&&input.files[0]; if(f)readImageFile(f); input.value=''; };
+window.onIntakePaste=function(e){ try{ const cd=e.clipboardData; if(!cd)return;
+  const items=[...(cd.items||[])]; const img=items.find(it=>it.type&&it.type.indexOf('image/')===0);
+  if(img){ const f=img.getAsFile(); if(f){ e.preventDefault(); readImageFile(f); return; } }
+  const html=cd.getData&&cd.getData('text/html');
+  if(html&&/<t[dhr]\b|<table/i.test(html)){ RAWIN.html=html; setInMode('🔤 표 포함 HTML 감지 — 표까지 읽음'); } else { RAWIN.html=''; }
+  setTimeout(()=>{ RAWIN.text=($('#emailRaw')?.value||'').trim(); },0);
+}catch(err){} };
+window.onEmlPick=async function(input){ const f=input.files&&input.files[0]; if(!f)return;
+  try{ const txt=await f.text(); RAWIN.text=txt; RAWIN.html=''; RAWIN.image=null; showThumb(null);
+    const ta=$('#emailRaw'); if(ta) ta.value=txt.slice(0,4000); setInMode('📎 .eml 로드됨 ('+Math.round(txt.length/1024)+'KB)'); }
+  catch(e){ toast('eml 읽기 실패',true); } input.value=''; };
 /* ── LLM 추출 결과(data)를 JOBW로 병합 ── */
 function applyIntake(d,rawText){
   const keys=['ship_kind','channel','direction','cargo_type','incoterms','shipper','shipper_contact','origin_port','dest_port','pickup_addr','delivery_addr','deadline','commodity','hs_code','weight','special_note','reefer_temp'];
   keys.forEach(k=>{ if(d[k]!=null&&d[k]!=='') JOBW[k]=d[k]; });
+  if(JOBW.cargo_type==='BB') JOBW.cargo_type='BREAKBULK';
+  if(JOBW.ship_kind==='벌크'&&(!d.cargo_type)) JOBW.cargo_type='BREAKBULK';
   if(d.volume_cbm!=null&&d.volume_cbm!=='') JOBW.volume_cbm=d.volume_cbm;
   if(d.dg===true) JOBW.dg=true;
   if(d.dg_note){ JOBW.dg=true; JOBW.dg_un=d.dg_note; }
@@ -977,43 +1054,45 @@ function applyIntake(d,rawText){
   JOBW.notes=(parts.length?parts.join('\n')+'\n':'')+'[원문]\n'+rawText.slice(0,600);
 }
 window.fillJob=async function(){
-  const t=$('#emailRaw').value.trim(); if(!t){toast('이메일을 붙여넣으세요',true);return;}
+  RAWIN.text=($('#emailRaw')?.value||'').trim();
+  const hasImg=!!(RAWIN.image&&RAWIN.image.data), hasHtml=!!RAWIN.html, hasText=!!RAWIN.text;
+  if(!hasImg&&!hasHtml&&!hasText){ toast('이메일/표/이미지를 넣으세요',true); return; }
   const btn=$('#btnFillJob'), st=$('#fillStatus');
-  const setSt=(html,show)=>{ if(st){ st.innerHTML=html; st.style.display=show?'block':'none'; } };
+  const setSt=(h,show)=>{ if(st){ st.innerHTML=h; st.style.display=show?'block':'none'; } };
   if(btn){ btn.disabled=true; btn.textContent='🤖 AI 분석 중…'; }
-  setSt('<span style="color:var(--accent)">Claude가 메일을 읽고 정형화하는 중… (2~4초)</span>',true);
-  let usedAI=false;
+  const kind=hasImg?'이미지':hasHtml?'HTML표':'텍스트';
+  setSt(`<span style="color:var(--accent)">Claude가 ${kind}을 읽는 중… (2~5초)</span>`,true);
+  const payload=hasImg?{image:{media_type:RAWIN.image.media_type,data:RAWIN.image.data}}:hasHtml?{html:RAWIN.html}:{text:RAWIN.text};
+  const rawForNotes=hasImg?'[이미지 입력]':hasHtml?RAWIN.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():RAWIN.text;
   try{
-    const r=await callParse('intake',t);
+    const r=await callParse('intake',payload);
     if(r&&r.ok&&r.data){
-      applyIntake(r.data,t); usedAI=true;
+      applyIntake(r.data,rawForNotes);
       const d=r.data;
       const conf=d.confidence!=null?` · 신뢰도 <b>${Math.round(d.confidence*100)}%</b>`:'';
       const miss=(Array.isArray(d.missing)&&d.missing.length)?` · <span style="color:var(--loss)">확인필요: ${esc(d.missing.join(', '))}</span>`:'';
-      setSt(`✅ AI 정형화 완료 <span class="badge auto">${esc(r.model||'')}</span>${conf}${miss}`,true);
+      setSt(`✅ AI 정형화 완료 <span class="badge auto">${esc(r.model||'')}</span> · 입력:${kind}${conf}${miss}`,true);
       toast('🤖 AI 정형화 완료 — 빈칸·특수화물은 검수하세요');
-    }else{
-      throw new Error((r&&(r.message||r.error))||'AI 응답 없음');
-    }
+    }else{ throw new Error((r&&(r.message||r.error))||'AI 응답 없음'); }
   }catch(e){
-    Object.assign(JOBW,fillFromEmail(t));
     const isKey=/NO_KEY/.test(String(e&&e.message||e));
-    setSt(`⚠️ 규칙(정규식) 모드로 채웠습니다 · ${isKey?'API 키 미설정':'AI 호출 실패'} — 필드를 꼭 검수하세요`,true);
-    toast(isKey?'API 키 미설정 — 정규식 모드로 자동채움':'AI 실패 — 정규식 모드로 자동채움',true);
+    if(hasText){ Object.assign(JOBW,fillFromEmail(RAWIN.text)); setSt(`⚠️ 규칙(정규식) 모드로 채웠습니다 · ${isKey?'API 키 미설정':'AI 호출 실패'} — 필드를 검수하세요`,true); toast(isKey?'API 키 미설정 — 정규식 모드':'AI 실패 — 정규식 모드',true); }
+    else{ setSt(`❌ ${isKey?'API 키 미설정':'AI 호출 실패'} — ${kind}은 재시도가 필요합니다 (텍스트로도 시도 가능)`,true); toast('AI 실패 — 재시도 필요',true); }
   }finally{
     renderJobForm();
     if(btn){ btn.disabled=false; btn.textContent='🤖 AI 읽어채우기'; }
   }
 };
-window.exJob=function(){ $('#emailRaw').value=`안녕하세요. 부산에서 함부르크로 40HQ 2대 + 40FR 1대(초과중량 OOG, 발전기) 수출 견적 부탁드립니다.\n화주: 효성중공업, FOB, 카고레디 9/5. 품목: Generator.`; };
-window.resetJob=function(){ JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT',cargo_type:'FCL',spec:{},cargo_items:[{q:'1'}]}; const e=$('#emailRaw'); if(e)e.value=''; renderJobForm(); };
+window.exJob=function(){ $('#emailRaw').value=`안녕하세요. 부산에서 함부르크로 40HQ 2대 + 40FR 1대(초과중량 OOG, 발전기) 수출 견적 부탁드립니다.\n화주: 효성중공업, FOB, 카고레디 9/5. 품목: Generator.`; RAWIN.html=''; RAWIN.image=null; RAWIN.text=$('#emailRaw').value; showThumb(null); setInMode(''); };
+window.resetJob=function(){ JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT',cargo_type:'FCL',spec:{},cargo_items:[{q:'1'}]}; RAWIN={text:'',html:'',image:null}; const e=$('#emailRaw'); if(e)e.value=''; showThumb(null); setInMode(''); renderJobForm(); };
 window.saveJob=async function(){
   const o=JOBW; for(const r of JOB_REQ){ if(!o[r]){toast(`'${r==='channel'?'채널':r==='shipper'?'화주':'담당자'}'은(는) 필수입니다`,true);return;} }
   const ci=v=>{const n=num(v);return n==null?null:Math.round(n);};
   const row={ship_kind:o.ship_kind,channel:o.channel,shipper:o.shipper,shipper_contact:o.shipper_contact,owner:o.owner,assigned_to:o.owner,stage:o.stage||'접수',
     origin_port:o.origin_port,dest_port:o.dest_port,cargo_type:o.cargo_type,mode:(o.ship_kind==='내륙운송'?'LAND':['항공','특송'].includes(o.ship_kind)?'AIR':'SEA'),direction:o.direction,incoterms:o.incoterms,
     pickup_addr:o.pickup_addr,delivery_addr:o.delivery_addr,
-    deadline:o.deadline,commodity:o.commodity,weight:o.weight,volume_cbm:num(o.volume_cbm),dimensions:cargoDims(o.cargo_items),
+    deadline:o.deadline,commodity:o.commodity,weight:o.vol_ton||o.weight,volume_cbm:num(o.vol_cbm)!=null?num(o.vol_cbm):num(o.volume_cbm),dimensions:cargoDims(o.cargo_items),
+    vol_pkg:o.vol_pkg,vol_ton:o.vol_ton,vol_cbm:o.vol_cbm,vol_unit:o.vol_unit,packing_list:o.packing_list,
     cargo_items:(o.cargo_items||[]).filter(it=>it&&(it.l||it.w||it.h||it.kg||(it.q&&(it.l||it.w||it.h)))),
     cntr_20dv:ci(o.cntr_20dv),cntr_40hq:ci(o.cntr_40hq),cntr_20fr:ci(o.cntr_20fr),cntr_40fr:ci(o.cntr_40fr),cntr_20rf:ci(o.cntr_20rf),cntr_40rf:ci(o.cntr_40rf),cntr_20ot:ci(o.cntr_20ot),cntr_40ot:ci(o.cntr_40ot),
     cntr_wt_dry:num(o.cntr_wt_dry),cntr_wt_rf:num(o.cntr_wt_rf),cntr_wt_ot:num(o.cntr_wt_ot),cntr_wt_fr:num(o.cntr_wt_fr),
