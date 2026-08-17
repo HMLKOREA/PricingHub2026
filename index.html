@@ -600,30 +600,57 @@ window.vmCopy=async function(){ const txt=$('#vmSu').value+'\n\n'+$('#vmBd').val
 window.setStage=async function(id){ try{ const stage=$('#stg').value;
   const {error}=await SB.from('quote_requests').update({stage}).eq('id',id); if(error)throw error; toast('단계 저장됨'); openReq(id);
 }catch(e){ toast(e.message||e,true);} };
-window.openBooking=function(id){
+let CARRIERS=null;
+async function loadCarriers(){
+  if(CARRIERS) return CARRIERS;
+  try{ const d=await q('carrier_desk',b=>b.limit(1000)); const m={};
+    d.forEach(x=>{ const c=(x.carrier||'').trim(); if(!c)return; (m[c]=m[c]||new Set()).add((x.region||'').toUpperCase()); });
+    CARRIERS=Object.keys(m).map(c=>({carrier:c,regions:[...m[c]].filter(Boolean)}));
+  }catch(e){ CARRIERS=[]; }
+  return CARRIERS;
+}
+function isoWk(ds){ if(!ds)return null; const dt=new Date(ds+'T00:00:00'); if(isNaN(dt))return null;
+  const t=new Date(dt); t.setDate(t.getDate()+3-((t.getDay()+6)%7)); const w1=new Date(t.getFullYear(),0,4);
+  return 1+Math.round(((t-w1)/86400000-3+((w1.getDay()+6)%7))/7); }
+window.openBooking=async function(id){
   const r=window.__req; if(!r||r.id!==id){ toast('Job 상세에서 실행하세요',true); return; }
-  const s=(QLINES||[]).reduce((a,l)=>a+((+l.sell||0)*(+l.qty||0)),0), b=(QLINES||[]).reduce((a,l)=>a+((+l.buy||0)*(+l.qty||0)),0);
+  const kToKRW=sel=>Math.round((QLINES||[]).reduce((a,l)=>a+fxToKRW((+l[sel]||0)*(+l.qty||0),l.currency),0));
+  const s=(r.sell_krw!=null&&r.sell_krw!=='')?Math.round(+r.sell_krw):kToKRW('sell');
+  const b=(r.buy_krw!=null&&r.buy_krw!=='')?Math.round(+r.buy_krw):kToKRW('buy');
+  const lane=vmTargetLane(r); const code0=(lane.codes[0]||'').toUpperCase();
+  const inReg=c=>!!code0&&c.regions.some(rg=>rg&&(rg===code0||rg.includes(code0)||code0.includes(rg.replace(/\(.*\)/,''))));
+  const cars=await loadCarriers();
+  const ordered=[], seen=new Set(); const push=c=>{ c=(c||'').trim(); if(c&&!seen.has(c)){ seen.add(c); ordered.push(c); } };
+  if(r.selected_carrier) push(r.selected_carrier);
+  cars.filter(inReg).map(c=>c.carrier).sort().forEach(push);
+  cars.map(c=>c.carrier).sort().forEach(push);
+  const opt=c=>{ const star=cars.some(x=>x.carrier===c&&inReg(x))?' ⭐':''; return `<option value="${esc(c)}"${c===r.selected_carrier?' selected':''}>${esc(c)}${star}</option>`; };
+  const carSel=`<select id="bk_car" onchange="bkCarPick(this)">${ordered.map(opt).join('')}<option value="__custom">＋ 직접입력…</option></select>`;
   showModal(`<h3>✅ 수주 · 부킹 전환</h3><div class="d">확정 시 단계=수주로 바뀌고 <b>부킹 원장(실적)</b>에 한 행이 생성됩니다. (${esc(r.job_no||'')} · ${esc(r.shipper||'')})</div>
     <div class="formgrid" style="margin-top:12px">
       <div class="fld"><label>BKG#</label><input id="bk_no" placeholder="선사 부킹번호"></div>
-      <div class="fld"><label>부킹일</label><input id="bk_date" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="fld"><label>주차(wk)</label><input id="bk_wk" inputmode="numeric"></div>
+      <div class="fld"><label>부킹일</label><input id="bk_date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fld"><label>기준일 (선적 스케줄)</label><div class="row" style="gap:6px">
+        <select id="bk_dkind" style="flex:0 0 118px"><option value="CRD">Cargo Ready</option><option value="ETD">Vessel ETD</option></select>
+        <input id="bk_date2" type="date" style="flex:1"></div></div>
       <div class="fld"><label>영업담당</label><input id="bk_sales" value="${esc(r.owner||r.assigned_to||'')}"></div>
       <div class="fld"><label>매출(KRW)</label><input id="bk_rev" inputmode="numeric" value="${s||''}"></div>
       <div class="fld"><label>원가(KRW)</label><input id="bk_pur" inputmode="numeric" value="${b||''}"></div>
-      <div class="fld"><label>선정 선사</label><input id="bk_car" value="${esc(r.selected_carrier||'')}"></div>
+      <div class="fld"><label>선정 선사 <span class="d" style="margin:0">· ⭐=해당 트레이드${lane.label?' ('+esc(lane.label)+')':''}</span></label>${carSel}</div>
       <div class="fld"><label>비고</label><input id="bk_note"></div>
     </div>
-    <div class="d" style="margin-top:8px">※ 매출/원가는 견적 라인 합계로 채웠습니다. 통화가 USD 등이면 <b>KRW 환산값</b>으로 수정 후 저장하세요.</div>
+    <div class="d" style="margin-top:8px">※ 매출/원가는 견적 라인 <b>KRW 환산 합계</b>로 자동 반영됐습니다. 기준일(Cargo Ready 또는 ETD)을 넣으면 주차(wk)는 자동 계산됩니다.</div>
     <div class="row" style="margin-top:12px"><button class="btn win" onclick="saveBooking('${id}')">수주·부킹 확정</button></div>`);
 };
+window.bkCarPick=function(sel){ if(sel.value==='__custom'){ const w=sel.parentNode; w.innerHTML='<input id="bk_car" placeholder="선사 직접입력">'; const el=document.getElementById('bk_car'); if(el)el.focus(); } };
 window.saveBooking=async function(id){
-  const r=window.__req; const g=x=>($('#'+x).value||'').trim();
+  const r=window.__req; const g=x=>{const e=$('#'+x);return e?(e.value||'').trim():'';};
   const rev=num(g('bk_rev')), pur=num(g('bk_pur'));
-  const brow={wk:num(g('bk_wk')),bkg_no:g('bk_no')||null,bkg_date:g('bk_date')||null,sales:g('bk_sales')||null,shipper:r.shipper,pol:r.origin_port,pod:r.dest_port,trans:r.cargo_type,mode:r.mode,direction:r.direction,cntr_20dv:r.cntr_20dv,cntr_40hq:r.cntr_40hq,cntr_20fr:r.cntr_20fr,cntr_40fr:r.cntr_40fr,revenue:rev,purchase:pur,margin:(rev!=null&&pur!=null)?rev-pur:null,note:g('bk_note')||null,source:'hub'};
+  const rdate=g('bk_date2')||null, dkind=g('bk_dkind')||null, car=g('bk_car')||null;
+  const brow={wk:isoWk(rdate),ready_date:rdate,date_kind:rdate?dkind:null,bkg_no:g('bk_no')||null,bkg_date:g('bk_date')||null,sales:g('bk_sales')||null,shipper:r.shipper,pol:r.origin_port,pod:r.dest_port,trans:r.cargo_type,mode:r.mode,direction:r.direction,cntr_20dv:r.cntr_20dv,cntr_40hq:r.cntr_40hq,cntr_20fr:r.cntr_20fr,cntr_40fr:r.cntr_40fr,revenue:rev,purchase:pur,margin:(rev!=null&&pur!=null)?rev-pur:null,note:g('bk_note')||null,source:'hub'};
   try{
     const {error}=await SB.from('bookings').insert(brow); if(error)throw error;
-    const {error:e2}=await SB.from('quote_requests').update({stage:'수주',bkg_no:g('bk_no')||null,selected_carrier:g('bk_car')||null,won_at:new Date().toISOString()}).eq('id',id); if(e2)throw e2;
+    const {error:e2}=await SB.from('quote_requests').update({stage:'수주',bkg_no:g('bk_no')||null,selected_carrier:car,won_at:new Date().toISOString()}).eq('id',id); if(e2)throw e2;
     toast('수주·부킹 확정 완료'); closeModal(); openReq(id);
   }catch(e){ toast(e.message||e,true); }
 };
