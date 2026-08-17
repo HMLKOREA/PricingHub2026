@@ -675,7 +675,8 @@ function qlineBlock(reqId,cat,title,defCur,types){
   const ls=(QLINES||[]).filter(l=>(l.category||'FREIGHT')===cat);
   const sK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.sell||0)*(+l.qty||0),l.currency),0));
   const bK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.buy||0)*(+l.qty||0),l.currency),0));
-  return `<div class="qlblock"><div class="qlh">${title} <span class="d" style="margin:0;font-weight:500">· 기본 ${defCur}</span></div>
+  const lcBtn=cat==='LOCAL'?`<button class="btn sm" style="margin-left:auto" onclick="openLocalCharge('${reqId}')">📋 선사 로컬차지 불러오기</button>`:'';
+  return `<div class="qlblock"><div class="qlh" style="display:flex;align-items:center">${title} <span class="d" style="margin:0 0 0 6px;font-weight:500">· 기본 ${defCur}</span>${lcBtn}</div>
     <datalist id="qtypes_${cat}">${types.map(t=>`<option value="${t}">`).join('')}</datalist>
     <div style="overflow:auto"><table class="qline"><thead><tr><th>항목</th><th class="num">수량</th><th class="num">Sell</th><th class="num">Buy</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
     <tbody>${ls.map(qlineRow).join('')||''}
@@ -720,6 +721,85 @@ async function syncReqTotals(reqId){
   const ls=QLINES||[]; const s=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.sell||0)*(+l.qty||0),l.currency),0)), b=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.buy||0)*(+l.qty||0),l.currency),0));
   try{ await SB.from('quote_requests').update({sell_krw:s||null,buy_krw:b||null}).eq('id',reqId); if(window.__req){window.__req.sell_krw=s;window.__req.buy_krw=b;} }catch(e){}
 }
+
+/* ===== 선사 로컬차지 불러오기 (직원 정리 기준표) ===== */
+let LCM=null;
+async function loadLCM(){ if(LCM)return LCM; try{ LCM=await q('local_charge_master',b=>b.limit(2000)); }catch(e){ LCM=[]; } return LCM; }
+function lcSuggest(r){ // 40 우선 여부 + 선호 선사
+  const c40=(+((r||{}).cntr_40hq||0))+(+((r||{}).cntr_40fr||0)), c20=(+((r||{}).cntr_20dv||0))+(+((r||{}).cntr_20fr||0));
+  return { size:(c40>=c20?'40':'20'), carrier:(r||{}).selected_carrier||'' };
+}
+window.openLocalCharge=async function(reqId){
+  const r=window.__req||{}; const data=await loadLCM();
+  const cons=data.filter(x=>x.carrier);
+  if(!cons.length){ toast('로컬차지 기준표가 비어있습니다',true); return; }
+  const byLane={}; cons.forEach(x=>{ (byLane[x.lane]=byLane[x.lane]||new Set()).add(x.carrier); });
+  const sug=lcSuggest(r);
+  const optg=Object.keys(byLane).map(ln=>`<optgroup label="${esc(ln)}">${[...byLane[ln]].sort().map(c=>`<option value="${esc(c)}"${c===sug.carrier?' selected':''}>${esc(c)}</option>`).join('')}</optgroup>`).join('');
+  showModal(`<h3>📋 선사 로컬차지 불러오기</h3>
+    <div class="d">직원이 정리한 <b>기준표</b> 기준입니다. 선사·규격을 고르고 필요한 항목만 체크해 로컬차지(KRW)로 담으세요.</div>
+    <div class="row" style="margin:10px 0;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div class="fld" style="min-width:200px"><label>선사</label><select id="lc_car" onchange="lcRender('${reqId}')">${optg}</select></div>
+      <div class="fld" style="min-width:120px"><label>기준 규격</label><select id="lc_size" onchange="lcRender('${reqId}')"><option value="20"${sug.size==='20'?' selected':''}>20'</option><option value="40"${sug.size==='40'?' selected':''}>40'/40'H</option><option value="ALL">전체 보기</option></select></div>
+      <div class="fld" style="min-width:70px"><label>수량(대)</label><input id="lc_qty" inputmode="numeric" value="1" style="width:64px;text-align:right"></div>
+    </div>
+    <div id="lc_list" style="max-height:44vh;overflow:auto"></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between;align-items:center">
+      <span class="d" id="lc_sum" style="margin:0"></span>
+      <button class="btn win" onclick="lcAddSelected('${reqId}')">선택 항목 담기 →</button>
+    </div>`);
+  lcRender(reqId);
+};
+function lcNorm(sz){ return sz==='40'?'40':'20'; }
+function lcMatchSize(spec,size){ if(size==='ALL')return true; if(!spec)return true;
+  const s=spec.replace(/40'?\/?40'?H?/i,'40'); // rough
+  if(/(^|[^0-9])45([^0-9]|$)/.test(spec)) return size==='40'; // 45 group with 40 view
+  const has20=/(^|[^0-9])20([^0-9]|$)/.test(spec), has40=/(^|[^0-9])40([^0-9]|$)/.test(spec);
+  if(!has20&&!has40) return true; // flat/B/L 등 규격없음 → 항상 표시
+  return size==='40'?has40:has20;
+}
+window.lcRender=function(reqId){
+  const car=($('#lc_car')||{}).value, size=($('#lc_size')||{}).value||'20';
+  const rows=(LCM||[]).filter(x=>x.carrier===car);
+  // group by charge_code, keep size-matching (numeric) rows; text rows shown as info
+  const groups={}; rows.forEach(x=>{ if(!lcMatchSize(x.spec,size))return; (groups[x.charge_code]=groups[x.charge_code]||[]).push(x); });
+  const order=['THC','CCC','DOF','WFG','PFS','PSC','PFS+PSC','FSC','SEAL'];
+  const keys=Object.keys(groups).sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  let html='<table class="qline" style="width:100%"><thead><tr><th style="width:34px"></th><th>항목</th><th>규격</th><th class="num">단가(KRW)</th></tr></thead><tbody>';
+  let idx=0;
+  keys.forEach(k=>{ groups[k].forEach(x=>{
+    const isNum=x.amount!=null;
+    const amt=isNum?Math.round(+x.amount).toLocaleString():esc(x.amount_text||'-');
+    const spec=esc(x.spec||(x.charge_code==='SEAL'?'건당':''));
+    const note=x.note?` <span class="d" style="margin:0">(${esc(x.note)})</span>`:'';
+    html+=`<tr><td>${isNum?`<input type="checkbox" class="lc_ck" data-code="${esc(x.charge_code)}" data-spec="${esc(x.spec||'')}" data-amt="${+x.amount}" data-scope="${esc(x.trade_scope||'')}">`:''}</td>
+      <td><b>${esc(x.charge_code)}</b>${note}</td><td>${spec}</td>
+      <td class="num mono"${isNum?'':' style="color:var(--mut2)"'}>${amt}${isNum?'':' (수동)'}</td></tr>`;
+    idx++;
+  });});
+  html+='</tbody></table>';
+  if(!idx) html='<div class="d">해당 선사·규격의 기준표 항목이 없습니다. 규격을 「전체 보기」로 바꿔보세요.</div>';
+  const el=$('#lc_list'); if(el)el.innerHTML=html;
+  // live sum on check
+  (el?el.querySelectorAll('.lc_ck'):[]).forEach&&el.querySelectorAll('.lc_ck').forEach(ck=>ck.addEventListener('change',()=>lcSum()));
+  lcSum();
+};
+function lcSum(){ const qy=num(($('#lc_qty')||{}).value)||1; let s=0,n=0;
+  document.querySelectorAll('.lc_ck:checked').forEach(ck=>{ s+=(+ck.dataset.amt||0)*qy; n++; });
+  const el=$('#lc_sum'); if(el)el.textContent=n?`선택 ${n}개 · 합계 ₩${Math.round(s).toLocaleString()} (수량 ${qy}대 반영)`:'항목을 체크하세요';
+}
+window.lcAddSelected=async function(reqId){
+  const car=($('#lc_car')||{}).value, qy=num(($('#lc_qty')||{}).value)||1;
+  const cks=[...document.querySelectorAll('.lc_ck:checked')];
+  if(!cks.length){ toast('담을 항목을 체크하세요',true); return; }
+  const rowsIns=cks.map(ck=>{ const code=ck.dataset.code, spec=ck.dataset.spec, amt=+ck.dataset.amt||0;
+    const label=code+(spec&&spec!=='flat'?(' '+spec):'');
+    return {quote_request_id:reqId,category:'LOCAL',cntr_type:label,qty:qy,sell:amt,buy:amt,currency:'KRW',note:car}; });
+  try{ const {error}=await SB.from('quote_lines').insert(rowsIns); if(error)throw error;
+    QLINES=await q('quote_lines',b=>b.eq('quote_request_id',reqId).order('created_at')); renderQuoteLines(reqId); syncReqTotals(reqId);
+    closeModal(); toast(`로컬차지 ${rowsIns.length}건 담김 (${car})`);
+  }catch(e){ toast(e.message||e,true); }
+};
 
 /* ================= 인테이크 (AI 추출) ================= */
 const PORTS={'부산':'BUSAN','인천':'INCHEON','광양':'GWANGYANG','평택':'PYEONGTAEK','울산':'ULSAN','마산':'MASAN','청도':'QINGDAO','칭다오':'QINGDAO','상해':'SHANGHAI','상하이':'SHANGHAI','제벨알리':'JEBEL ALI','담맘':'DAMMAM','두바이':'DUBAI','아부다비':'ABUDHABI','소하르':'SOHAR','안트워프':'ANTWERP','로테르담':'ROTTERDAM','함부르크':'HAMBURG','마이애미':'MIAMI','하이퐁':'HAIPHONG','싱가포르':'SINGAPORE'};
