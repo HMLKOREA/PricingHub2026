@@ -194,6 +194,7 @@ tr.stale td{background:rgba(180,83,9,.08)}
       <a data-v="rfq">🚚 RFQ·견적비교</a>
       <a data-v="history">📜 히스토리 검색</a>
       <a data-v="contacts">👥 연락처·선사</a>
+      <a data-v="partners">🌏 해외파트너</a>
       <a data-v="rates">💱 요율</a>
       <a data-v="ports">🌐 포트코드</a>
       <a data-v="archive">🗄 아카이브</a>
@@ -1568,6 +1569,64 @@ window.importCSV=async function(table,input){
     st.textContent=`✅ ${objs.length}건 적재 완료`; toast(`${table}: ${objs.length}건 적재`);
   }catch(e){ st.textContent='❌ '+(e.message||e); toast(e.message||e,true); }
 };
+
+/* ================= 해외파트너 디렉토리 ================= */
+const PDIR_MAP={PARTNER_CD:'partner_cd',PARTNER_NM:'name',BIZ_TYPE:'biz_type',TAGLINE:'tagline',COUNTRY:'country',REGION:'region',REGION_CONF:'region_conf',ADDRESS:'address',TEL:'tel',FAX:'fax',EMAIL:'email',WEBSITE:'website',CONTACT_CNT:'contact_cnt',LISTING_TYPE:'listing_type',VISITS:'visits',LIKES:'likes',SRC:'src',SRC_URL:'src_url',COLLECTED_DT:'collected_dt'};
+const PDIR_INT=['contact_cnt','visits','likes'];
+const PDIR_REGIONS=['','유럽','동북아','북미','중동·북아프리카','서남아','중남미','동남아','아프리카','CIS','오세아니아','미분류'];
+const PDIR_TR={'동북아':'아시아','동남아':'아시아','서남아':'인도','유럽':'구주','중동·북아프리카':'중동','북미':'미주','중남미':'중남미','오세아니아':'호주','CIS':'구주','아프리카':'아프리카'};
+let PDIR={q:'',region:'',rows:[]};
+VIEWS.partners=async function(){
+  $('#main').innerHTML=`<h2>🌏 해외파트너 디렉토리 <span class="pill" id="pdirCount">…</span></h2>
+   <div class="sub">포워더케이알 기준 수집 · 업체명·국가·이메일 검색 → 필요 시 [＋연락처] 승격. RFQ 추천은 큐레이션(선사데스크·XLP·Pick)만 사용.</div>
+   <div class="card"><div class="row">
+     <input id="pdq" value="${esc(PDIR.q)}" placeholder="업체명·국가·이메일 검색" style="flex:1;min-width:200px" oninput="pdirDeb()"><button class="btn" onclick="pdirSearch()">검색</button>
+     <span class="d" style="margin:0 0 0 6px">권역</span>${PDIR_REGIONS.map(r=>`<button class="pchip${PDIR.region===r?' on':''}" onclick="PDIR.region='${r}';pdirSearch()">${r===''?'전체':r}</button>`).join('')}
+   </div></div>
+   <div class="card" style="border-color:var(--accent)"><div class="row" style="align-items:center">
+     <div style="flex:1;min-width:200px"><b>📥 master CSV 가져오기</b><div class="d" style="margin:2px 0 0">hamel_partner_master.csv를 올리면 브라우저→Supabase로 바로 적재(partner_cd 기준 갱신, 재업로드 안전).</div></div>
+     <input type="file" accept=".csv" onchange="importPartners(this)"><span id="pdirImp" class="d" style="margin:0"></span>
+   </div></div>
+   <div id="pdirOut"><div class="empty">검색어/권역을 선택하거나 그냥 검색을 누르세요.</div></div>`;
+  pdirSearch();
+};
+let _pdt=null; window.pdirDeb=function(){ clearTimeout(_pdt); _pdt=setTimeout(pdirSearch,300); };
+window.pdirSearch=async function(){
+  const kw=($('#pdq')?.value||'').trim(); PDIR.q=kw;
+  try{
+    const rows=await q('partners_directory',b=>{ let x=b; if(PDIR.region)x=x.eq('region',PDIR.region);
+      if(kw)x=x.or(`name.ilike.%${kw}%,country.ilike.%${kw}%,email.ilike.%${kw}%`); return x.order('visits',{ascending:false,nullsFirst:false}).limit(200); });
+    try{ const c=await SB.from('partners_directory').select('*',{count:'exact',head:true}); const el=document.getElementById('pdirCount'); if(el)el.textContent=(c.count!=null?c.count.toLocaleString():'0')+'개'; }catch(e){}
+    PDIR.rows=rows;
+    $('#pdirOut').innerHTML=`<div class="card"><div class="d">상위 ${rows.length}건 (방문수순)</div><div style="overflow:auto"><table><thead><tr><th>업체</th><th>국가</th><th>권역</th><th>이메일</th><th>전화</th><th></th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr><td><b>${esc(r.name||'')}</b>${r.tagline?`<div class="d" style="margin:0;font-size:10px">${esc((r.tagline||'').slice(0,50))}</div>`:''}</td>
+        <td>${esc(r.country||'')}</td><td>${esc(r.region||'')}</td><td style="color:var(--mut)">${esc(r.email||'')}</td><td style="color:var(--mut)">${esc(r.tel||'')}</td>
+        <td style="white-space:nowrap"><button class="btn sm" onclick="pdirPromote(${i})">＋연락처</button>${r.website?` <a class="btn sm" href="${esc(r.website)}" target="_blank" rel="noopener">웹</a>`:''}</td></tr>`).join('')||'<tr><td colspan=6 class="d">결과 없음</td></tr>'}
+      </tbody></table></div></div>`;
+  }catch(e){ $('#pdirOut').innerHTML=`<div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
+};
+window.pdirPromote=async function(i){ const r=PDIR.rows[i]; if(!r)return;
+  const row={major_category:'협력사',sub_category:'FWDKR',company_name:r.name,email:(r.email||'').split(/[;,\s]/)[0]||null,
+    country_region:(r.country||'')+(r.region&&r.region!=='미분류'?'/'+r.region:''),trade_route:PDIR_TR[r.region]||null,phone:r.tel,
+    notes:('[forwarder.kr] '+(r.tagline||'')+(r.website?' · '+r.website:'')).slice(0,400)};
+  try{ const {error}=await SB.from('contacts').insert(row); if(error)throw error; toast(`연락처 등록: ${r.name}`); }
+  catch(e){ toast(e.message||e,true); } };
+window.importPartners=async function(input){
+  const f=input.files[0]; if(!f)return; const st=$('#pdirImp'); st.textContent='읽는 중…';
+  const text=await f.text(); const rows=parseCSV(text).filter(r=>r.length&&r.some(c=>c!==''));
+  if(rows.length<2){st.textContent='행 없음';return;}
+  const head=rows[0].map(h=>h.trim().replace(/^﻿/,''));
+  const objs=rows.slice(1).map(r=>{ const o={}; head.forEach((h,i)=>{ const col=PDIR_MAP[h]||PDIR_MAP[h.toUpperCase()]; if(!col)return; let v=(r[i]||'').trim();
+    if(PDIR_INT.includes(col)){ const n=parseInt(String(v).replace(/[^0-9]/g,'')); v=isNaN(n)?null:n; }
+    else if(col==='collected_dt'){ v=v?String(v).slice(0,10):null; } else if(v==='') v=null;
+    o[col]=v; }); return o; }).filter(o=>o.partner_cd);
+  if(!objs.length){ st.textContent='❌ PARTNER_CD 컬럼을 찾지 못함 (헤더 확인)'; return; }
+  try{ let done=0;
+    for(let i=0;i<objs.length;i+=500){ const chunk=objs.slice(i,i+500);
+      const {error}=await SB.from('partners_directory').upsert(chunk,{onConflict:'partner_cd'}); if(error)throw error;
+      done+=chunk.length; st.textContent=`${done}/${objs.length} 적재…`; }
+    st.textContent=`✅ ${objs.length}건 적재 완료`; toast(`해외파트너 ${objs.length}건 적재`); pdirSearch();
+  }catch(e){ st.textContent='❌ '+(e.message||e); toast(e.message||e,true); } };
 
 /* ================= 물류도구 ================= */
 window.openCBM=function(){
