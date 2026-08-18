@@ -117,9 +117,10 @@ tr.grp td{background:var(--panel2);font-weight:700;font-size:12px;color:var(--tx
 .doorbar{display:flex;align-items:center;gap:8px;border:1px dashed var(--accent);border-radius:8px;padding:9px 12px;background:rgba(37,99,235,.05);cursor:pointer;font-size:13px;font-weight:600;color:var(--txt)}
 .doorbox{border:1px solid var(--accent);border-radius:9px;padding:12px;background:rgba(37,99,235,.05);display:grid;gap:10px}
 .qline input,.qline select{padding:6px 8px}
-table.kvt{width:100%;border-collapse:collapse}
-table.kvt th.kv{background:var(--panel2);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:none;width:92px;white-space:nowrap;text-align:left;border:1px solid var(--line);padding:7px 9px}
-table.kvt td{font-size:13px;border:1px solid var(--line);padding:7px 9px;vertical-align:top}
+table.kvt{width:100%;border-collapse:collapse;table-layout:fixed}
+table.kvt th.kv{background:var(--panel2);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:none;width:118px;white-space:nowrap;text-align:left;border:1px solid var(--line);padding:7px 9px;vertical-align:top}
+table.kvt td{font-size:13px;border:1px solid var(--line);padding:7px 9px;vertical-align:top;width:auto;word-break:break-word;overflow-wrap:anywhere}
+@media(max-width:760px){table.kvt,table.kvt tbody,table.kvt tr{display:block}table.kvt th.kv,table.kvt td{display:block;width:auto}}
 .pchip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:5px 10px 5px 6px;font-size:12px;cursor:pointer;color:var(--txt);font-weight:600;display:inline-flex;align-items:center;gap:4px}
 .pchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .pchip.on .tag{background:rgba(255,255,255,.25);color:#fff}
@@ -282,6 +283,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
     <nav id="nav">
       <a data-v="dashboard" class="active">📊 대시보드</a>
       <a data-v="pipeline">🗂 파이프라인</a>
+      <a data-v="daily">🗓 데일리 리포트</a>
       <a data-v="intake">📥 인테이크(AI)</a>
       <a data-v="rfq">🚚 RFQ·견적비교</a>
       <a data-v="history">📜 히스토리 검색</a>
@@ -715,9 +717,14 @@ window.vmSend=function(kind){
 };
 window.vmCopy=async function(){ const txt=$('#vmSu').value+'\n\n'+$('#vmBd').value;
   try{ await navigator.clipboard.writeText(txt); toast('본문 복사됨'); }catch(e){ try{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('복사됨');}catch(e2){toast('복사 실패',true);} } };
-window.setStage=async function(id){ try{ const stage=$('#stg').value;
-  const {error}=await SB.from('quote_requests').update({stage}).eq('id',id); if(error)throw error; toast('단계 저장됨'); openReq(id);
-}catch(e){ toast(e.message||e,true);} };
+window.setStage=async function(id){ const stage=$('#stg').value;
+  if(stage==='수주'){ // 수주 = 부킹 전환. 부킹 원장에 행이 생성되어야 대시보드·실적에 반영됨
+    let exists=false; try{ const ex=await q('bookings',b=>b.eq('quote_request_id',id).limit(1)); exists=ex.length>0; }catch(e){}
+    if(exists){ try{ const {error}=await SB.from('quote_requests').update({stage}).eq('id',id); if(error)throw error; toast('단계=수주 저장 (부킹 원장 기존재)'); openReq(id); }catch(e){ toast(e.message||e,true);} return; }
+    toast('수주는 부킹 전환으로 진행합니다 — 부킹 정보를 입력하세요'); return openBooking(id);
+  }
+  try{ const {error}=await SB.from('quote_requests').update({stage}).eq('id',id); if(error)throw error; toast('단계 저장됨'); openReq(id);
+  }catch(e){ toast(e.message||e,true);} };
 let CARRIERS=null;
 async function loadCarriers(){
   if(CARRIERS) return CARRIERS;
@@ -752,20 +759,22 @@ window.openBooking=async function(id){
         <select id="bk_dkind" style="flex:0 0 118px"><option value="CRD">Cargo Ready</option><option value="ETD">Vessel ETD</option></select>
         <input id="bk_date2" type="date" style="flex:1"></div></div>
       <div class="fld"><label>영업담당</label><input id="bk_sales" value="${esc(r.owner||r.assigned_to||'')}"></div>
-      <div class="fld"><label>매출(KRW)</label><input id="bk_rev" inputmode="numeric" value="${s||''}"></div>
-      <div class="fld"><label>원가(KRW)</label><input id="bk_pur" inputmode="numeric" value="${b||''}"></div>
       <div class="fld"><label>선정 선사 <span class="d" style="margin:0">· ⭐=해당 트레이드${lane.label?' ('+esc(lane.label)+')':''}</span></label>${carSel}</div>
-      <div class="fld"><label>비고</label><input id="bk_note"></div>
+      <div class="fld" style="grid-column:1/-1"><label>비고</label><input id="bk_note"></div>
     </div>
-    <div class="d" style="margin-top:8px">※ 매출/원가는 견적 라인 <b>KRW 환산 합계</b>로 자동 반영됐습니다. 기준일(Cargo Ready 또는 ETD)을 넣으면 주차(wk)는 자동 계산됩니다.</div>
+    <div class="d" style="margin-top:10px;padding:9px 11px;background:var(--panel2);border-radius:8px;line-height:1.6">
+      💡 <b>매출·원가는 견적 라인(USD/KRW 분리 입력)에서 관리</b>되며 자동으로 실적에 반영됩니다.<br>현재 원 환산 — 매출 <b>₩${(s||0).toLocaleString()}</b> · 원가 <b>₩${(b||0).toLocaleString()}</b> · 마진 <b style="color:var(--win)">₩${((s||0)-(b||0)).toLocaleString()}</b>. 세부 금액 조정은 부킹 확정 후 <b>견적 라인</b>에서 진행하세요.
+    </div>
     <div class="row" style="margin-top:12px"><button class="btn win" onclick="saveBooking('${id}')">수주·부킹 확정</button></div>`);
 };
 window.bkCarPick=function(sel){ if(sel.value==='__custom'){ const w=sel.parentNode; w.innerHTML='<input id="bk_car" placeholder="선사 직접입력">'; const el=document.getElementById('bk_car'); if(el)el.focus(); } };
 window.saveBooking=async function(id){
   const r=window.__req; const g=x=>{const e=$('#'+x);return e?(e.value||'').trim():'';};
-  const rev=num(g('bk_rev')), pur=num(g('bk_pur'));
+  const kToKRW=sel=>Math.round((QLINES||[]).reduce((a,l)=>a+fxToKRW((+l[sel]||0)*(+l.qty||0),l.currency),0));
+  const rev=(r.sell_krw!=null&&r.sell_krw!=='')?Math.round(+r.sell_krw):kToKRW('sell');
+  const pur=(r.buy_krw!=null&&r.buy_krw!=='')?Math.round(+r.buy_krw):kToKRW('buy');
   const rdate=g('bk_date2')||null, dkind=g('bk_dkind')||null, car=g('bk_car')||null;
-  const brow={wk:isoWk(rdate),ready_date:rdate,date_kind:rdate?dkind:null,bkg_no:g('bk_no')||null,bkg_date:g('bk_date')||null,sales:g('bk_sales')||null,shipper:r.shipper,pol:r.origin_port,pod:r.dest_port,trans:r.cargo_type,mode:r.mode,direction:r.direction,cntr_20dv:r.cntr_20dv,cntr_40hq:r.cntr_40hq,cntr_20fr:r.cntr_20fr,cntr_40fr:r.cntr_40fr,revenue:rev,purchase:pur,margin:(rev!=null&&pur!=null)?rev-pur:null,note:g('bk_note')||null,source:'hub'};
+  const brow={quote_request_id:id,wk:isoWk(rdate),ready_date:rdate,date_kind:rdate?dkind:null,bkg_no:g('bk_no')||null,bkg_date:g('bk_date')||null,sales:g('bk_sales')||null,shipper:r.shipper,pol:r.origin_port,pod:r.dest_port,trans:r.cargo_type,mode:r.mode,direction:r.direction,cntr_20dv:r.cntr_20dv,cntr_40hq:r.cntr_40hq,cntr_20fr:r.cntr_20fr,cntr_40fr:r.cntr_40fr,revenue:rev,purchase:pur,margin:(rev!=null&&pur!=null)?rev-pur:null,note:g('bk_note')||null,source:'hub'};
   try{
     const {error}=await SB.from('bookings').insert(brow); if(error)throw error;
     const {error:e2}=await SB.from('quote_requests').update({stage:'수주',bkg_no:g('bk_no')||null,selected_carrier:car,won_at:new Date().toISOString()}).eq('id',id); if(e2)throw e2;
@@ -780,31 +789,32 @@ const QTYPES_L=['THC','DOF(B/L)','WFG','CCC','DOC','HANDLING','PFS','PSC','FSC',
 const QCATS=[['FREIGHT','🚢 운임 (Freight)','USD',QTYPES_F],['LOCAL','🏭 로컬차지 (Local)','KRW',QTYPES_L]];
 const QCURS=['USD','KRW','EUR','CNY'];
 function qlineRow(l){
-  return `<tr class="qline"><td><input value="${esc(l.cntr_type||'')}" list="qtypes_${l.category||'FREIGHT'}" onchange="updLine('${l.id}','cntr_type',this.value)" style="width:120px"></td>
-    <td><input inputmode="numeric" value="${l.qty??''}" onchange="updLine('${l.id}','qty',this.value)" style="width:52px;text-align:right"></td>
-    <td><input inputmode="numeric" value="${l.sell??''}" onchange="updLine('${l.id}','sell',this.value)" style="width:92px;text-align:right"></td>
-    <td><input inputmode="numeric" value="${l.buy??''}" onchange="updLine('${l.id}','buy',this.value)" style="width:92px;text-align:right"></td>
-    <td><select onchange="updLine('${l.id}','currency',this.value)">${QCURS.map(c=>`<option${l.currency===c?' selected':''}>${c}</option>`).join('')}</select></td>
-    <td class="num mono">${(((+l.sell||0)-(+l.buy||0))*(+l.qty||1)).toLocaleString()} ${esc(l.currency||'')}</td>
-    <td><input value="${esc(l.note||'')}" onchange="updLine('${l.id}','note',this.value)" placeholder="비고" style="width:100px"></td>
-    <td><button class="btn sm" onclick="delLine('${l.id}')">✕</button></td></tr>`;
+  return `<tr class="qline"><td><input value="${esc(l.cntr_type||'')}" list="qtypes_${l.category||'FREIGHT'}" onchange="updLine('${l.id}','cntr_type',this.value)" style="width:100%"></td>
+    <td><input inputmode="numeric" value="${l.qty??''}" onchange="updLine('${l.id}','qty',this.value)" style="width:100%;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.sell??''}" onchange="updLine('${l.id}','sell',this.value)" style="width:100%;text-align:right"></td>
+    <td><input inputmode="numeric" value="${l.buy??''}" onchange="updLine('${l.id}','buy',this.value)" style="width:100%;text-align:right"></td>
+    <td><select onchange="updLine('${l.id}','currency',this.value)" style="width:100%">${QCURS.map(c=>`<option${l.currency===c?' selected':''}>${c}</option>`).join('')}</select></td>
+    <td class="num mono" style="white-space:nowrap">${(((+l.sell||0)-(+l.buy||0))*(+l.qty||1)).toLocaleString()} ${esc(l.currency||'')}</td>
+    <td><input value="${esc(l.note||'')}" onchange="updLine('${l.id}','note',this.value)" placeholder="비고" style="width:100%"></td>
+    <td style="text-align:center"><button class="btn sm" onclick="delLine('${l.id}')">✕</button></td></tr>`;
 }
+const QLCG=`<colgroup><col style="width:22%"><col style="width:8%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:16%"><col style="width:10%"><col style="width:4%"></colgroup>`;
 function qlineBlock(reqId,cat,title,defCur,types){
   const ls=(QLINES||[]).filter(l=>(l.category||'FREIGHT')===cat);
   const sK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.sell||0)*(+l.qty||0),l.currency),0));
   const bK=Math.round(ls.reduce((a,l)=>a+fxToKRW((+l.buy||0)*(+l.qty||0),l.currency),0));
-  const lcBtn=cat==='LOCAL'?`<button class="btn sm" style="margin-left:auto" onclick="openLocalCharge('${reqId}')">📋 선사 로컬차지 불러오기</button>`:'';
+  const lcBtn=cat==='LOCAL'?`<button class="btn sm" style="margin-left:auto" onclick="openLocalCharge('${reqId}')">📋 로컬차지 불러오기</button>`:'';
   return `<div class="qlblock"><div class="qlh" style="display:flex;align-items:center">${title} <span class="d" style="margin:0 0 0 6px;font-weight:500">· 기본 ${defCur}</span>${lcBtn}</div>
     <datalist id="qtypes_${cat}">${types.map(t=>`<option value="${t}">`).join('')}</datalist>
-    <div style="overflow:auto"><table class="qline"><thead><tr><th>항목</th><th class="num">수량</th><th class="num">Sell</th><th class="num">Buy</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
+    <div style="overflow-x:auto"><table class="qline" style="width:100%;table-layout:fixed;min-width:660px">${QLCG}<thead><tr><th>항목</th><th class="num">수량</th><th class="num">Sell</th><th class="num">Buy</th><th>통화</th><th class="num">라인마진</th><th>비고</th><th></th></tr></thead>
     <tbody>${ls.map(qlineRow).join('')||''}
-    <tr class="qline" style="background:rgba(37,99,235,.04)"><td><input id="ql_type_${cat}" list="qtypes_${cat}" placeholder="항목" style="width:120px"></td>
-     <td><input id="ql_qty_${cat}" inputmode="numeric" value="1" style="width:52px;text-align:right"></td>
-     <td><input id="ql_sell_${cat}" inputmode="numeric" style="width:92px;text-align:right"></td>
-     <td><input id="ql_buy_${cat}" inputmode="numeric" style="width:92px;text-align:right"></td>
-     <td><select id="ql_cur_${cat}">${QCURS.map(c=>`<option${c===defCur?' selected':''}>${c}</option>`).join('')}</select></td>
-     <td></td><td><input id="ql_note_${cat}" placeholder="비고" style="width:100px"></td>
-     <td><button class="btn primary sm" onclick="addLine('${reqId}','${cat}')">＋</button></td></tr>
+    <tr class="qline" style="background:rgba(37,99,235,.04)"><td><input id="ql_type_${cat}" list="qtypes_${cat}" placeholder="항목 입력/선택" style="width:100%"></td>
+     <td><input id="ql_qty_${cat}" inputmode="numeric" value="1" style="width:100%;text-align:right"></td>
+     <td><input id="ql_sell_${cat}" inputmode="numeric" placeholder="Sell" style="width:100%;text-align:right"></td>
+     <td><input id="ql_buy_${cat}" inputmode="numeric" placeholder="Buy" style="width:100%;text-align:right"></td>
+     <td><select id="ql_cur_${cat}" style="width:100%">${QCURS.map(c=>`<option${c===defCur?' selected':''}>${c}</option>`).join('')}</select></td>
+     <td></td><td><input id="ql_note_${cat}" placeholder="비고" style="width:100%"></td>
+     <td style="text-align:center"><button class="btn primary sm" onclick="addLine('${reqId}','${cat}')">＋</button></td></tr>
     </tbody></table></div>
     <div class="d" style="text-align:right;margin:4px 2px 0">소계(원 환산) Sell ₩${sK.toLocaleString()} · Buy ₩${bK.toLocaleString()}</div></div>`;
 }
@@ -849,6 +859,7 @@ function lcSuggest(r){ // 40 우선 여부 + 선호 선사
 }
 window.openLocalCharge=async function(reqId){
   const r=window.__req||{}; const data=await loadLCM();
+  if((r.cargo_type==='BULK')||(r.ship_kind==='벌크')) return openLocalChargeBulk(reqId,r,data);
   const cons=data.filter(x=>x.carrier);
   if(!cons.length){ toast('로컬차지 기준표가 비어있습니다',true); return; }
   const byLane={}; cons.forEach(x=>{ (byLane[x.lane]=byLane[x.lane]||new Set()).add(x.carrier); });
@@ -916,6 +927,63 @@ window.lcAddSelected=async function(reqId){
   try{ const {error}=await SB.from('quote_lines').insert(rowsIns); if(error)throw error;
     QLINES=await q('quote_lines',b=>b.eq('quote_request_id',reqId).order('created_at')); renderQuoteLines(reqId); syncReqTotals(reqId);
     closeModal(); toast(`로컬차지 ${rowsIns.length}건 담김 (${car})`);
+  }catch(e){ toast(e.message||e,true); }
+};
+/* ===== 벌크 로컬차지: 터미널 하역요율(KRW/F.TON) × 물동량 자동계산 ===== */
+function lcParseRate(x){
+  const t=x.amount_text||''; let rate=null;
+  if(x.amount!=null) rate=+x.amount; else { const m=t.replace(/,/g,'').match(/(\d+(?:\.\d+)?)/); if(m)rate=+m[1]; }
+  const perTon=/F\.?\s*TON|R\.?\s*TON|R\/T|F\/T|톤/i.test(t);
+  const perDay=/\/\s*일|\/\s*day/i.test(t), perMafi=/MAFI/i.test(t);
+  const manual=(/invoice|vat|별도|송장|×|계수/i.test(t)&&!perTon)||rate==null;
+  return {rate,perTon,perDay,perMafi,manual,text:t};
+}
+window.openLocalChargeBulk=function(reqId,r,data){
+  const rows=(data||LCM||[]).filter(x=>x.lane==='벌크');
+  if(!rows.length){ toast('벌크 부대비용 기준표가 비어있습니다',true); return; }
+  const terms=[...new Set(rows.map(x=>x.terminal).filter(Boolean))];
+  const defTon=num(r.vol_ton)||num(r.weight)||num(r.volume_cbm)||'';
+  showModal(`<h3>📋 벌크 로컬차지 불러오기 <span class="d" style="font-size:11px">— 하역·부대 요율</span></h3>
+    <div class="d">벌크 화물: <b>물동량(R.TON)</b> 입력 후 항목 체크 → 톤당 요율은 <b>자동 계산</b>되어 로컬차지(KRW)로 담깁니다.</div>
+    <div class="row" style="margin:10px 0;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div class="fld" style="min-width:230px"><label>터미널</label><select id="lc_term" onchange="lcRenderBulk('${reqId}')">${terms.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select></div>
+      <div class="fld" style="min-width:130px"><label>물동량 (R.TON)</label><input id="lc_ton" inputmode="numeric" value="${defTon||''}" placeholder="예: 5000" oninput="lcRenderBulk('${reqId}')" style="width:130px;text-align:right"></div>
+    </div>
+    <div id="lc_list" style="max-height:44vh;overflow:auto"></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between;align-items:center">
+      <span class="d" id="lc_sum" style="margin:0"></span>
+      <button class="btn win" onclick="lcAddBulkSelected('${reqId}')">선택 항목 담기 →</button>
+    </div>`);
+  lcRenderBulk(reqId);
+};
+window.lcRenderBulk=function(reqId){
+  const term=($('#lc_term')||{}).value, ton=num(($('#lc_ton')||{}).value)||0;
+  const rows=(LCM||[]).filter(x=>x.lane==='벌크'&&x.terminal===term);
+  let html='<table class="qline" style="width:100%;table-layout:fixed"><colgroup><col style="width:32px"><col><col style="width:38%"><col style="width:120px"></colgroup><thead><tr><th></th><th>항목</th><th>기준요율</th><th class="num">금액(KRW)</th></tr></thead><tbody>';
+  let idx=0;
+  rows.forEach(x=>{ const pr=lcParseRate(x); let amt=null, basis='';
+    if(!pr.manual&&pr.rate!=null){ if(pr.perTon){ amt=Math.round(pr.rate*ton); basis=`${pr.rate.toLocaleString()}×${ton}R.TON`; } else { amt=Math.round(pr.rate); basis='건당'; } }
+    const canCk=amt!=null;
+    html+=`<tr><td>${canCk?`<input type="checkbox" class="lc_ck" data-code="${esc(x.charge_code)}" data-amt="${amt}" data-basis="${esc(basis)}">`:''}</td>
+      <td><b>${esc(x.charge_code)}</b>${x.note?` <span class="d" style="margin:0">(${esc(x.note)})</span>`:''}</td>
+      <td class="d" style="margin:0;font-size:11px">${esc(pr.text||'-')}</td>
+      <td class="num mono"${canCk?'':' style="color:var(--mut2)"'}>${canCk?amt.toLocaleString():'수동'}</td></tr>`;
+    idx++;
+  });
+  html+='</tbody></table>';
+  if(!idx) html='<div class="d">해당 터미널 항목이 없습니다.</div>';
+  const el=$('#lc_list'); if(el)el.innerHTML=html;
+  if(el)el.querySelectorAll('.lc_ck').forEach(ck=>ck.addEventListener('change',lcSumBulk));
+  lcSumBulk();
+};
+function lcSumBulk(){ let s=0,n=0; document.querySelectorAll('.lc_ck:checked').forEach(ck=>{s+=+ck.dataset.amt||0;n++;}); const el=$('#lc_sum'); if(el)el.textContent=n?`선택 ${n}개 · 합계 ₩${Math.round(s).toLocaleString()}`:'항목 체크 시 톤당 요율 자동계산'; }
+window.lcAddBulkSelected=async function(reqId){
+  const term=($('#lc_term')||{}).value;
+  const cks=[...document.querySelectorAll('.lc_ck:checked')]; if(!cks.length){toast('담을 항목을 체크하세요',true);return;}
+  const rowsIns=cks.map(ck=>({quote_request_id:reqId,category:'LOCAL',cntr_type:ck.dataset.code,qty:1,sell:+ck.dataset.amt||0,buy:+ck.dataset.amt||0,currency:'KRW',note:term+(ck.dataset.basis?' ('+ck.dataset.basis+')':'')}));
+  try{ const {error}=await SB.from('quote_lines').insert(rowsIns); if(error)throw error;
+    QLINES=await q('quote_lines',b=>b.eq('quote_request_id',reqId).order('created_at')); renderQuoteLines(reqId); syncReqTotals(reqId);
+    closeModal(); toast(`벌크 로컬차지 ${rowsIns.length}건 담김 (${term})`);
   }catch(e){ toast(e.message||e,true); }
 };
 
@@ -1351,6 +1419,71 @@ window.saveJob=async function(){
 };
 
 /* ================= RFQ ================= */
+/* ================= 데일리 리포트 (오늘의 INTAKE / PIPELINE) ================= */
+let DAILY={d:null};
+window.setDailyD=function(d){ DAILY.d=d; VIEWS.daily(); };
+VIEWS.daily=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  try{
+    const reqs=await q('quote_requests'); let bk=[]; try{ bk=await q('bookings'); }catch(e){}
+    const D=DAILY.d||new Date().toISOString().slice(0,10);
+    const dOf=s=>String(s||'').slice(0,10);
+    const endT=new Date(D+'T23:59:59'); const daysAgo=s=>Math.floor((endT-new Date(s))/86400000);
+    const ownerOf=r=>r.owner||r.assigned_to||'(미지정)';
+    const todayIn=reqs.filter(r=>dOf(r.created_at)===D).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+    const open=reqs.filter(r=>OPEN.includes(r.stage||'접수'));
+    const stale=open.filter(r=>daysAgo(r.created_at)>=7).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const wonToday=reqs.filter(r=>r.won_at&&dOf(r.won_at)===D);
+    const bkToday=bk.filter(b=>dOf(b.bkg_date)===D);
+    // 담당자별 집계
+    const OW={}; const ens=o=>OW[o]=OW[o]||{intake:0,open:0,stale:0,won:0};
+    reqs.forEach(r=>{ if(dOf(r.created_at)===D)ens(ownerOf(r)).intake++; });
+    open.forEach(r=>{ ens(ownerOf(r)).open++; if(daysAgo(r.created_at)>=7)OW[ownerOf(r)].stale++; });
+    wonToday.forEach(r=>ens(ownerOf(r)).won++);
+    const owners=Object.keys(OW).filter(o=>o!=='(미지정)'||OW[o].intake||OW[o].open).sort((a,b)=>OW[b].intake-OW[a].intake||OW[b].open-OW[a].open);
+    DAILY._ctx={D,todayIn,stale,wonToday,bkToday,OW,owners,ownerOf};
+    const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
+    const stg=s=>`<span class="tag st-${s||'접수'}">${s||'접수'}</span>`;
+    const rowLink=r=>`onclick="openReq('${r.id}')" style="cursor:pointer"`;
+    $('#main').innerHTML=`
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><h2 style="margin:0">🗓 데일리 리포트</h2><div class="sub" style="margin:2px 0 0">오늘의 인테이크 · 담당자별 팔로업 · 파이프라인 (${D})</div></div>
+        <div class="row noprint"><span class="d" style="margin:0">기준일</span><input type="date" value="${D}" onchange="setDailyD(this.value)"><button class="btn" onclick="copyDaily()">📋 리포트 복사</button><button class="btn" onclick="window.print()">🖨 인쇄</button></div>
+      </div>
+      <div class="kpis">
+        ${tile('오늘 신규 인테이크',todayIn.length+'건','접수 기준',todayIn.length?'var(--accent)':null)}
+        ${tile('오늘 부킹',bkToday.length+'건','BKG 기준')}
+        ${tile('오늘 수주',wonToday.length+'건','수주 확정',wonToday.length?'var(--win)':null)}
+        ${tile('진행중 파이프라인',open.length+'건','미마감 인콰이어리')}
+        ${tile('미처리 7일↑',stale.length+'건','팔로업 필요',stale.length?'var(--loss)':null)}
+      </div>
+      <div class="card"><h3>👥 담당자별 현황 <span class="d" style="display:inline">— ${D}</span></h3>
+        <table><thead><tr><th>담당</th><th class="num">오늘 신규</th><th class="num">진행중</th><th class="num">미처리(7일↑)</th><th class="num">오늘 수주</th></tr></thead><tbody>
+        ${owners.length?owners.map(o=>`<tr><td><b>${esc(o)}</b></td><td class="num mono">${OW[o].intake}</td><td class="num mono">${OW[o].open}</td><td class="num mono" style="${OW[o].stale?'color:var(--loss);font-weight:700':'color:var(--mut2)'}">${OW[o].stale}</td><td class="num mono" style="${OW[o].won?'color:var(--win);font-weight:700':''}">${OW[o].won}</td></tr>`).join(''):'<tr><td colspan=5 class="d">데이터 없음</td></tr>'}
+        </tbody></table></div>
+      <div class="card"><h3>📥 오늘 신규 인테이크 <span class="pill">${todayIn.length}</span></h3>
+        ${todayIn.length?`<div style="overflow:auto;max-height:320px"><table><thead><tr><th>시각</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th></tr></thead><tbody>
+          ${todayIn.map(r=>`<tr ${rowLink(r)}><td class="mono" style="color:var(--mut)">${String(r.created_at||'').slice(11,16)}</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.channel||'')}</td><td>${esc(ownerOf(r))}</td><td>${stg(r.stage)}</td></tr>`).join('')}
+        </tbody></table></div>`:'<div class="d">오늘 신규 인테이크가 없습니다.</div>'}</div>
+      <div class="card"><h3>🔴 미처리 팔로업 <span class="pill">${stale.length}</span> <span class="d" style="display:inline">— 7일 이상 진행중 · 오래된 순</span></h3>
+        ${stale.length?`<div style="overflow:auto;max-height:320px"><table><thead><tr><th>경과</th><th>Job#</th><th>화주</th><th>레인</th><th>담당</th><th>단계</th></tr></thead><tbody>
+          ${stale.slice(0,40).map(r=>`<tr ${rowLink(r)}><td class="mono" style="color:var(--loss);font-weight:700">${daysAgo(r.created_at)}일</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(ownerOf(r))}</td><td>${stg(r.stage)}</td></tr>`).join('')}
+        </tbody></table></div>`:'<div class="d">7일 이상 미처리 건이 없습니다. 👍</div>'}</div>`;
+  }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
+};
+window.copyDaily=function(){ const c=DAILY._ctx; if(!c){toast('먼저 리포트를 불러오세요',true);return;}
+  const L=[]; L.push(`[하멜코리아 데일리 리포트] ${c.D}`);
+  L.push(`· 신규 인테이크 ${c.todayIn.length} · 부킹 ${c.bkToday.length} · 수주 ${c.wonToday.length} · 미처리(7일↑) ${c.stale.length}`);
+  L.push(''); L.push('■ 담당자별 (신규/진행/미처리/수주)');
+  c.owners.forEach(o=>L.push(`- ${o}: 신규${c.OW[o].intake} 진행${c.OW[o].open} 미처리${c.OW[o].stale} 수주${c.OW[o].won}`));
+  L.push(''); L.push('■ 오늘 신규 인테이크');
+  if(c.todayIn.length)c.todayIn.forEach(r=>L.push(`- ${r.job_no||''} ${r.shipper||''} ${r.origin_port||'?'}→${r.dest_port||'?'} [${c.ownerOf(r)}] ${r.stage||'접수'}`)); else L.push('- 없음');
+  L.push(''); L.push('■ 미처리 팔로업 (7일↑)');
+  if(c.stale.length)c.stale.slice(0,20).forEach(r=>{const dd=Math.floor((new Date(c.D+'T23:59:59')-new Date(r.created_at))/86400000);L.push(`- ${r.job_no||''} ${dd}일 ${r.shipper||''} ${r.origin_port||'?'}→${r.dest_port||'?'} [${c.ownerOf(r)}] ${r.stage||''}`);}); else L.push('- 없음 👍');
+  const txt=L.join('\n');
+  (async()=>{ try{ await navigator.clipboard.writeText(txt); toast('데일리 리포트 복사됨 — 붙여넣기'); }catch(e){ try{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('복사됨');}catch(e2){ showModal(`<h3>데일리 리포트</h3><div class="copybox"><pre>${esc(txt)}</pre></div>`);} } })();
+};
+
 let RFQ={inq:null,vendors:[],cmp:[]};
 VIEWS.rfq=async function(){
   try{
@@ -1368,31 +1501,52 @@ window.rfqPick=async function(){
   const id=$('#rfqPick').value; if(!id){$('#rfqBody').innerHTML='';return;}
   const r=RFQ.reqs.find(x=>x.id===id); RFQ.inq=r;
   $('#rfqInfo').textContent=`${r.origin_port||'?'}→${r.dest_port||'?'} · ${r.cargo_type||''} · ${r.incoterms||''}`;
-  // 벤더 후보: carrier_desk (전체) + contacts 선사·협력사
+  // 벤더 후보: carrier_desk + contacts → 스마트 분류(vmScore)로 추천·정렬
   let desk=[],cons=[];
-  try{ desk=await q('carrier_desk',b=>b.limit(500)); }catch(e){}
-  try{ cons=await q('contacts',b=>b.in('major_category',['선사','운송사','콘솔','협력사']).limit(500)); }catch(e){}
-  const pod=(r.dest_port||'').toUpperCase();
-  const cand=[...desk.map(d=>({name:d.carrier,contact:d.contact_name,email:d.email,region:d.region,src:'desk'})),
-    ...cons.map(c=>({name:c.company_name,contact:c.contact_name,email:c.email,region:c.country_region,src:'contact'}))]
-    .filter(v=>v.email);
-  RFQ.cand=cand;
+  try{ desk=await q('carrier_desk',b=>b.limit(1000)); }catch(e){}
+  try{ cons=await q('contacts',b=>b.in('major_category',['선사','운송사','콘솔','협력사']).limit(1000)); }catch(e){}
+  const cand=[
+    ...desk.map(d=>({name:d.carrier,contact:d.contact_name,email:d.email,kind:'선사',region:d.region||'',trade:'',country:'',src:'desk'})),
+    ...cons.map(c=>({name:c.company_name,contact:c.contact_name,email:c.email,kind:c.major_category,region:'',trade:c.trade_route||'',country:c.country_region||'',src:'contact'}))
+  ].filter(v=>v.email&&v.name);
+  const lane=vmTargetLane(r), kinds=vmModeKinds(r);
+  cand.forEach(v=>{ const sc=vmScore(v,lane,kinds); v.score=sc.s; v.rec=sc.s>=2; v.auto=sc.s>=4; });
+  cand.sort((a,b)=>b.score-a.score||String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  RFQ.cand=cand; RFQ.lane=lane; RFQ.showAll=false; RFQ.cq='';
+  RFQ.sel=new Set(cand.filter(v=>v.auto).map(v=>v.email));
+  if(!RFQ.sel.size) cand.filter(v=>v.rec).slice(0,8).forEach(v=>RFQ.sel.add(v.email)); // 자동추천 없으면 적합 상위 자동선택
+  const laneTxt=lane.label?`<b>${esc(lane.label)}</b>${lane.codes.length?' ('+esc(lane.codes[0])+')':''}`:'-';
   $('#rfqBody').innerHTML=`
    <div class="row" style="margin-bottom:12px"><button class="btn primary" onclick="openRateModal('${(r.origin_port||'').replace(/'/g,'')}','${(r.dest_port||'').replace(/'/g,'')}')">💱 요율표 비교 (${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')})</button>
-     <span class="d" style="margin:0">받은 견적을 넣으면 바인딩 요율표 대비 즉시 판정</span></div>
-   <div class="card"><h3>② 대상 선사 선택 <span class="pill">${cand.length}곳 후보</span></h3>
-     <div class="d">이메일 있는 후보만 표시 · 체크 후 RFQ 생성</div>
-     <div style="max-height:260px;overflow:auto"><table><thead><tr><th>✓</th><th>선사/업체</th><th>담당</th><th>이메일</th><th>지역</th></tr></thead><tbody>
-      ${cand.map((v,i)=>`<tr><td><input type="checkbox" class="vk" data-i="${i}"${pod&&(v.region||'').toUpperCase().includes(pod)?' checked':''}></td>
-       <td>${esc(v.name)}</td><td>${esc(v.contact||'')}</td><td style="color:var(--mut)">${esc(v.email)}</td><td>${esc(v.region||'')}</td></tr>`).join('')||'<tr><td colspan=5 style="color:var(--mut2)">이메일 있는 선사 후보가 없습니다. 연락처를 먼저 가져오세요.</td></tr>'}
-      </tbody></table></div>
-     <div class="row" style="margin-top:10px"><button class="btn primary" onclick="rfqGen()">📧 RFQ 초안 생성</button></div></div>
+     <span class="d" style="margin:0">🎯 트레이드: ${laneTxt} · 받은 견적을 넣으면 요율표 대비 즉시 판정</span></div>
+   <div class="card"><h3>② 대상 선사 선택 <span class="pill" id="rfqSelN">${RFQ.sel.size}곳 선택</span></h3>
+     <div id="rfqCand"></div>
+     <div class="row" style="margin-top:10px"><button class="btn primary" onclick="rfqGen()">📧 RFQ 초안 생성</button><span class="d" style="margin:0">🎯추천 = POD 트레이드·운송구분 자동매칭 · 체크 조정 가능</span></div></div>
    <div id="rfqDrafts"></div>
    <div class="card"><h3>③ 견적 수집·비교</h3><div class="d">회신 견적 입력 → 최저가 자동 → 반영</div>
      <div id="cmpArea"><div class="d">RFQ 생성 시 대상 선사가 나타납니다.</div></div></div>`;
+  rfqCandRender();
 };
+function rfqCandRender(){
+  const box=$('#rfqCand'); if(!box)return; const kw=(RFQ.cq||'').toLowerCase().trim();
+  let list=RFQ.cand||[];
+  if(!RFQ.showAll) list=list.filter(v=>v.rec);
+  if(kw) list=list.filter(v=>((v.name||'')+(v.contact||'')+(v.email||'')+(v.region||'')+(v.trade||'')+(v.country||'')).toLowerCase().includes(kw));
+  const recN=(RFQ.cand||[]).filter(v=>v.rec).length, allN=(RFQ.cand||[]).length;
+  box.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+      <div class="d" style="margin:0">🎯 추천 ${recN}곳 · 표시 ${list.length}곳 ${RFQ.showAll?'(전체 '+allN+')':'(추천만)'}</div>
+      <div class="row" style="gap:6px"><input id="rfqCq" value="${esc(RFQ.cq||'')}" oninput="rfqCandSearch(this.value)" placeholder="선사·지역 검색" style="width:150px">
+        <button class="btn sm" onclick="rfqToggleAll()">${RFQ.showAll?'추천만 보기':'전체 보기'}</button></div></div>
+    <div style="max-height:300px;overflow:auto"><table><thead><tr><th>✓</th><th>선사/업체</th><th>담당</th><th>이메일</th><th>지역/트레이드</th></tr></thead><tbody>
+     ${list.map(v=>{const i=RFQ.cand.indexOf(v);const rt=v.region||v.trade||v.country||'';const ck=RFQ.sel&&RFQ.sel.has(v.email);return `<tr${ck?' style="background:rgba(37,99,235,.05)"':''}><td><input type="checkbox" class="vk" data-i="${i}"${ck?' checked':''} onchange="rfqVk(${i},this.checked)"></td>
+       <td><b>${esc(v.name)}</b>${v.auto?' <span style="color:var(--win);font-size:10px;font-weight:700">🎯추천</span>':(v.rec?' <span style="color:var(--accent);font-size:10px">적합</span>':'')}</td><td>${esc(v.contact||'')}</td><td style="color:var(--mut)">${esc(v.email)}</td><td>${esc(rt)}</td></tr>`;}).join('')||'<tr><td colspan=5 class="d">해당 조건 후보 없음 — 「전체 보기」로 전환하세요</td></tr>'}
+     </tbody></table></div>`;
+}
+window.rfqVk=function(i,on){ RFQ.sel=RFQ.sel||new Set(); const em=(RFQ.cand[i]||{}).email; if(!em)return; if(on)RFQ.sel.add(em); else RFQ.sel.delete(em); const n=$('#rfqSelN'); if(n)n.textContent=RFQ.sel.size+'곳 선택'; };
+window.rfqToggleAll=function(){ RFQ.showAll=!RFQ.showAll; rfqCandRender(); };
+window.rfqCandSearch=function(v){ RFQ.cq=v; rfqCandRender(); const el=$('#rfqCq'); if(el){ el.focus(); try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){} } };
 window.rfqGen=function(){
-  const r=RFQ.inq; const chosen=[...document.querySelectorAll('.vk:checked')].map(c=>RFQ.cand[+c.dataset.i]);
+  const r=RFQ.inq; const chosen=(RFQ.cand||[]).filter(v=>RFQ.sel&&RFQ.sel.has(v.email));
   if(!chosen.length){toast('선사를 1곳 이상 선택',true);return;}
   RFQ.chosen=chosen;
   const su=rfqSubject(r);
