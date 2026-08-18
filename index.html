@@ -1824,40 +1824,46 @@ window.saveFX=async function(){
     toast('환율 저장됨 · USD '+FX.USD); }catch(err){ toast(err.message||err,true); }
 };
 /* ===== 국내 부대비용 (선사별 기준표) ===== */
-let LCVIEW={lane:'원양',port:'BUSAN',carrier:'',scope:'',orient:'v'};
-window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.scope=''; LCVIEW.port='BUSAN';} if(k==='carrier'){LCVIEW.scope='';} VIEWS.charges(); };
+let LCVIEW={lane:'원양',port:'BUSAN',carrier:'',scope:'',orient:'v',lang:'ko',type:''};
+window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.scope=''; LCVIEW.port='BUSAN'; LCVIEW.type='';} if(k==='carrier'){LCVIEW.scope='';} VIEWS.charges(); };
 const LC_CARRIER_ORDER={'원양':['HMM','ONE','CMA','MAERSK','COSCO','HAPAG','ZIM'],'근해':['KMTC','흥아해운','범주해운 PANCON','SINOKOR','남성해운','동진상선','RCL']};
 const LC_PORTNM={BUSAN:'부산',INCHEON:'인천',KWANGYANG:'광양',POHANG:'포항',ULSAN:'울산'};
-function lcColGroups(lane,port){ const P=port||'BUSAN';
+const LC_PORTEN={BUSAN:'Busan',INCHEON:'Incheon',KWANGYANG:'Gwangyang',POHANG:'Pohang',ULSAN:'Ulsan'};
+const LC_L=(ko,en,lang)=>lang==='en'?en:ko;
+const LC_SEC={THC:['THC · 터미널 화물처리비','THC · Terminal Handling'],CCC:['CCC · 컨테이너 청소비','CCC · Container Cleaning'],DOF:['DOF · 서류(B/L) 발급비','DOF · Documentation (B/L)'],WFG:['WFG · 부두사용료','WFG · Wharfage'],PFSPSC:['PFS · PSC · 항만시설·보안료','PFS · PSC · Facility & Security'],PFS:['PFS · 항만시설사용료','PFS · Port Facility'],PSC:['PSC · 항만보안료','PSC · Port Security'],FSC:['FSC · 화물보안료','FSC · Freight Security'],SEAL:['SEAL · 실 (건당)','SEAL (per unit)']};
+const LC_COND={DC:['일반 (Dry)','General (Dry)'],DG:['위험물 (DG)','Dangerous (DG)'],RF:['냉동 (Reefer)','Reefer'],OTFR:['OT · FR','OT · FR'],DCOTFR:['일반 · OT · FR','General · OT · FR'],BL:['B/L','B/L'],RATE:['요율','Rate'],UNIT:['건당','per unit']};
+const LC_TYPEOPTS={'원양':[['THC','THC'],['CCC','CCC'],['DOF','DOF'],['WFG','WFG'],['PFSPSC','PFS·PSC']],'근해':[['THC','THC'],['DOF','DOF'],['WFG','WFG'],['PFS','PFS'],['PSC','PSC'],['FSC','FSC'],['SEAL','SEAL']]};
+function lcColGroups(lane,port,lang){ const P=port||'BUSAN'; lang=lang||'ko';
+  const pn=lang==='en'?(LC_PORTEN[P]||P):(LC_PORTNM[P]||P); const thc=lang==='en'?'THC (KRW)':'THC (원)'; const fscp=lang==='en'?'FSC · Busan':'FSC · 부산'; const seal=lang==='en'?"per unit":'건당';
   if(lane==='근해') return [
-    {g:'THC (원)',cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"]]},
+    {g:thc,cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"]]},
     {g:'DOF',cols:[['DOF','B/L','B/L']]},
-    {g:'WFG · '+(LC_PORTNM[P]||P),cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
+    {g:'WFG · '+pn,cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
     {g:'PFS',cols:[['PFS','20',"20'"],['PFS','40',"40'"]]},
     {g:'PSC',cols:[['PSC','20',"20'"],['PSC','40',"40'"]]},
-    {g:'FSC · 부산',cols:[['FSC','BUSAN 20',"20'"],['FSC','BUSAN 40',"40'"]]},
-    {g:'SEAL',cols:[['SEAL','flat','건당']]} ];
+    {g:fscp,cols:[['FSC','BUSAN 20',"20'"],['FSC','BUSAN 40',"40'"]]},
+    {g:'SEAL',cols:[['SEAL','flat',seal]]} ];
   return [
-    {g:'THC (원)',cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"]]},
+    {g:thc,cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"]]},
     {g:'CCC',cols:[['CCC','DC/OT/FR 20',"20'"],['CCC','DC/OT/FR 40',"40'"]]},
     {g:'DOF',cols:[['DOF','B/L','B/L']]},
-    {g:'WFG · '+(LC_PORTNM[P]||P),cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
+    {g:'WFG · '+pn,cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
     {g:'PFS·PSC',cols:[['PFS+PSC','20',"20'"],['PFS+PSC','40',"40'"]]} ];
 }
 function lcFmt(v){ if(v&&v.t!=null&&v.t!=='')return esc(v.t); if(v&&v.a!=null)return Math.round(v.a).toLocaleString(); return null; }
 function lcScopeShow(s){ return s&&s!=='ALL'&&s!=='Intra-Asia'; }
-function lcModel(lane,port,carrier){
+function lcModel(lane,port,carrier,lang){
   const rows=(LCM||[]).filter(x=>x.lane===lane&&x.carrier);
-  const groups=lcColGroups(lane,port); const flat=[]; groups.forEach(g=>g.cols.forEach(c=>flat.push({code:c[0],spec:c[1]})));
+  const groups=lcColGroups(lane,port,lang); const flat=[]; groups.forEach(g=>g.cols.forEach(c=>flat.push({code:c[0],spec:c[1]})));
   const M={},keyList=[];
   rows.forEach(x=>{ const k=x.carrier+'||'+(x.trade_scope||''); if(!M[k]){M[k]={carrier:x.carrier,scope:x.trade_scope||'',v:{}}; keyList.push(k);} M[k].v[x.charge_code+'|'+x.spec]={a:x.amount,t:x.amount_text}; });
   let keys=keyList; if(carrier) keys=keys.filter(k=>M[k].carrier===carrier);
   const ord=LC_CARRIER_ORDER[lane]||[];
   keys.sort((a,b)=>{ const ia=ord.indexOf(M[a].carrier),ib=ord.indexOf(M[b].carrier); if(ia!==ib)return (ia<0?99:ia)-(ib<0?99:ib); return String(a).localeCompare(String(b)); });
-  return {groups,flat,rows:keys.map(k=>({carrier:M[k].carrier,scope:M[k].scope,vals:flat.map(f=>M[k].v[f.code+'|'+f.spec]||null)}))};
+  return {groups,flat,lang:lang||'ko',rows:keys.map(k=>({carrier:M[k].carrier,scope:M[k].scope,vals:flat.map(f=>M[k].v[f.code+'|'+f.spec]||null)}))};
 }
 function lcRenderDOM(model){
-  let gh='<tr class="grp"><th class="car" rowspan="2">선사</th>';
+  let gh=`<tr class="grp"><th class="car" rowspan="2">${model.lang==='en'?'Carrier':'선사'}</th>`;
   model.groups.forEach(g=>{ gh+=`<th class="grpstart" colspan="${g.cols.length}">${esc(g.g)}</th>`; });
   gh+='</tr><tr class="sub">';
   model.groups.forEach(g=>g.cols.forEach((c,i)=>{ gh+=`<th class="num${i===0?' grpstart':''}">${esc(c[2])}</th>`; }));
@@ -1870,15 +1876,15 @@ function lcRenderDOM(model){
 function lcEmailHTML(model,title){ const bd='1px solid #c9d2dd';
   let h=`<div style="font-family:Arial,'Malgun Gothic',sans-serif"><div style="font-size:13px;font-weight:bold;margin:0 0 7px;color:#12233f">${title}</div>`;
   h+=`<table style="border-collapse:collapse;font-family:Arial,'Malgun Gothic',sans-serif;font-size:12px;color:#1b2430">`;
-  h+=`<tr><th rowspan="2" style="border:${bd};background:#eef3fb;padding:6px 9px">선사</th>`;
+  h+=`<tr><th rowspan="2" style="border:${bd};background:#eef3fb;padding:6px 9px">${model.lang==='en'?'Carrier':'선사'}</th>`;
   model.groups.forEach(g=>{ h+=`<th colspan="${g.cols.length}" style="border:${bd};background:#dfe9fa;padding:6px 9px;text-align:center;font-weight:bold">${g.g}</th>`; });
   h+='</tr><tr>'; model.groups.forEach(g=>g.cols.forEach(c=>{ h+=`<th style="border:${bd};background:#eef3fb;padding:5px 9px;text-align:right">${c[2]}</th>`; })); h+='</tr>';
   model.rows.forEach(r=>{ h+=`<tr><td style="border:${bd};padding:5px 9px;font-weight:bold">${r.carrier}${lcScopeShow(r.scope)?` <span style="color:#7a8699;font-weight:normal">(${r.scope})</span>`:''}</td>`;
     r.vals.forEach(v=>{ const f=lcFmt(v); h+=`<td style="border:${bd};padding:5px 9px;text-align:right">${f==null?'–':f}</td>`; }); h+='</tr>'; });
-  h+='</table><div style="font-size:11px;color:#7a8699;margin-top:6px">단위: 원(KRW) · 하멜코리아 국내 부대비용 기준표</div></div>';
+  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용 기준표'}</div></div>`;
   return h;
 }
-function lcPlain(model,title){ const L=a=>a.join('\t'); const head=['선사']; model.groups.forEach(g=>g.cols.forEach(c=>head.push(c[2])));
+function lcPlain(model,title){ const L=a=>a.join('\t'); const head=[model.lang==='en'?'Carrier':'선사']; model.groups.forEach(g=>g.cols.forEach(c=>head.push(c[2])));
   const out=[title,L(head)]; model.rows.forEach(r=>{ const row=[r.carrier+(lcScopeShow(r.scope)?'('+r.scope+')':'')]; r.vals.forEach(v=>{const f=lcFmt(v); row.push(f==null?'-':String(f).replace(/,/g,''));}); out.push(L(row)); }); return out.join('\n'); }
 async function copyRich(html,text){
   try{ if(navigator.clipboard&&window.ClipboardItem){ await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text||''],{type:'text/plain'})})]); toast('표 복사됨 — 메일/문서에 붙여넣기'); return; } }catch(e){}
@@ -1888,28 +1894,35 @@ async function copyRich(html,text){
 }
 /* ---- 세로(선사별) 모델: 항목 × 사이즈(20'/40'/45') ---- */
 function lcScopes(lane,carrier){ return [...new Set((LCM||[]).filter(x=>x.lane===lane&&x.carrier===carrier).map(x=>x.trade_scope||''))]; }
-function lcVertModel(lane,carrier,scope,port){
+function lcVertModel(lane,carrier,scope,port,lang){
+  lang=lang||'ko';
   const rows=(LCM||[]).filter(x=>x.lane===lane&&x.carrier===carrier&&(x.trade_scope||'')===(scope||''));
   const map={}; rows.forEach(x=>map[x.charge_code+'|'+x.spec]={a:x.amount,t:x.amount_text});
   const val=(code,spec)=>{ const v=map[code+'|'+spec]; return (v&&(v.a!=null||(v.t!=null&&v.t!=='')))?v:null; };
   const P=port||'BUSAN', SIZES=['20','40','45'], used=new Set(), secs=[];
-  const row=(label,code,pre)=>{ const cells={}; SIZES.forEach(s=>{ const v=val(code,pre?pre+' '+s:s); if(v){cells[s]=v; used.add(s);} }); return Object.keys(cells).length?{label,cells}:null; };
-  const single=(label,code,spec)=>{ const v=val(code,spec); return v?{label,single:v}:null; };
-  const push=(title,rs)=>{ rs=rs.filter(Boolean); if(rs.length)secs.push({title,rows:rs}); };
-  push('THC · 터미널 화물처리비',[row('일반 (Dry)','THC','DC'),row('위험물 (DG)','THC','DG'),row('냉동 (Reefer)','THC','RF'),row('OT · FR','THC','OT/FR')]);
-  push('CCC · 컨테이너 청소비',[row('일반 · OT · FR','CCC','DC/OT/FR'),row('위험물 (DG)','CCC','DG'),row('냉동 (Reefer)','CCC','RF')]);
-  push('DOF · 서류(B/L) 발급비',[single('B/L','DOF','B/L')]);
-  push('WFG · 부두사용료 ('+(LC_PORTNM[P]||P)+')',[row(LC_PORTNM[P]||P,'WFG',P)]);
-  if(lane==='원양'){ push('PFS · PSC · 항만시설·보안료',[row('요율','PFS+PSC','')]); }
-  else { push('PFS · 항만시설사용료',[row('요율','PFS','')]); push('PSC · 항만보안료',[row('요율','PSC','')]);
-    push('FSC · 화물보안료 (부산)',[row('부산','FSC','BUSAN')]); push('SEAL · 실 (건당)',[single('건당','SEAL','flat')]); }
+  const pn=lang==='en'?(LC_PORTEN[P]||P):(LC_PORTNM[P]||P);
+  const cl=k=>LC_L(LC_COND[k][0],LC_COND[k][1],lang);
+  const row=(condKey,code,pre)=>{ const cells={}; SIZES.forEach(s=>{ const v=val(code,pre?pre+' '+s:s); if(v){cells[s]=v; used.add(s);} }); return Object.keys(cells).length?{label:cl(condKey),cells}:null; };
+  const rowL=(labelStr,code,pre)=>{ const cells={}; SIZES.forEach(s=>{ const v=val(code,pre?pre+' '+s:s); if(v){cells[s]=v; used.add(s);} }); return Object.keys(cells).length?{label:labelStr,cells}:null; };
+  const single=(condKey,code,spec)=>{ const v=val(code,spec); return v?{label:cl(condKey),single:v}:null; };
+  const push=(key,secMap,rs,suf)=>{ rs=rs.filter(Boolean); if(rs.length)secs.push({key,title:LC_L(secMap[0],secMap[1],lang)+(suf||''),rows:rs}); };
+  push('THC',LC_SEC.THC,[row('DC','THC','DC'),row('DG','THC','DG'),row('RF','THC','RF'),row('OTFR','THC','OT/FR')]);
+  push('CCC',LC_SEC.CCC,[row('DCOTFR','CCC','DC/OT/FR'),row('DG','CCC','DG'),row('RF','CCC','RF')]);
+  push('DOF',LC_SEC.DOF,[single('BL','DOF','B/L')]);
+  push('WFG',LC_SEC.WFG,[rowL(pn,'WFG',P)],' ('+pn+')');
+  if(lane==='원양'){ push('PFSPSC',LC_SEC.PFSPSC,[row('RATE','PFS+PSC','')]); }
+  else { push('PFS',LC_SEC.PFS,[row('RATE','PFS','')]); push('PSC',LC_SEC.PSC,[row('RATE','PSC','')]);
+    const bs=lang==='en'?'Busan':'부산'; push('FSC',LC_SEC.FSC,[rowL(bs,'FSC','BUSAN')],' ('+bs+')'); push('SEAL',LC_SEC.SEAL,[single('UNIT','SEAL','flat')]); }
   const sizes=SIZES.filter(s=>used.has(s));
-  return {sizes:sizes.length?sizes:['20','40'], secs};
+  return {sizes:sizes.length?sizes:['20','40'], secs, lang};
 }
+function lcFilterType(model,type){ if(!type)return model; const secs=model.secs.filter(s=>s.key===type);
+  const used=new Set(); secs.forEach(s=>s.rows.forEach(r=>{ if(r.cells)Object.keys(r.cells).forEach(k=>used.add(k)); }));
+  const sizes=['20','40','45'].filter(s=>used.has(s)); return {sizes:sizes.length?sizes:model.sizes, secs, lang:model.lang}; }
 function lcRenderVert(model){
   if(!model.secs.length) return '<div class="d">해당 선사·구간의 기준표 항목이 없습니다.</div>';
   const sizes=model.sizes, span=sizes.length+1;
-  const head=`<tr><th>항목</th>${sizes.map(s=>`<th class="num">${s}'</th>`).join('')}</tr>`;
+  const head=`<tr><th>${model.lang==='en'?'Item':'항목'}</th>${sizes.map(s=>`<th class="num">${s}'</th>`).join('')}</tr>`;
   const body=model.secs.map(s=>`<tr class="lcband"><td colspan="${span}">${esc(s.title)}</td></tr>`+
     s.rows.map(r=> r.single
       ? `<tr><td>${esc(r.label)}</td><td class="num" colspan="${sizes.length}">${lcFmt(r.single)}</td></tr>`
@@ -1919,21 +1932,22 @@ function lcRenderVert(model){
 }
 function lcVertEmail(model,title){ const bd='1px solid #c9d2dd', sizes=model.sizes, span=sizes.length+1;
   let h=`<div style="font-family:Arial,'Malgun Gothic',sans-serif"><div style="font-size:13px;font-weight:bold;margin:0 0 7px;color:#12233f">${title}</div><table style="border-collapse:collapse;font-size:12px;color:#1b2430">`;
-  h+=`<tr><th style="border:${bd};background:#eef3fb;padding:6px 13px;text-align:left">항목</th>${sizes.map(s=>`<th style="border:${bd};background:#eef3fb;padding:6px 13px;text-align:right">${s}'</th>`).join('')}</tr>`;
+  h+=`<tr><th style="border:${bd};background:#eef3fb;padding:6px 13px;text-align:left">${model.lang==='en'?'Item':'항목'}</th>${sizes.map(s=>`<th style="border:${bd};background:#eef3fb;padding:6px 13px;text-align:right">${s}'</th>`).join('')}</tr>`;
   model.secs.forEach(s=>{ h+=`<tr><td colspan="${span}" style="border:${bd};background:#dfe9fa;padding:5px 13px;font-weight:bold">${s.title}</td></tr>`;
     s.rows.forEach(r=>{ if(r.single){ h+=`<tr><td style="border:${bd};padding:5px 13px">${r.label}</td><td colspan="${sizes.length}" style="border:${bd};padding:5px 13px;text-align:right">${lcFmt(r.single)}</td></tr>`; }
       else { h+=`<tr><td style="border:${bd};padding:5px 13px">${r.label}</td>${sizes.map(sz=>`<td style="border:${bd};padding:5px 13px;text-align:right">${r.cells[sz]?lcFmt(r.cells[sz]):'–'}</td>`).join('')}</tr>`; } }); });
-  h+='</table><div style="font-size:11px;color:#7a8699;margin-top:6px">단위: 원(KRW) · 하멜코리아 국내 부대비용</div></div>'; return h;
+  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용'}</div></div>`; return h;
 }
-function lcVertPlain(model,title){ const sizes=model.sizes; const out=[title,['항목',...sizes.map(s=>s+"'")].join('\t')];
+function lcVertPlain(model,title){ const sizes=model.sizes; const out=[title,[model.lang==='en'?'Item':'항목',...sizes.map(s=>s+"'")].join('\t')];
   model.secs.forEach(s=>{ out.push('['+s.title+']'); s.rows.forEach(r=>{ if(r.single)out.push(r.label+'\t'+String(lcFmt(r.single)).replace(/,/g,'')); else out.push([r.label,...sizes.map(sz=>r.cells[sz]?String(lcFmt(r.cells[sz])).replace(/,/g,''):'-')].join('\t')); }); }); return out.join('\n'); }
 window.copyLCTable=function(){
+  const lang=LCVIEW.lang||'ko'; const laneEN=LCVIEW.lane==='원양'?'Ocean':(LCVIEW.lane==='근해'?'Intra-Asia':'Bulk'); const portN=lang==='en'?(LC_PORTEN[LCVIEW.port]||LCVIEW.port):(LC_PORTNM[LCVIEW.port]||LCVIEW.port);
   if(LCVIEW.orient==='v'){ const carriers=[...new Set((LCM||[]).filter(x=>x.lane===LCVIEW.lane&&x.carrier).map(x=>x.carrier))]; const car=LCVIEW.carrier||carriers[0]; const sc=LCVIEW.scope||(lcScopes(LCVIEW.lane,car)[0]||'');
-    const secs=lcVertModel(LCVIEW.lane,car,sc,LCVIEW.port);
-    const title=`하멜코리아 국내 부대비용 · ${car}${lcScopeShow(sc)?' ('+sc+')':''} · ${LCVIEW.lane} · WFG기준 ${LC_PORTNM[LCVIEW.port]||LCVIEW.port}`;
-    copyRich(lcVertEmail(secs,title),lcVertPlain(secs,title)); return; }
-  const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier);
-  const title=`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${LC_PORTNM[LCVIEW.port]||LCVIEW.port}`;
+    let model=lcVertModel(LCVIEW.lane,car,sc,LCVIEW.port,lang); model=lcFilterType(model,LCVIEW.type);
+    const title=lang==='en'?`HAMEL KOREA · Domestic Local Charges · ${car}${lcScopeShow(sc)?' ('+sc+')':''} · ${laneEN} · WFG@${portN}`:`하멜코리아 국내 부대비용 · ${car}${lcScopeShow(sc)?' ('+sc+')':''} · ${LCVIEW.lane} · WFG기준 ${portN}`;
+    copyRich(lcVertEmail(model,title),lcVertPlain(model,title)); return; }
+  const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier,lang);
+  const title=lang==='en'?`HAMEL KOREA · Domestic Local Charges · ${laneEN}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG@${portN}`:`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${portN}`;
   copyRich(lcEmailHTML(m,title),lcPlain(m,title)); };
 function lcBulkHTML(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
   if(!Object.keys(terms).length)return '<div class="d">벌크 부대비용 데이터가 없습니다.</div>';
@@ -1946,7 +1960,7 @@ VIEWS.charges=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
   try{
     await loadLCM(); const lane=LCVIEW.lane;
-    const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" onclick="setLCV('lane','${v}')">${l}</button>`;
+    const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" style="flex:0 0 auto" onclick="setLCV('lane','${v}')">${l}</button>`;
     let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')}`;
     let table='',note='';
     if(lane==='벌크'){ table=lcBulkHTML(); note='※ 마산항 벌크 하역·부대 요율 (KCTC). 톤(F.TON)당 기준.'; }
@@ -1956,19 +1970,22 @@ VIEWS.charges=async function(){
       const carriers=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.carrier).map(x=>x.carrier))];
       const ord=LC_CARRIER_ORDER[lane]||[]; carriers.sort((a,b)=>{const ia=ord.indexOf(a),ib=ord.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
       const portSel=`<span class="d" style="margin:0 0 0 8px">WFG 기준항</span><select onchange="setLCV('port',this.value)">${ports.map(p=>`<option value="${p}"${LCVIEW.port===p?' selected':''}>${LC_PORTNM[p]||p}</option>`).join('')}</select>`;
-      const otog=`<span class="d" style="margin:0 0 0 10px">보기</span><button class="segb${LCVIEW.orient==='v'?' on':''}" onclick="setLCV('orient','v')">▤ 세로(고객용)</button><button class="segb${LCVIEW.orient!=='v'?' on':''}" onclick="setLCV('orient','h')">▥ 가로(비교)</button>`;
+      const otog=`<span class="d" style="margin:0 0 0 10px">보기</span><button class="segb${LCVIEW.orient==='v'?' on':''}" style="flex:0 0 auto" onclick="setLCV('orient','v')">▤ 세로(고객용)</button><button class="segb${LCVIEW.orient!=='v'?' on':''}" style="flex:0 0 auto" onclick="setLCV('orient','h')">▥ 가로(비교)</button>`;
       if(LCVIEW.orient==='v'){
         const car=carriers.includes(LCVIEW.carrier)?LCVIEW.carrier:(carriers[0]||''); LCVIEW.carrier=car;
         const scopes=lcScopes(lane,car); const sc=scopes.includes(LCVIEW.scope)?LCVIEW.scope:(scopes[0]||''); LCVIEW.scope=sc;
         const scopeSel=scopes.length>1?`<select onchange="setLCV('scope',this.value)">${scopes.map(s=>`<option value="${esc(s)}"${sc===s?' selected':''}>${esc(s||'기본')}</option>`).join('')}</select>`:'';
-        controls+=`${otog}<span class="d" style="margin:0 0 0 10px">선사</span><select onchange="setLCV('carrier',this.value)">${carriers.map(c=>`<option value="${esc(c)}"${car===c?' selected':''}>${esc(c)}</option>`).join('')}</select>${scopeSel}${portSel}
+        const typeOpts=LC_TYPEOPTS[lane]||[]; const typeSel=`<span class="d" style="margin:0 0 0 10px">항목</span><select onchange="setLCV('type',this.value)"><option value="">${LCVIEW.lang==='en'?'All':'전체'}</option>${typeOpts.map(o=>`<option value="${o[0]}"${LCVIEW.type===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>`;
+        const langTog=`<span class="d" style="margin:0 0 0 10px">언어</span><button class="segb${LCVIEW.lang!=='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','ko')">KO</button><button class="segb${LCVIEW.lang==='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','en')">EN</button>`;
+        controls+=`${otog}<span class="d" style="margin:0 0 0 10px">선사</span><select onchange="setLCV('carrier',this.value)">${carriers.map(c=>`<option value="${esc(c)}"${car===c?' selected':''}>${esc(c)}</option>`).join('')}</select>${scopeSel}${portSel}${typeSel}${langTog}
           <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
-        table=lcRenderVert(lcVertModel(lane,car,sc,LCVIEW.port));
+        table=lcRenderVert(lcFilterType(lcVertModel(lane,car,sc,LCVIEW.port,LCVIEW.lang),LCVIEW.type));
         note='※ 고객 발송용 세로표 — 「📋 메일용 표 복사」로 메일 본문에 붙여넣거나 스크린샷으로 전달하세요. WFG는 선적항 기준으로 상단에서 선택.';
       } else {
-        controls+=`${otog}${portSel}<select onchange="setLCV('carrier',this.value)"><option value="">전체 선사</option>${carriers.map(c=>`<option value="${esc(c)}"${LCVIEW.carrier===c?' selected':''}>${esc(c)}</option>`).join('')}</select>
+        const langTogH=`<span class="d" style="margin:0 0 0 10px">언어</span><button class="segb${LCVIEW.lang!=='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','ko')">KO</button><button class="segb${LCVIEW.lang==='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','en')">EN</button>`;
+        controls+=`${otog}${portSel}<select onchange="setLCV('carrier',this.value)"><option value="">전체 선사</option>${carriers.map(c=>`<option value="${esc(c)}"${LCVIEW.carrier===c?' selected':''}>${esc(c)}</option>`).join('')}</select>${langTogH}
           <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
-        table=lcRenderDOM(lcModel(lane,LCVIEW.port,LCVIEW.carrier));
+        table=lcRenderDOM(lcModel(lane,LCVIEW.port,LCVIEW.carrier,LCVIEW.lang));
         note='※ 내부 비교용 가로표. 「–」는 미제공/해당없음. 고객 발송은 세로(고객용) 보기를 권장.';
       }
     }
