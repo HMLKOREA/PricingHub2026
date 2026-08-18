@@ -12,8 +12,10 @@
 body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",Arial,sans-serif;font-size:13.5px}
 .app{display:flex;min-height:100vh}
 .side{width:210px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
-.side .logo{padding:16px 18px;border-bottom:1px solid var(--line)}
+.side .logo{padding:15px 18px 13px;border-bottom:1px solid var(--line)}
 .side .logo b{font-size:15px}
+.side .logo .brandlogo{height:26px;width:auto;display:block}
+.side .logo .brandsub{font-size:11px;color:var(--mut2);margin-top:6px;font-weight:600;letter-spacing:.01em}
 .side .logo div{font-size:11px;color:var(--mut2);margin-top:2px}
 .side nav{padding:8px;flex:1;overflow:auto}
 .side nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:500;text-decoration:none;margin:2px 0}
@@ -276,7 +278,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 <button id="navToggle" class="navToggle" onclick="document.querySelector('.side').classList.toggle('open')">☰</button>
 <div class="app">
   <aside class="side">
-    <div class="logo"><b>하멜 · 견적 허브</b><div>Inquiry → RFQ → 견적 → 복기</div></div>
+    <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA"><div class="brandsub">견적 · 부킹 허브</div></div>
     <nav id="nav">
       <a data-v="dashboard" class="active">📊 대시보드</a>
       <a data-v="pipeline">🗂 파이프라인</a>
@@ -395,6 +397,7 @@ VIEWS.dashboard=async function(){
   try{
     DASH.bk=await q('bookings'); DASH.reqs=await q('quote_requests');
     try{ DASH.notes=await q('board_notes',b=>b.order('created_at',{ascending:false}).limit(100)); }catch(e){ DASH.notes=[]; }
+    try{ const st=await q('app_settings'); const t=st.find(r=>r.key==='rev_target'); DASH.target=t?(+t.value||0):(DASH.target||0); }catch(e){ DASH.target=DASH.target||0; }
     const ms=[...new Set([...DASH.bk.map(b=>ym(b.bkg_date)),...DASH.reqs.map(r=>ym(r.created_at))].filter(Boolean))].sort();
     const nowM=new Date().toISOString().slice(0,7);
     if(!DASH.m) DASH.m=ms.includes(nowM)?nowM:(ms[ms.length-1]||nowM);
@@ -402,58 +405,63 @@ VIEWS.dashboard=async function(){
   }catch(e){ $('#main').innerHTML=`<h2>월간 실적 장표</h2><div class="card"><div class="empty">데이터를 불러오지 못했습니다.<br>${esc(e.message||e)}</div></div>`; }
 };
 window.setDashMonth=function(m){ DASH.m=m; renderDash(); };
+window.saveRevTarget=async function(){ if(!(ME&&ME.role==='admin'))return; const v=num(($('#revTgt')||{}).value)||0;
+  try{ const ex=await q('app_settings',b=>b.eq('key','rev_target')); if(ex.length){ await SB.from('app_settings').update({value:String(v)}).eq('key','rev_target'); } else { await SB.from('app_settings').insert({key:'rev_target',value:String(v)}); }
+    DASH.target=v; toast('월 매출목표 저장됨'); renderDash();
+  }catch(e){ toast(e.message||e,true); } };
 function renderDash(ms){
   ms=ms||DASH._ms; DASH._ms=ms;
-  const bk=DASH.bk, reqs=DASH.reqs, M=DASH.m;
+  const bk=DASH.bk, reqs=DASH.reqs, M=DASH.m; const A=!!(ME&&ME.role==='admin'); const target=+DASH.target||0;
   const bkM=k=>bk.filter(b=>ym(b.bkg_date)===k), reqM=k=>reqs.filter(r=>ym(r.created_at)===k);
   const met=k=>{ const B=bkM(k),R=reqM(k);
     const rev=B.reduce((a,b)=>a+(+b.revenue||0),0),mgn=B.reduce((a,b)=>a+(+b.margin||0),0);
     const won=R.filter(r=>r.stage==='수주').length,lost=R.filter(r=>r.stage==='실주').length;
     return {bkN:B.length,rev,mgn,mrate:rev?mgn/rev:null,reqN:R.length,won,lost,hit:(won+lost)?won/(won+lost):null}; };
-  const cur=met(M);
+  const cur=met(M); const achv=target?cur.rev/target:null;
   const pk=(()=>{let [y,m]=M.split('-').map(Number);m--;if(m<=0){m=12;y--;}return y+'-'+String(m).padStart(2,'0');})();
   const prev=met(pk);
   const trend=monthsBack(M,6).map(k=>({k,...met(k)})); const maxRev=Math.max(1,...trend.map(t=>t.rev));
-  const tile=(l,v,n)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n||''}</div></div>`;
+  const tile=(l,v,n,accent)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${accent?` style="color:${accent}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   const bySales={}; bkM(M).forEach(b=>{const s=b.sales||'(미지정)';(bySales[s]=bySales[s]||{n:0,rev:0,mgn:0});bySales[s].n++;bySales[s].rev+=+b.revenue||0;bySales[s].mgn+=+b.margin||0;});
   const salesRows=Object.entries(bySales).sort((a,b)=>b[1].rev-a[1].rev);
   const today=new Date(); const daysSince=d=>Math.floor((today-new Date(d))/86400000);
   const openReqs=reqs.filter(r=>OPEN.includes(r.stage||'접수')).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const liveBk=bk.filter(b=>ym(b.bkg_date)>=M).sort((a,b)=>String(b.bkg_date).localeCompare(String(a.bkg_date))).slice(0,15);
   const monthOpts=ms.map(m=>`<option${m===M?' selected':''}>${m}</option>`).join('');
+  const salesCard=`<div class="card"><h3>담당자별 실적 <span class="d" style="display:inline">— ${M}</span></h3>
+    ${salesRows.length?`<table><thead><tr><th>담당</th><th class="num">부킹</th><th class="num">매출</th>${A?'<th class="num">마진</th><th class="num">마진율</th>':''}</tr></thead><tbody>
+      ${salesRows.map(([s,v])=>`<tr><td><b>${esc(s)}</b></td><td class="num mono">${v.n}</td><td class="num mono">${fmtW(v.rev)}</td>${A?`<td class="num mono">${fmtW(v.mgn)}</td><td class="num mono">${v.rev?(v.mgn/v.rev*100).toFixed(1)+'%':'–'}</td>`:''}</tr>`).join('')}
+    </tbody></table>`:'<div class="d">이 달 부킹 데이터가 없습니다.</div>'}</div>`;
+  const stageCard=`<div class="card"><h3>단계별 진행 인콰이어리 <span class="d" style="display:inline">— 현재</span></h3>
+    ${OPEN.concat(['수주','실주']).map(s=>{const n=reqs.filter(r=>(r.stage||'접수')===s).length;return `<div class="row" style="margin:6px 0"><div style="width:56px;color:var(--mut)">${s}</div><div style="flex:1;background:var(--panel2);border-radius:6px;height:18px"><div style="height:100%;border-radius:6px;background:${s==='수주'?'var(--win)':s==='실주'?'var(--loss)':'var(--accent)'};width:${Math.min(n*20,100)}%"></div></div><div style="width:34px;text-align:right" class="mono">${n}</div></div>`;}).join('')}</div>`;
+  const midBlock=A?`<div class="mgrid">${salesCard}${stageCard}</div>`:stageCard;
   $('#main').innerHTML=`
    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-     <div><h2 style="margin:0">월간 실적 장표</h2><div class="sub" style="margin:2px 0 0">회의용 정형 장표 · 전 직원 공유 · 실시간</div></div>
-     <div class="row noprint"><span class="d" style="margin:0">기준월</span><select onchange="setDashMonth(this.value)">${monthOpts}</select><button class="btn" onclick="window.print()">🖨 장표 인쇄</button></div>
+     <div><h2 style="margin:0">월간 현황 장표</h2><div class="sub" style="margin:2px 0 0">${A?'경영 전체 지표 · 관리자 전용 상세':'부킹·견적 현황 중심 · 전 직원 공유'} · 실시간</div></div>
+     <div class="row noprint">${A?`<span class="d" style="margin:0">월매출목표</span><input id="revTgt" inputmode="numeric" value="${target||''}" placeholder="원(예: 100000000)" style="width:150px;text-align:right"><button class="btn sm" onclick="saveRevTarget()">저장</button>`:''}<span class="d" style="margin:0 0 0 8px">기준월</span><select onchange="setDashMonth(this.value)">${monthOpts}</select><button class="btn" onclick="window.print()">🖨 인쇄</button></div>
    </div>
    <div class="kpis">
      ${tile('부킹 건수',cur.bkN+'건',`전월 ${prev.bkN} ${deltaHTML(cur.bkN,prev.bkN)}`)}
-     ${tile('매출',fmtW(cur.rev)+'원',`전월대비 ${deltaHTML(cur.rev,prev.rev)}`)}
-     ${tile('마진',fmtW(cur.mgn)+'원',`전월대비 ${deltaHTML(cur.mgn,prev.mgn)}`)}
-     ${tile('마진율',cur.mrate==null?'–':(cur.mrate*100).toFixed(1)+'%',`전월 ${prev.mrate==null?'–':(prev.mrate*100).toFixed(1)+'%'}`)}
+     ${tile('매출 현황',fmtW(cur.rev)+'원',`전월대비 ${deltaHTML(cur.rev,prev.rev)}`)}
+     ${tile('매출 목표 달성율',achv==null?'–':(achv*100).toFixed(0)+'%',target?`목표 ${fmtW(target)}원`:'목표 미설정',achv==null?null:(achv>=1?'var(--win)':achv>=0.7?'var(--accent)':'var(--amber)'))}
+     ${A?tile('마진 (순수익)',fmtW(cur.mgn)+'원',`전월대비 ${deltaHTML(cur.mgn,prev.mgn)}`,'var(--b)'):''}
+     ${A?tile('마진율 (수익률)',cur.mrate==null?'–':(cur.mrate*100).toFixed(1)+'%',`전월 ${prev.mrate==null?'–':(prev.mrate*100).toFixed(1)+'%'}`,'var(--b)'):''}
      ${tile('인콰이어리 접수',cur.reqN+'건','이번 달 신규')}
      ${tile('수주 / 승률',cur.won+'건',`승률 ${pct(cur.hit)} (${cur.won}/${cur.won+cur.lost})`)}
    </div>
    <div class="card"><h3>월별 추이 <span class="d" style="display:inline">— 최근 6개월 (${M} 기준)</span></h3>
-     <div style="overflow:auto"><table><thead><tr><th>월</th><th class="num">부킹</th><th class="num">매출</th><th class="num">마진</th><th class="num">마진율</th><th class="num">인콰이어리</th><th class="num">수주</th><th class="num">승률</th><th style="width:110px">매출</th></tr></thead><tbody>
-       ${trend.map(t=>`<tr${t.k===M?' style="background:rgba(37,99,235,.06);font-weight:600"':''}><td class="mono">${t.k}</td><td class="num mono">${t.bkN}</td><td class="num mono">${fmtW(t.rev)}</td><td class="num mono">${fmtW(t.mgn)}</td><td class="num mono">${t.mrate==null?'–':(t.mrate*100).toFixed(1)+'%'}</td><td class="num mono">${t.reqN}</td><td class="num mono">${t.won}</td><td class="num mono">${pct(t.hit)}</td>
+     <div style="overflow:auto"><table><thead><tr><th>월</th><th class="num">부킹</th><th class="num">매출</th>${A?'<th class="num">마진</th><th class="num">마진율</th>':''}<th class="num">인콰이어리</th><th class="num">수주</th><th class="num">승률</th><th style="width:110px">매출</th></tr></thead><tbody>
+       ${trend.map(t=>`<tr${t.k===M?' style="background:rgba(37,99,235,.06);font-weight:600"':''}><td class="mono">${t.k}</td><td class="num mono">${t.bkN}</td><td class="num mono">${fmtW(t.rev)}</td>${A?`<td class="num mono">${fmtW(t.mgn)}</td><td class="num mono">${t.mrate==null?'–':(t.mrate*100).toFixed(1)+'%'}</td>`:''}<td class="num mono">${t.reqN}</td><td class="num mono">${t.won}</td><td class="num mono">${pct(t.hit)}</td>
          <td><div style="background:var(--panel2);border-radius:5px;height:13px"><div style="height:100%;border-radius:5px;background:var(--accent);width:${Math.round(t.rev/maxRev*100)}%"></div></div></td></tr>`).join('')}
      </tbody></table></div></div>
-   <div class="mgrid">
-     <div class="card"><h3>담당자별 실적 <span class="d" style="display:inline">— ${M}</span></h3>
-       ${salesRows.length?`<table><thead><tr><th>담당</th><th class="num">부킹</th><th class="num">매출</th><th class="num">마진</th><th class="num">마진율</th></tr></thead><tbody>
-         ${salesRows.map(([s,v])=>`<tr><td><b>${esc(s)}</b></td><td class="num mono">${v.n}</td><td class="num mono">${fmtW(v.rev)}</td><td class="num mono">${fmtW(v.mgn)}</td><td class="num mono">${v.rev?(v.mgn/v.rev*100).toFixed(1)+'%':'–'}</td></tr>`).join('')}
-       </tbody></table>`:'<div class="d">이 달 부킹 데이터가 없습니다.</div>'}</div>
-     <div class="card"><h3>단계별 진행 인콰이어리 <span class="d" style="display:inline">— 현재</span></h3>
-       ${OPEN.concat(['수주','실주']).map(s=>{const n=reqs.filter(r=>(r.stage||'접수')===s).length;return `<div class="row" style="margin:6px 0"><div style="width:56px;color:var(--mut)">${s}</div><div style="flex:1;background:var(--panel2);border-radius:6px;height:18px"><div style="height:100%;border-radius:6px;background:${s==='수주'?'var(--win)':s==='실주'?'var(--loss)':'var(--accent)'};width:${Math.min(n*20,100)}%"></div></div><div style="width:34px;text-align:right" class="mono">${n}</div></div>`;}).join('')}</div>
-   </div>
+   ${midBlock}
    <div class="card"><h3>🔴 현행 인콰이어리 현황 <span class="pill">${openReqs.length}</span> <span class="d" style="display:inline">— 진행중 · 오래된 순 (7일↑ 경고)</span></h3>
      ${openReqs.length?`<div style="overflow:auto;max-height:340px"><table><thead><tr><th>경과</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th><th class="num">견적</th></tr></thead><tbody>
        ${openReqs.slice(0,40).map(r=>{const dd=daysSince(r.created_at);return `<tr class="${dd>=7?'stale':''}" style="cursor:pointer" onclick="openReq('${r.id}')"><td class="mono" style="${dd>=7?'color:var(--loss);font-weight:700':'color:var(--mut)'}">${dd}일</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.channel||'')}</td><td>${esc(r.owner||r.assigned_to||'')}</td><td><span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span></td><td class="num mono">${r.sell_krw?fmtW(r.sell_krw):'–'}</td></tr>`;}).join('')}
      </tbody></table></div>`:'<div class="d">진행중 인콰이어리가 없습니다.</div>'}</div>
    <div class="card"><h3>🚢 현행·예정 부킹 <span class="d" style="display:inline">— ${M} 이후 · 최근 15건</span></h3>
-     ${liveBk.length?`<div style="overflow:auto;max-height:340px"><table><thead><tr><th>주차</th><th>BKG#</th><th>ETD</th><th>화주</th><th>레인</th><th>담당</th><th class="num">매출</th><th class="num">마진</th></tr></thead><tbody>
-       ${liveBk.map(b=>`<tr><td class="mono">${b.wk||''}</td><td>${esc(b.bkg_no||'')}</td><td class="mono" style="white-space:nowrap">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(b.pol||'?')}→${esc(b.pod||'?')}</td><td>${esc(b.sales||'')}</td><td class="num mono">${b.revenue?fmtW(b.revenue):'–'}</td><td class="num mono">${b.margin?fmtW(b.margin):'–'}</td></tr>`).join('')}
+     ${liveBk.length?`<div style="overflow:auto;max-height:340px"><table><thead><tr><th>주차</th><th>BKG#</th><th>ETD</th><th>화주</th><th>레인</th><th>담당</th><th class="num">매출</th>${A?'<th class="num">마진</th>':''}</tr></thead><tbody>
+       ${liveBk.map(b=>`<tr><td class="mono">${b.wk||''}</td><td>${esc(b.bkg_no||'')}</td><td class="mono" style="white-space:nowrap">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(b.pol||'?')}→${esc(b.pod||'?')}</td><td>${esc(b.sales||'')}</td><td class="num mono">${b.revenue?fmtW(b.revenue):'–'}</td>${A?`<td class="num mono">${b.margin?fmtW(b.margin):'–'}</td>`:''}</tr>`).join('')}
      </tbody></table></div>`:'<div class="d">해당 기간 부킹이 없습니다.</div>'}</div>
    <div class="card"><h3>📌 지시 · 메모 보드 <span class="d" style="display:inline">— 전 직원 공유 · 회의 대체</span></h3>
      <div class="row noprint" style="margin-bottom:12px">
@@ -510,7 +518,7 @@ function renderPipe(){
   const openN=reqs.filter(r=>OPEN.includes(r.stage||'접수')).length, won=cnt('수주'), lost=cnt('실주');
   const hit=(won+lost)?won/(won+lost):null;
   const pipeVal=reqs.filter(r=>OPEN.includes(r.stage||'접수')).reduce((a,r)=>a+((+r.sell_krw||0)*(WEIGHT[r.stage||'접수']||0)),0);
-  const tile=(l,v,n)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n||''}</div></div>`;
+  const tile=(l,v,n,accent)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${accent?` style="color:${accent}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   const chip=s=>`<button class="pchip${PIPEF.stage===s?' on':''}" onclick="setPipeStage('${s}')"><span class="tag st-${s}" style="padding:1px 7px">${s}</span> <b>${cnt(s)}</b></button>`;
   $('#main').innerHTML=`<h2>파이프라인</h2><div class="sub">상단 단계별 요약 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
@@ -2239,7 +2247,7 @@ function hideGate(){ const g=$('#loginGate'); if(g)g.style.display='none'; }
 /* ================= 시작 ================= */
 let APP_BOOTED=false;
 async function bootApp(){ if(APP_BOOTED)return; APP_BOOTED=true; const ok=SB?await checkConn():false; if(SB)await loadFX(); go('dashboard'); }
-(function(){ const s=getSession(); if(s){ ME=s; hideGate(); applyUserbar(); bootApp(); } else { showGate(); } })();
+(function(){ const bl=$('#brandLogo'); if(bl)bl.src=LOGO_URI; const s=getSession(); if(s){ ME=s; hideGate(); applyUserbar(); bootApp(); } else { showGate(); } })();
 </script>
 </body>
 </html>
