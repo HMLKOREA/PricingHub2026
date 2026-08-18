@@ -189,40 +189,34 @@ tr.stale td{background:rgba(180,83,9,.08)}
   .kpis{grid-template-columns:repeat(2,1fr)!important}
   .mgrid{grid-template-columns:1fr!important}
 }
-/* ===== 로그인 게이트 ===== */
-#loginGate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-  background:#0a1526;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",Arial,sans-serif}
-#loginGate .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.05);
-  filter:saturate(1.05)}
-#loginGate .scrim{position:absolute;inset:0;background:
-  radial-gradient(1200px 600px at 72% 78%,rgba(10,21,38,.15),transparent 60%),
-  linear-gradient(105deg,rgba(8,17,32,.94) 0%,rgba(9,20,40,.82) 38%,rgba(10,22,44,.55) 62%,rgba(9,18,34,.72) 100%)}
-#loginGate .lgwrap{position:relative;z-index:2;width:min(94vw,880px);display:grid;grid-template-columns:1.15fr .85fr;
-  gap:0;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55);animation:lgIn .6s cubic-bezier(.2,.7,.2,1)}
-@keyframes lgIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-#loginGate .lgleft{padding:44px 40px;color:#eaf1fb;background:linear-gradient(160deg,rgba(12,24,46,.30),rgba(8,16,30,.10));
-  display:flex;flex-direction:column;justify-content:space-between;backdrop-filter:blur(2px)}
-#loginGate .lgbrand{font-size:11px;letter-spacing:.32em;color:#8fb4ea;font-weight:700;text-transform:uppercase}
-#loginGate .lgtitle{font-size:30px;font-weight:800;line-height:1.22;margin:14px 0 10px;letter-spacing:-.5px}
-#loginGate .lgtitle span{color:#ff5b52}
-#loginGate .lgdesc{font-size:13px;color:#b9c9e0;line-height:1.7;max-width:330px}
-#loginGate .lgtag{margin-top:24px;font-size:11.5px;color:#7f97ba;border-left:2px solid #ff5b52;padding-left:11px;line-height:1.6}
-#loginGate .lgright{padding:40px 36px;background:rgba(255,255,255,.10);backdrop-filter:blur(20px) saturate(1.2);
-  border-left:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;justify-content:center}
-#loginGate .lglogo{height:38px;width:auto;margin-bottom:22px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
-#loginGate label{display:block;font-size:11px;color:#c7d5ea;font-weight:600;margin:0 0 6px;letter-spacing:.02em}
-#loginGate input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.08);color:#fff;font-size:14px;outline:none;transition:border .15s,background .15s;margin-bottom:15px}
-#loginGate input::placeholder{color:#8ba0bd}
-#loginGate input:focus{border-color:#4d8bff;background:rgba(255,255,255,.14)}
+/* ===== 로그인 게이트 (가운데 박스 · 좌 이미지 · 우 폼 · 흰 배경) ===== */
+#loginGate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",Arial,sans-serif}
+#loginGate .lgbox{display:flex;width:min(92vw,860px);height:min(86vh,500px);background:#fff;border:1px solid #e6ecf3;border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(15,30,60,.16);animation:lgIn .55s cubic-bezier(.2,.7,.2,1)}
+#loginGate .lgphoto{flex:1 1 52%;position:relative;background-size:cover;background-position:center;overflow:hidden}
+#loginGate .lgphoto::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,14,28,.10) 0%,rgba(6,14,28,0) 34%,rgba(6,14,28,.66) 100%)}
+#loginGate .lgcap{position:absolute;left:32px;right:32px;bottom:30px;z-index:2;color:#fff}
+#loginGate .lgcap .b{font-size:10.5px;letter-spacing:.3em;font-weight:700;color:#d5e3f7;text-transform:uppercase}
+#loginGate .lgcap .t{font-size:26px;font-weight:800;line-height:1.2;margin:9px 0 7px;letter-spacing:-.5px;text-shadow:0 2px 24px rgba(0,0,0,.55)}
+#loginGate .lgcap .t span{color:#ff5b52}
+#loginGate .lgcap .d{font-size:12px;color:#eaf1fb;line-height:1.6;text-shadow:0 1px 14px rgba(0,0,0,.55)}
+#loginGate .lgpanel{flex:1 1 48%;display:flex;align-items:center;justify-content:center;padding:34px 32px;background:#fff}
+#loginGate .lgcard{width:100%;max-width:320px}
+@keyframes lgIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+#loginGate .lglogo{height:40px;width:auto;margin-bottom:6px}
+#loginGate .lgwelcome{font-size:21px;font-weight:800;color:#17202b;margin:16px 0 4px;letter-spacing:-.3px}
+#loginGate .lgsub{font-size:12.5px;color:#8592a4;margin-bottom:26px}
+#loginGate label{display:block;font-size:11.5px;color:#54637a;font-weight:600;margin:0 0 6px}
+#loginGate input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #dae1ea;background:#f7f9fc;color:#17202b;font-size:14px;outline:none;transition:border .15s,background .15s,box-shadow .15s;margin-bottom:15px}
+#loginGate input::placeholder{color:#aab4c2}
+#loginGate input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 #loginGate .lgbtn{width:100%;padding:13px;border:0;border-radius:10px;cursor:pointer;font-size:14.5px;font-weight:700;color:#fff;
-  background:linear-gradient(120deg,#2563eb,#3b82f6);box-shadow:0 8px 22px rgba(37,99,235,.4);transition:transform .1s,box-shadow .15s;margin-top:4px}
-#loginGate .lgbtn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(37,99,235,.5)}
+  background:linear-gradient(120deg,#2563eb,#3b82f6);box-shadow:0 8px 22px rgba(37,99,235,.28);transition:transform .1s,box-shadow .15s;margin-top:4px}
+#loginGate .lgbtn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(37,99,235,.38)}
 #loginGate .lgbtn:active{transform:none}
 #loginGate .lgbtn:disabled{opacity:.6;cursor:default;transform:none}
-#loginGate .lgerr{color:#ff8b83;font-size:12px;min-height:16px;margin:10px 2px 0;text-align:center;font-weight:500}
-#loginGate .lgfoot{margin-top:20px;font-size:10.5px;color:#7387a3;text-align:center;line-height:1.6}
-@media(max-width:720px){#loginGate .lgwrap{grid-template-columns:1fr;width:94vw}#loginGate .lgleft{display:none}}
+#loginGate .lgerr{color:#dc2626;font-size:12px;min-height:16px;margin:10px 2px 0;text-align:center;font-weight:500}
+#loginGate .lgfoot{margin-top:22px;font-size:10.5px;color:#aab4c2;text-align:center;line-height:1.6}
+@media(max-width:720px){#loginGate .lgbox{height:auto;max-width:400px}#loginGate .lgphoto{display:none}#loginGate .lgpanel{flex:1;padding:40px 30px}}
 /* 사이드바 사용자/로그아웃 */
 .side .userbar{padding:10px 14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;font-size:12px}
 .side .userbar .av{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
@@ -234,28 +228,29 @@ tr.stale td{background:rgba(180,83,9,.08)}
 </head>
 <body>
 <div id="loginGate" style="display:none">
-  <div class="bg" id="lgBg"></div>
-  <div class="scrim"></div>
-  <div class="lgwrap">
-    <div class="lgleft">
-      <div>
-        <div class="lgbrand">HAMEL KOREA · SEASON 2</div>
-        <div class="lgtitle">견적 · 부킹 <span>허브</span></div>
-        <div class="lgdesc">인콰이어리부터 RFQ, 견적, 수주·부킹까지 — 하멜코리아의 모든 프로젝트를 한 곳에서. 대한민국 최고의 Heavy Hauler를 향하여.</div>
+  <div class="lgbox">
+    <div class="lgphoto" id="lgBg">
+      <div class="lgcap">
+        <div class="b">HAMEL KOREA · SEASON 2</div>
+        <div class="t">견적 · 부킹 <span>허브</span></div>
+        <div class="d">인콰이어리부터 RFQ·견적·수주·부킹까지 한 곳에서. 대한민국 최고의 Heavy Hauler를 향하여.</div>
       </div>
-      <div class="lgtag">Pricing · RFQ · Booking Intelligence<br>Internal use only · 하멜코리아</div>
     </div>
-    <div class="lgright">
-      <img class="lglogo" id="lgLogo" alt="HAMEL">
-      <form id="lgForm" onsubmit="return doLogin(event)">
-        <label>아이디</label>
-        <input id="lgUser" autocomplete="username" placeholder="ID (대소문자 무관)">
-        <label>비밀번호</label>
-        <input id="lgPass" type="password" autocomplete="current-password" placeholder="Password">
-        <button class="lgbtn" id="lgBtn" type="submit">로그인</button>
-        <div class="lgerr" id="lgErr"></div>
-      </form>
-      <div class="lgfoot">© 2026 HAMEL KOREA · 견적 허브<br>비밀번호 문의는 관리자에게</div>
+    <div class="lgpanel">
+      <div class="lgcard">
+        <img class="lglogo" id="lgLogo" alt="HAMEL">
+        <div class="lgwelcome">로그인</div>
+        <div class="lgsub">하멜코리아 견적 허브 · 직원 전용</div>
+        <form id="lgForm" onsubmit="return doLogin(event)">
+          <label>아이디</label>
+          <input id="lgUser" autocomplete="username" placeholder="ID (대소문자 무관)">
+          <label>비밀번호</label>
+          <input id="lgPass" type="password" autocomplete="current-password" placeholder="Password">
+          <button class="lgbtn" id="lgBtn" type="submit">로그인</button>
+          <div class="lgerr" id="lgErr"></div>
+        </form>
+        <div class="lgfoot">© 2026 HAMEL KOREA · 견적 허브 · 비밀번호 문의는 관리자에게</div>
+      </div>
     </div>
   </div>
 </div>
