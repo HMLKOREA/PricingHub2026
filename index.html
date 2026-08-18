@@ -224,6 +224,22 @@ tr.stale td{background:rgba(180,83,9,.08)}
 .side .userbar .ut{font-size:10.5px;color:var(--mut2)}
 .side .userbar .lo{margin-left:auto;font-size:11px;color:var(--mut);cursor:pointer;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
 .side .userbar .lo:hover{background:var(--panel2);color:var(--loss)}
+/* ===== 국내 부대비용 매트릭스 ===== */
+.lcwrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);max-height:70vh}
+table.lctbl{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
+table.lctbl th,table.lctbl td{padding:7px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.lctbl thead th{position:sticky;background:var(--panel2);font-weight:700;color:var(--mut);z-index:2}
+table.lctbl thead tr.grp th{top:0}
+table.lctbl thead tr.sub th{top:31px}
+table.lctbl thead tr.grp th{background:#eaf0fb;color:var(--txt);text-align:center;border-left:2px solid var(--line);font-size:11.5px;letter-spacing:.02em}
+table.lctbl .car{position:sticky;left:0;background:var(--panel);font-weight:700;box-shadow:1px 0 0 var(--line);z-index:1}
+table.lctbl thead .car{z-index:4;background:var(--panel2)}
+table.lctbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.lctbl td.grpstart,table.lctbl th.grpstart{border-left:2px solid var(--line)}
+table.lctbl tbody tr:hover td{background:rgba(37,99,235,.05)}
+table.lctbl tbody tr:hover td.car{background:var(--panel2)}
+table.lctbl .scope{font-size:10.5px;color:var(--mut2);font-weight:500}
+table.lctbl td.miss{color:var(--mut2);text-align:center}
 </style>
 </head>
 <body>
@@ -267,6 +283,7 @@ tr.stale td{background:rgba(180,83,9,.08)}
       <a data-v="contacts">👥 연락처·선사</a>
       <a data-v="partners">🌏 파트너</a>
       <a data-v="rates">💱 요율</a>
+      <a data-v="charges">🏭 국내 부대비용</a>
       <a data-v="ports">🌐 포트코드</a>
       <a data-v="archive">🗄 아카이브</a>
       <a data-v="import">⬆ 가져오기</a>
@@ -1795,6 +1812,105 @@ window.saveFX=async function(){
   try{ await SB.from('app_settings').upsert([{key:'fx_usd',value:String(FX.USD)},{key:'fx_eur',value:String(FX.EUR)},{key:'fx_cny',value:String(FX.CNY)}],{onConflict:'key'});
     toast('환율 저장됨 · USD '+FX.USD); }catch(err){ toast(err.message||err,true); }
 };
+/* ===== 국내 부대비용 (선사별 기준표) ===== */
+let LCVIEW={lane:'원양',port:'BUSAN',carrier:''};
+window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.port='BUSAN';} VIEWS.charges(); };
+const LC_CARRIER_ORDER={'원양':['HMM','ONE','CMA','MAERSK','COSCO','HAPAG','ZIM'],'근해':['KMTC','흥아해운','범주해운 PANCON','SINOKOR','남성해운','동진상선','RCL']};
+const LC_PORTNM={BUSAN:'부산',INCHEON:'인천',KWANGYANG:'광양',POHANG:'포항',ULSAN:'울산'};
+function lcColGroups(lane,port){ const P=port||'BUSAN';
+  if(lane==='근해') return [
+    {g:'THC (원)',cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"]]},
+    {g:'DOF',cols:[['DOF','B/L','B/L']]},
+    {g:'WFG · '+(LC_PORTNM[P]||P),cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
+    {g:'PFS',cols:[['PFS','20',"20'"],['PFS','40',"40'"]]},
+    {g:'PSC',cols:[['PSC','20',"20'"],['PSC','40',"40'"]]},
+    {g:'FSC · 부산',cols:[['FSC','BUSAN 20',"20'"],['FSC','BUSAN 40',"40'"]]},
+    {g:'SEAL',cols:[['SEAL','flat','건당']]} ];
+  return [
+    {g:'THC (원)',cols:[['THC','DC 20',"DC 20'"],['THC','DC 40',"DC 40'"],['THC','DG 20',"DG 20'"],['THC','DG 40',"DG 40'"],['THC','RF 20',"RF 20'"],['THC','RF 40',"RF 40'"],['THC','OT/FR 20',"OT·FR 20'"],['THC','OT/FR 40',"OT·FR 40'"]]},
+    {g:'CCC',cols:[['CCC','DC/OT/FR 20',"20'"],['CCC','DC/OT/FR 40',"40'"]]},
+    {g:'DOF',cols:[['DOF','B/L','B/L']]},
+    {g:'WFG · '+(LC_PORTNM[P]||P),cols:[['WFG',P+' 20',"20'"],['WFG',P+' 40',"40'"]]},
+    {g:'PFS·PSC',cols:[['PFS+PSC','20',"20'"],['PFS+PSC','40',"40'"]]} ];
+}
+function lcFmt(v){ if(v&&v.t!=null&&v.t!=='')return esc(v.t); if(v&&v.a!=null)return Math.round(v.a).toLocaleString(); return null; }
+function lcScopeShow(s){ return s&&s!=='ALL'&&s!=='Intra-Asia'; }
+function lcModel(lane,port,carrier){
+  const rows=(LCM||[]).filter(x=>x.lane===lane&&x.carrier);
+  const groups=lcColGroups(lane,port); const flat=[]; groups.forEach(g=>g.cols.forEach(c=>flat.push({code:c[0],spec:c[1]})));
+  const M={},keyList=[];
+  rows.forEach(x=>{ const k=x.carrier+'||'+(x.trade_scope||''); if(!M[k]){M[k]={carrier:x.carrier,scope:x.trade_scope||'',v:{}}; keyList.push(k);} M[k].v[x.charge_code+'|'+x.spec]={a:x.amount,t:x.amount_text}; });
+  let keys=keyList; if(carrier) keys=keys.filter(k=>M[k].carrier===carrier);
+  const ord=LC_CARRIER_ORDER[lane]||[];
+  keys.sort((a,b)=>{ const ia=ord.indexOf(M[a].carrier),ib=ord.indexOf(M[b].carrier); if(ia!==ib)return (ia<0?99:ia)-(ib<0?99:ib); return String(a).localeCompare(String(b)); });
+  return {groups,flat,rows:keys.map(k=>({carrier:M[k].carrier,scope:M[k].scope,vals:flat.map(f=>M[k].v[f.code+'|'+f.spec]||null)}))};
+}
+function lcRenderDOM(model){
+  let gh='<tr class="grp"><th class="car" rowspan="2">선사</th>';
+  model.groups.forEach(g=>{ gh+=`<th class="grpstart" colspan="${g.cols.length}">${esc(g.g)}</th>`; });
+  gh+='</tr><tr class="sub">';
+  model.groups.forEach(g=>g.cols.forEach((c,i)=>{ gh+=`<th class="num${i===0?' grpstart':''}">${esc(c[2])}</th>`; }));
+  gh+='</tr>';
+  let body='';
+  model.rows.forEach(r=>{ body+=`<tr><td class="car">${esc(r.carrier)}${lcScopeShow(r.scope)?`<div class="scope">${esc(r.scope)}</div>`:''}</td>`;
+    let ci=0; model.groups.forEach(g=>g.cols.forEach((c,i)=>{ const f=lcFmt(r.vals[ci++]); body+= f==null?`<td class="miss${i===0?' grpstart':''}">–</td>`:`<td class="num${i===0?' grpstart':''}">${f}</td>`; })); body+='</tr>'; });
+  return `<div class="lcwrap"><table class="lctbl"><thead>${gh}</thead><tbody>${body}</tbody></table></div>`;
+}
+function lcEmailHTML(model,title){ const bd='1px solid #c9d2dd';
+  let h=`<div style="font-family:Arial,'Malgun Gothic',sans-serif"><div style="font-size:13px;font-weight:bold;margin:0 0 7px;color:#12233f">${title}</div>`;
+  h+=`<table style="border-collapse:collapse;font-family:Arial,'Malgun Gothic',sans-serif;font-size:12px;color:#1b2430">`;
+  h+=`<tr><th rowspan="2" style="border:${bd};background:#eef3fb;padding:6px 9px">선사</th>`;
+  model.groups.forEach(g=>{ h+=`<th colspan="${g.cols.length}" style="border:${bd};background:#dfe9fa;padding:6px 9px;text-align:center;font-weight:bold">${g.g}</th>`; });
+  h+='</tr><tr>'; model.groups.forEach(g=>g.cols.forEach(c=>{ h+=`<th style="border:${bd};background:#eef3fb;padding:5px 9px;text-align:right">${c[2]}</th>`; })); h+='</tr>';
+  model.rows.forEach(r=>{ h+=`<tr><td style="border:${bd};padding:5px 9px;font-weight:bold">${r.carrier}${lcScopeShow(r.scope)?` <span style="color:#7a8699;font-weight:normal">(${r.scope})</span>`:''}</td>`;
+    r.vals.forEach(v=>{ const f=lcFmt(v); h+=`<td style="border:${bd};padding:5px 9px;text-align:right">${f==null?'–':f}</td>`; }); h+='</tr>'; });
+  h+='</table><div style="font-size:11px;color:#7a8699;margin-top:6px">단위: 원(KRW) · 하멜코리아 국내 부대비용 기준표</div></div>';
+  return h;
+}
+function lcPlain(model,title){ const L=a=>a.join('\t'); const head=['선사']; model.groups.forEach(g=>g.cols.forEach(c=>head.push(c[2])));
+  const out=[title,L(head)]; model.rows.forEach(r=>{ const row=[r.carrier+(lcScopeShow(r.scope)?'('+r.scope+')':'')]; r.vals.forEach(v=>{const f=lcFmt(v); row.push(f==null?'-':String(f).replace(/,/g,''));}); out.push(L(row)); }); return out.join('\n'); }
+async function copyRich(html,text){
+  try{ if(navigator.clipboard&&window.ClipboardItem){ await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text||''],{type:'text/plain'})})]); toast('표 복사됨 — 메일/문서에 붙여넣기'); return; } }catch(e){}
+  try{ const d=document.createElement('div'); d.innerHTML=html; d.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(d);
+    const rg=document.createRange(); rg.selectNode(d); const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(rg); document.execCommand('copy'); sel.removeAllRanges(); document.body.removeChild(d); toast('표 복사됨 — 붙여넣기'); }
+  catch(e){ toast('복사 실패 — 스크린샷으로 대체하세요',true); }
+}
+window.copyLCTable=function(){ const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier);
+  const title=`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${LC_PORTNM[LCVIEW.port]||LCVIEW.port}`;
+  copyRich(lcEmailHTML(m,title),lcPlain(m,title)); };
+function lcBulkHTML(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
+  if(!Object.keys(terms).length)return '<div class="d">벌크 부대비용 데이터가 없습니다.</div>';
+  return Object.keys(terms).map(t=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 8px">⚓ ${esc(t)}</h3>
+    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">항목</th><th>요율</th><th>비고</th></tr></thead><tbody>
+    ${terms[t].map(x=>`<tr><td class="car" style="position:static"><b>${esc(x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'))}</td><td style="color:var(--mut)">${esc(x.note||'')}</td></tr>`).join('')}
+    </tbody></table></div></div>`).join('');
+}
+VIEWS.charges=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  try{
+    await loadLCM(); const lane=LCVIEW.lane;
+    const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" onclick="setLCV('lane','${v}')">${l}</button>`;
+    let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')}`;
+    let table='';
+    if(lane==='벌크'){ table=lcBulkHTML(); }
+    else {
+      const ports=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.charge_code==='WFG'&&x.spec).map(x=>String(x.spec).split(' ')[0]))];
+      if(!ports.includes(LCVIEW.port))LCVIEW.port=ports[0]||'BUSAN';
+      const carriers=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.carrier).map(x=>x.carrier))];
+      const ord=LC_CARRIER_ORDER[lane]||[]; carriers.sort((a,b)=>{const ia=ord.indexOf(a),ib=ord.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+      controls+=`<span class="d" style="margin:0 0 0 8px">WFG 기준항</span><select onchange="setLCV('port',this.value)">${ports.map(p=>`<option value="${p}"${LCVIEW.port===p?' selected':''}>${LC_PORTNM[p]||p}</option>`).join('')}</select>
+        <select onchange="setLCV('carrier',this.value)"><option value="">전체 선사</option>${carriers.map(c=>`<option value="${esc(c)}"${LCVIEW.carrier===c?' selected':''}>${esc(c)}</option>`).join('')}</select>
+        <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
+      table=lcRenderDOM(lcModel(lane,LCVIEW.port,LCVIEW.carrier));
+    }
+    controls+='</div>';
+    $('#main').innerHTML=`<h2>🏭 국내 부대비용 <span class="d" style="font-weight:400">· 선사별 기준표</span></h2>
+      <div class="sub">직원 정리 기준표 · 단위 원(KRW) · 메일 본문에 붙여넣기 또는 스크린샷으로 바로 전달</div>
+      ${controls}${table}
+      <div class="d" style="margin-top:10px">※ WFG(부두사용료)는 선적항 기준으로 값이 달라 상단에서 기준항을 선택하세요. 「–」는 미제공/해당없음. 값 수정은 기준표(DB)에 반영됩니다.</div>`;
+  }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
+};
+
 VIEWS.rates=async function(){
   try{ if(!PORTDB.length){ try{ PORTDB=await q('ports',b=>b.order('code')); }catch(e){} }
     const rc=await q('rate_cards',b=>b.order('created_at',{ascending:false}).limit(50)); const rg=await q('regions');
