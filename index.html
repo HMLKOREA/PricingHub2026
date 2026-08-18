@@ -240,6 +240,9 @@ table.lctbl tbody tr:hover td{background:rgba(37,99,235,.05)}
 table.lctbl tbody tr:hover td.car{background:var(--panel2)}
 table.lctbl .scope{font-size:10.5px;color:var(--mut2);font-weight:500}
 table.lctbl td.miss{color:var(--mut2);text-align:center}
+table.lctbl.lcvert td,table.lctbl.lcvert th{white-space:normal}
+table.lctbl.lcvert td.num{font-weight:700}
+table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);border-top:2px solid var(--line);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -1813,8 +1816,8 @@ window.saveFX=async function(){
     toast('환율 저장됨 · USD '+FX.USD); }catch(err){ toast(err.message||err,true); }
 };
 /* ===== 국내 부대비용 (선사별 기준표) ===== */
-let LCVIEW={lane:'원양',port:'BUSAN',carrier:''};
-window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.port='BUSAN';} VIEWS.charges(); };
+let LCVIEW={lane:'원양',port:'BUSAN',carrier:'',scope:'',orient:'v'};
+window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.scope=''; LCVIEW.port='BUSAN';} if(k==='carrier'){LCVIEW.scope='';} VIEWS.charges(); };
 const LC_CARRIER_ORDER={'원양':['HMM','ONE','CMA','MAERSK','COSCO','HAPAG','ZIM'],'근해':['KMTC','흥아해운','범주해운 PANCON','SINOKOR','남성해운','동진상선','RCL']};
 const LC_PORTNM={BUSAN:'부산',INCHEON:'인천',KWANGYANG:'광양',POHANG:'포항',ULSAN:'울산'};
 function lcColGroups(lane,port){ const P=port||'BUSAN';
@@ -1875,7 +1878,42 @@ async function copyRich(html,text){
     const rg=document.createRange(); rg.selectNode(d); const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(rg); document.execCommand('copy'); sel.removeAllRanges(); document.body.removeChild(d); toast('표 복사됨 — 붙여넣기'); }
   catch(e){ toast('복사 실패 — 스크린샷으로 대체하세요',true); }
 }
-window.copyLCTable=function(){ const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier);
+/* ---- 세로(선사별) 모델 ---- */
+function lcCondName(cond){ return {'DC':'일반(Dry)','DG':'위험물(DG)','RF':'냉동(Reefer)','OT/FR':'OT·FR','DC/OT/FR':'Dry·OT·FR'}[cond]||LC_PORTNM[cond]||cond||''; }
+function lcSpecParts(code,spec){
+  if(code==='DOF') return {cond:'B/L',size:''};
+  if(code==='SEAL') return {cond:'',size:'건당'};
+  if(code==='PFS+PSC'||code==='PFS'||code==='PSC') return {cond:'',size:(/^\d+$/.test(spec)?spec+"'":spec)};
+  const parts=String(spec).split(' '); const size=parts[parts.length-1]; const cond=parts.slice(0,-1).join(' ');
+  return {cond:lcCondName(cond), size:(/^\d+$/.test(size)?size+"'":size)};
+}
+function lcScopes(lane,carrier){ return [...new Set((LCM||[]).filter(x=>x.lane===lane&&x.carrier===carrier).map(x=>x.trade_scope||''))]; }
+function lcVertModel(lane,carrier,scope,port){
+  const groups=lcColGroups(lane,port);
+  const rows=(LCM||[]).filter(x=>x.lane===lane&&x.carrier===carrier&&(x.trade_scope||'')===(scope||''));
+  const map={}; rows.forEach(x=>map[x.charge_code+'|'+x.spec]={a:x.amount,t:x.amount_text});
+  return groups.map(g=>({title:g.g, rows:g.cols.map(c=>{ const v=map[c[0]+'|'+c[1]]; if(!v||(v.a==null&&(v.t==null||v.t===''))) return null; const sp=lcSpecParts(c[0],c[1]); return {cond:sp.cond,size:sp.size,amt:v}; }).filter(Boolean)})).filter(s=>s.rows.length);
+}
+function lcRenderVert(secs){
+  if(!secs.length) return '<div class="d">해당 선사·구간의 기준표 항목이 없습니다.</div>';
+  const body=secs.map(s=>`<tr class="lcband"><td colspan="3">${esc(s.title)}</td></tr>`+
+    s.rows.map(r=>`<tr><td>${esc(r.cond||'')}</td><td style="color:var(--mut)">${esc(r.size||'')}</td><td class="num">${lcFmt(r.amt)}</td></tr>`).join('')).join('');
+  return `<div class="lcwrap" style="max-width:480px;max-height:none"><table class="lctbl lcvert" style="min-width:auto;width:100%"><thead><tr><th>구분</th><th>규격</th><th class="num">금액(원)</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function lcVertEmail(secs,title){ const bd='1px solid #c9d2dd';
+  let h=`<div style="font-family:Arial,'Malgun Gothic',sans-serif"><div style="font-size:13px;font-weight:bold;margin:0 0 7px;color:#12233f">${title}</div><table style="border-collapse:collapse;font-size:12px;color:#1b2430;min-width:330px">`;
+  h+=`<tr><th style="border:${bd};background:#eef3fb;padding:6px 11px;text-align:left">구분</th><th style="border:${bd};background:#eef3fb;padding:6px 11px;text-align:left">규격</th><th style="border:${bd};background:#eef3fb;padding:6px 11px;text-align:right">금액(원)</th></tr>`;
+  secs.forEach(s=>{ h+=`<tr><td colspan="3" style="border:${bd};background:#dfe9fa;padding:5px 11px;font-weight:bold">${s.title}</td></tr>`;
+    s.rows.forEach(r=>{ h+=`<tr><td style="border:${bd};padding:4px 11px">${r.cond||''}</td><td style="border:${bd};padding:4px 11px;color:#5a6678">${r.size||''}</td><td style="border:${bd};padding:4px 11px;text-align:right">${lcFmt(r.amt)}</td></tr>`; }); });
+  h+='</table><div style="font-size:11px;color:#7a8699;margin-top:6px">단위: 원(KRW) · 하멜코리아 국내 부대비용</div></div>'; return h;
+}
+function lcVertPlain(secs,title){ const out=[title,'구분\t규격\t금액(원)']; secs.forEach(s=>{ out.push('['+s.title+']'); s.rows.forEach(r=>out.push((r.cond||'')+'\t'+(r.size||'')+'\t'+String(lcFmt(r.amt)).replace(/,/g,''))); }); return out.join('\n'); }
+window.copyLCTable=function(){
+  if(LCVIEW.orient==='v'){ const carriers=[...new Set((LCM||[]).filter(x=>x.lane===LCVIEW.lane&&x.carrier).map(x=>x.carrier))]; const car=LCVIEW.carrier||carriers[0]; const sc=LCVIEW.scope||(lcScopes(LCVIEW.lane,car)[0]||'');
+    const secs=lcVertModel(LCVIEW.lane,car,sc,LCVIEW.port);
+    const title=`하멜코리아 국내 부대비용 · ${car}${lcScopeShow(sc)?' ('+sc+')':''} · ${LCVIEW.lane} · WFG기준 ${LC_PORTNM[LCVIEW.port]||LCVIEW.port}`;
+    copyRich(lcVertEmail(secs,title),lcVertPlain(secs,title)); return; }
+  const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier);
   const title=`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${LC_PORTNM[LCVIEW.port]||LCVIEW.port}`;
   copyRich(lcEmailHTML(m,title),lcPlain(m,title)); };
 function lcBulkHTML(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
@@ -1891,23 +1929,35 @@ VIEWS.charges=async function(){
     await loadLCM(); const lane=LCVIEW.lane;
     const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" onclick="setLCV('lane','${v}')">${l}</button>`;
     let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')}`;
-    let table='';
-    if(lane==='벌크'){ table=lcBulkHTML(); }
+    let table='',note='';
+    if(lane==='벌크'){ table=lcBulkHTML(); note='※ 마산항 벌크 하역·부대 요율 (KCTC). 톤(F.TON)당 기준.'; }
     else {
       const ports=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.charge_code==='WFG'&&x.spec).map(x=>String(x.spec).split(' ')[0]))];
       if(!ports.includes(LCVIEW.port))LCVIEW.port=ports[0]||'BUSAN';
       const carriers=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.carrier).map(x=>x.carrier))];
       const ord=LC_CARRIER_ORDER[lane]||[]; carriers.sort((a,b)=>{const ia=ord.indexOf(a),ib=ord.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-      controls+=`<span class="d" style="margin:0 0 0 8px">WFG 기준항</span><select onchange="setLCV('port',this.value)">${ports.map(p=>`<option value="${p}"${LCVIEW.port===p?' selected':''}>${LC_PORTNM[p]||p}</option>`).join('')}</select>
-        <select onchange="setLCV('carrier',this.value)"><option value="">전체 선사</option>${carriers.map(c=>`<option value="${esc(c)}"${LCVIEW.carrier===c?' selected':''}>${esc(c)}</option>`).join('')}</select>
-        <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
-      table=lcRenderDOM(lcModel(lane,LCVIEW.port,LCVIEW.carrier));
+      const portSel=`<span class="d" style="margin:0 0 0 8px">WFG 기준항</span><select onchange="setLCV('port',this.value)">${ports.map(p=>`<option value="${p}"${LCVIEW.port===p?' selected':''}>${LC_PORTNM[p]||p}</option>`).join('')}</select>`;
+      const otog=`<span class="d" style="margin:0 0 0 10px">보기</span><button class="segb${LCVIEW.orient==='v'?' on':''}" onclick="setLCV('orient','v')">▤ 세로(고객용)</button><button class="segb${LCVIEW.orient!=='v'?' on':''}" onclick="setLCV('orient','h')">▥ 가로(비교)</button>`;
+      if(LCVIEW.orient==='v'){
+        const car=carriers.includes(LCVIEW.carrier)?LCVIEW.carrier:(carriers[0]||''); LCVIEW.carrier=car;
+        const scopes=lcScopes(lane,car); const sc=scopes.includes(LCVIEW.scope)?LCVIEW.scope:(scopes[0]||''); LCVIEW.scope=sc;
+        const scopeSel=scopes.length>1?`<select onchange="setLCV('scope',this.value)">${scopes.map(s=>`<option value="${esc(s)}"${sc===s?' selected':''}>${esc(s||'기본')}</option>`).join('')}</select>`:'';
+        controls+=`${otog}<span class="d" style="margin:0 0 0 10px">선사</span><select onchange="setLCV('carrier',this.value)">${carriers.map(c=>`<option value="${esc(c)}"${car===c?' selected':''}>${esc(c)}</option>`).join('')}</select>${scopeSel}${portSel}
+          <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
+        table=lcRenderVert(lcVertModel(lane,car,sc,LCVIEW.port));
+        note='※ 고객 발송용 세로표 — 「📋 메일용 표 복사」로 메일 본문에 붙여넣거나 스크린샷으로 전달하세요. WFG는 선적항 기준으로 상단에서 선택.';
+      } else {
+        controls+=`${otog}${portSel}<select onchange="setLCV('carrier',this.value)"><option value="">전체 선사</option>${carriers.map(c=>`<option value="${esc(c)}"${LCVIEW.carrier===c?' selected':''}>${esc(c)}</option>`).join('')}</select>
+          <button class="btn primary sm" onclick="copyLCTable()">📋 메일용 표 복사</button>`;
+        table=lcRenderDOM(lcModel(lane,LCVIEW.port,LCVIEW.carrier));
+        note='※ 내부 비교용 가로표. 「–」는 미제공/해당없음. 고객 발송은 세로(고객용) 보기를 권장.';
+      }
     }
     controls+='</div>';
     $('#main').innerHTML=`<h2>🏭 국내 부대비용 <span class="d" style="font-weight:400">· 선사별 기준표</span></h2>
-      <div class="sub">직원 정리 기준표 · 단위 원(KRW) · 메일 본문에 붙여넣기 또는 스크린샷으로 바로 전달</div>
+      <div class="sub">직원 정리 기준표 · 단위 원(KRW) · 메일 본문 붙여넣기 또는 스크린샷으로 바로 전달</div>
       ${controls}${table}
-      <div class="d" style="margin-top:10px">※ WFG(부두사용료)는 선적항 기준으로 값이 달라 상단에서 기준항을 선택하세요. 「–」는 미제공/해당없음. 값 수정은 기준표(DB)에 반영됩니다.</div>`;
+      <div class="d" style="margin-top:10px">${note} 값 수정은 기준표(DB)에 반영됩니다.</div>`;
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
 };
 
