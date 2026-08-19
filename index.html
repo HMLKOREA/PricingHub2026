@@ -2371,7 +2371,9 @@ VIEWS.logs=async function(){
     const actOpts=['<option value="">전체 액션</option>'].concat(acts.map(a=>`<option${LOGF.act===a?' selected':''}>${a}</option>`)).join('');
     const dayBtn=(d,l)=>`<button class="segb${LOGF.days===d?' on':''}" onclick="setLogF('days',${d})">${l}</button>`;
     const sumKeys=Object.keys(sum).filter(k=>users.find(u=>u.username===k)||sum[k].login||sum[k].ins||sum[k].upd||sum[k].del||sum[k].fail);
-    sumKeys.sort((a,b)=>String(sum[b].last||'').localeCompare(String(sum[a].last||'')));
+    const ROSTER_ORDER=['ceo','luna','emily','jina','yeji','heesoo','grace','admin'];
+    const rk=k=>{const i=ROSTER_ORDER.indexOf(String(k).toLowerCase()); return i<0?900:i;};
+    sumKeys.sort((a,b)=>{const d=rk(a)-rk(b); return d!==0?d:String(sum[b].last||'').localeCompare(String(sum[a].last||''));});
     $('#main').innerHTML=`
       <h2>🔐 접속 · 입력 로그</h2>
       <div class="sub">담당자별 접속 및 데이터 입력·수정·삭제 감사 기록 · 관리자 전용</div>
