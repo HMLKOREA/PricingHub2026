@@ -14,15 +14,15 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Bl
 .side{width:210px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
 .side .logo{padding:15px 18px 13px;border-bottom:1px solid var(--line)}
 .side .logo b{font-size:15px}
-.side .logo .brandlogo{height:26px;width:auto;display:block}
+.side .logo .brandlogo{height:39px;width:auto;display:block;cursor:pointer}
 .side .logo .brandsub{font-size:11px;color:var(--mut2);margin-top:6px;font-weight:600;letter-spacing:.01em}
 .side .logo div{font-size:11px;color:var(--mut2);margin-top:2px}
 .side nav{padding:8px;flex:1;overflow:auto}
 .side nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:500;text-decoration:none;margin:2px 0}
 .side nav a:hover{background:var(--panel2)}
 .side nav a.active{background:var(--accent);color:#fff;font-weight:600}
-.side nav .navsec{font-size:10px;color:var(--mut2);font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:12px 12px 3px;margin-top:2px}
-.side nav .navsec:first-child{margin-top:0;padding-top:4px}
+.side nav .navsec{font-size:12px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;margin:10px 0 5px;background:var(--panel2);border:1px solid var(--line);border-radius:7px}
+.side nav .navsec:first-child{margin-top:2px}
 .side nav #adminNav{border-top:1px dashed var(--line);margin-top:6px;padding-top:2px}
 .side .conn{padding:10px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--mut2)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--mut2);vertical-align:0}
@@ -80,7 +80,12 @@ tr.grp td{background:var(--panel2);font-weight:700;font-size:12px;color:var(--tx
 .syslink.moqv{background:#fff;color:#111;border-color:#f2911e}          /* MOQV 화이트+오렌지 */
 .syslink.moqv .qm{color:#f2911e;font-weight:800}
 .syslink.moqv:hover{background:#fff7ee}
-.pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--mut)}
+.pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--mut);white-space:nowrap;display:inline-block}
+/* 연락처·선사 전용 테이블: 셀 줄바꿈/겹침 방지 + 여유 간격 */
+table.ctbl{table-layout:auto}
+table.ctbl th,table.ctbl td{white-space:nowrap;padding:9px 14px;vertical-align:middle}
+table.ctbl td.cmail{color:var(--mut)}
+table.ctbl thead th{background:var(--panel);position:sticky;top:0;z-index:1}
 .badge.auto{background:rgba(22,163,74,.13);color:var(--win);font-size:10px;padding:1px 6px;border-radius:20px}
 .copybox{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:6px}
 .copybox pre{margin:0;white-space:pre-wrap;font-size:12px;line-height:1.6}
@@ -282,7 +287,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 <button id="navToggle" class="navToggle" onclick="document.querySelector('.side').classList.toggle('open')">☰</button>
 <div class="app">
   <aside class="side">
-    <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA"><div class="brandsub">견적 · 부킹 허브</div></div>
+    <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA" title="대시보드로 이동" onclick="go('dashboard')"><div class="brandsub">견적 · 부킹 허브</div></div>
     <nav id="nav">
       <div class="navsec">📊 Daily Dashboard</div>
       <a data-v="dashboard" class="active">📊 대시보드</a>
@@ -395,6 +400,15 @@ async function checkConn(){
 const VIEWS={};
 let CURRENT='dashboard';
 const ADMIN_VIEWS=['archive','import','logs'];
+/* ===== 담당자 조직 순서(직급) · 공용 정렬/제외 — 모든 담당자별 현황에서 동일 로직 ===== */
+const STAFF_ORDER=[
+  {u:'ceo',n:'안진오'},{u:'luna',n:'권영재'},{u:'emily',n:'김도현'},
+  {u:'jina',n:'김진아'},{u:'yeji',n:'전예지'},{u:'heesoo',n:'노희수'},{u:'admin',n:'관리자'}
+];
+const STAFF_EXCLUDE=['grace','황선화']; // 황선화: 입사전 → 담당자별 현황에서 제외
+function staffRank(v){ const s=String(v||'').toLowerCase().trim();
+  for(let i=0;i<STAFF_ORDER.length;i++){ const o=STAFF_ORDER[i]; if(s===o.u||s===o.n.toLowerCase())return i; } return 500; }
+function staffExcluded(v){ const s=String(v||'').toLowerCase().trim(); return STAFF_EXCLUDE.some(x=>s===x.toLowerCase()); }
 function go(v){ if(ADMIN_VIEWS.includes(v)&&!(typeof ME!=='undefined'&&ME&&ME.role==='admin')){ toast('관리자 전용 메뉴입니다',true); return; }
   CURRENT=v; document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
@@ -436,7 +450,7 @@ function renderDash(ms){
   const trend=monthsBack(M,6).map(k=>({k,...met(k)})); const maxRev=Math.max(1,...trend.map(t=>t.rev));
   const tile=(l,v,n,accent)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${accent?` style="color:${accent}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   const bySales={}; bkM(M).forEach(b=>{const s=b.sales||'(미지정)';(bySales[s]=bySales[s]||{n:0,rev:0,mgn:0});bySales[s].n++;bySales[s].rev+=+b.revenue||0;bySales[s].mgn+=+b.margin||0;});
-  const salesRows=Object.entries(bySales).sort((a,b)=>b[1].rev-a[1].rev);
+  const salesRows=Object.entries(bySales).filter(([s])=>!staffExcluded(s)).sort((a,b)=>staffRank(a[0])-staffRank(b[0])||b[1].rev-a[1].rev);
   const today=new Date(); const daysSince=d=>Math.floor((today-new Date(d))/86400000);
   const openReqs=reqs.filter(r=>OPEN.includes(r.stage||'접수')).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const liveBk=bk.filter(b=>ym(b.bkg_date)>=M).sort((a,b)=>String(b.bkg_date).localeCompare(String(a.bkg_date))).slice(0,15);
@@ -1451,7 +1465,7 @@ VIEWS.daily=async function(){
     reqs.forEach(r=>{ if(dOf(r.created_at)===D)ens(ownerOf(r)).intake++; });
     open.forEach(r=>{ ens(ownerOf(r)).open++; if(daysAgo(r.created_at)>=7)OW[ownerOf(r)].stale++; });
     wonToday.forEach(r=>ens(ownerOf(r)).won++);
-    const owners=Object.keys(OW).filter(o=>o!=='(미지정)'||OW[o].intake||OW[o].open).sort((a,b)=>OW[b].intake-OW[a].intake||OW[b].open-OW[a].open);
+    const owners=Object.keys(OW).filter(o=>(o!=='(미지정)'||OW[o].intake||OW[o].open)&&!staffExcluded(o)).sort((a,b)=>staffRank(a)-staffRank(b)||OW[b].intake-OW[a].intake||OW[b].open-OW[a].open);
     DAILY._ctx={D,todayIn,stale,wonToday,bkToday,OW,owners,ownerOf};
     const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
     const stg=s=>`<span class="tag st-${s||'접수'}">${s||'접수'}</span>`;
@@ -1723,8 +1737,8 @@ window.conRender=function(){
       <select onchange="setConF('sub',this.value)">${selOpts(subList,conF.sub)}</select>
       ${(conF.major||conF.sub||kw)?`<button class="btn sm" onclick="conF={major:'',sub:'',sort:conF.sort,dir:conF.dir};document.getElementById('cq').value='';conRender()">필터해제</button>`:''}
     </div>
-    ${con.length?`<div style="overflow:auto;max-height:440px"><table><thead><tr>${cH('major_category','대분류')}${cH('sub_category','중분류')}${cH('company_name','회사')}${cH('contact_name','담당')}<th>이메일</th>${cH('country_region','지역')}${cH('grade','등급')}<th></th></tr></thead><tbody>
-      ${con.map(c=>`<tr><td><span class="pill">${esc(c.major_category||'')}</span></td><td style="color:var(--mut)">${esc(c.sub_category||'')}</td><td><b>${esc(c.company_name||'')}</b></td><td>${esc(c.contact_name||'')}</td><td style="color:var(--mut)">${esc(c.email||'')}</td><td>${esc(c.country_region||'')}</td><td>${esc(c.grade||'')}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="editContact('${c.id}')">수정</button></td></tr>`).join('')}
+    ${con.length?`<div style="overflow:auto;max-height:440px"><table class="ctbl"><thead><tr>${cH('major_category','대분류')}${cH('sub_category','중분류')}${cH('company_name','회사')}${cH('contact_name','담당')}<th>이메일</th>${cH('country_region','지역')}${cH('grade','등급')}<th></th></tr></thead><tbody>
+      ${con.map(c=>`<tr><td><span class="pill">${esc(c.major_category||'')}</span></td><td style="color:var(--mut)">${esc(c.sub_category||'')}</td><td><b>${esc(c.company_name||'')}</b></td><td>${esc(c.contact_name||'')}</td><td class="cmail">${esc(c.email||'')}</td><td>${esc(c.country_region||'')}</td><td>${esc(c.grade||'')}</td><td style="text-align:right"><button class="btn sm" onclick="editContact('${c.id}')">수정</button></td></tr>`).join('')}
       </tbody></table></div>`:'<div class="d">조건에 맞는 거래처가 없습니다.</div>'}</div>`;
   // ── 선사 데스크 ──
   let desk=DESK.filter(d=>{
@@ -1742,8 +1756,8 @@ window.conRender=function(){
       ${(deskF.major||deskF.trade)?`<button class="btn sm" onclick="deskF={major:'',trade:'',sort:deskF.sort,dir:deskF.dir};conRender()">필터해제</button>`:''}
       <button class="btn primary sm" style="margin-left:auto" onclick="newDeskBlank()">➕ 선사 데스크 추가</button>
     </div>
-    ${desk.length?`<div style="overflow:auto;max-height:440px"><table><thead><tr>${dH('major_category','대분류')}${dH('region','트레이드')}${dH('carrier','선사')}${dH('role','구분')}${dH('contact_name','담당')}<th>직위</th><th>이메일</th><th>비고</th><th></th></tr></thead><tbody>
-      ${desk.map(d=>`<tr><td><span class="pill">${esc(d.major_category||'')}</span></td><td>${esc(d.region||'')}</td><td><b>${esc(d.carrier||'')}</b></td><td style="color:var(--mut)">${esc(d.role||'')}</td><td>${esc(d.contact_name||'')}</td><td style="color:var(--mut)">${esc(d.title||'')}</td><td style="color:var(--mut)">${esc(d.email||'')}</td><td style="color:var(--mut)">${esc(d.note||'')}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="editDesk('${d.id}')">수정</button></td></tr>`).join('')}
+    ${desk.length?`<div style="overflow:auto;max-height:440px"><table class="ctbl"><thead><tr>${dH('major_category','대분류')}${dH('region','트레이드')}${dH('carrier','선사')}${dH('role','구분')}${dH('contact_name','담당')}<th>직위</th><th>이메일</th><th>비고</th><th></th></tr></thead><tbody>
+      ${desk.map(d=>`<tr><td><span class="pill">${esc(d.major_category||'')}</span></td><td>${esc(d.region||'')}</td><td><b>${esc(d.carrier||'')}</b></td><td style="color:var(--mut)">${esc(d.role||'')}</td><td>${esc(d.contact_name||'')}</td><td style="color:var(--mut)">${esc(d.title||'')}</td><td class="cmail">${esc(d.email||'')}</td><td style="color:var(--mut)">${esc(d.note||'')}</td><td style="text-align:right"><button class="btn sm" onclick="editDesk('${d.id}')">수정</button></td></tr>`).join('')}
       </tbody></table></div>`:'<div class="d">조건에 맞는 데스크가 없습니다.</div>'}</div>`;
 };
 
@@ -2370,10 +2384,8 @@ VIEWS.logs=async function(){
     const acts=['접속','로그아웃','접속실패','입력','수정','삭제'];
     const actOpts=['<option value="">전체 액션</option>'].concat(acts.map(a=>`<option${LOGF.act===a?' selected':''}>${a}</option>`)).join('');
     const dayBtn=(d,l)=>`<button class="segb${LOGF.days===d?' on':''}" onclick="setLogF('days',${d})">${l}</button>`;
-    const sumKeys=Object.keys(sum).filter(k=>users.find(u=>u.username===k)||sum[k].login||sum[k].ins||sum[k].upd||sum[k].del||sum[k].fail);
-    const ROSTER_ORDER=['ceo','luna','emily','jina','yeji','heesoo','grace','admin'];
-    const rk=k=>{const i=ROSTER_ORDER.indexOf(String(k).toLowerCase()); return i<0?900:i;};
-    sumKeys.sort((a,b)=>{const d=rk(a)-rk(b); return d!==0?d:String(sum[b].last||'').localeCompare(String(sum[a].last||''));});
+    const sumKeys=Object.keys(sum).filter(k=>(users.find(u=>u.username===k)||sum[k].login||sum[k].ins||sum[k].upd||sum[k].del||sum[k].fail)&&!staffExcluded(k));
+    sumKeys.sort((a,b)=>{const d=staffRank(a)-staffRank(b); return d!==0?d:String(sum[b].last||'').localeCompare(String(sum[a].last||''));});
     $('#main').innerHTML=`
       <h2>🔐 접속 · 입력 로그</h2>
       <div class="sub">담당자별 접속 및 데이터 입력·수정·삭제 감사 기록 · 관리자 전용</div>
