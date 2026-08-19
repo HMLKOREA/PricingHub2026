@@ -21,6 +21,9 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Bl
 .side nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:500;text-decoration:none;margin:2px 0}
 .side nav a:hover{background:var(--panel2)}
 .side nav a.active{background:var(--accent);color:#fff;font-weight:600}
+.side nav .navsec{font-size:10px;color:var(--mut2);font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:12px 12px 3px;margin-top:2px}
+.side nav .navsec:first-child{margin-top:0;padding-top:4px}
+.side nav #adminNav{border-top:1px dashed var(--line);margin-top:6px;padding-top:2px}
 .side .conn{padding:10px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--mut2)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--mut2);vertical-align:0}
 .dot.ok{background:var(--win)}.dot.bad{background:var(--loss)}
@@ -281,20 +284,26 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
   <aside class="side">
     <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA"><div class="brandsub">견적 · 부킹 허브</div></div>
     <nav id="nav">
+      <div class="navsec">📊 Daily Dashboard</div>
       <a data-v="dashboard" class="active">📊 대시보드</a>
-      <a data-v="pipeline">🗂 파이프라인</a>
       <a data-v="daily">🗓 데일리 리포트</a>
+      <div class="navsec">💰 Pricing</div>
       <a data-v="intake">📥 인테이크(AI)</a>
+      <a data-v="pipeline">🗂 파이프라인</a>
       <a data-v="rfq">🚚 RFQ·견적비교</a>
       <a data-v="history">📜 히스토리 검색</a>
-      <a data-v="contacts">👥 연락처·선사</a>
-      <a data-v="partners">🌏 파트너</a>
       <a data-v="rates">💱 요율</a>
       <a data-v="charges">🏭 국내 부대비용</a>
       <a data-v="ports">🌐 포트코드</a>
-      <a data-v="archive">🗄 아카이브</a>
-      <a data-v="import">⬆ 가져오기</a>
-      <a data-v="logs" id="navLogs" style="display:none">🔐 접속·입력 로그</a>
+      <div class="navsec">👥 Contacts</div>
+      <a data-v="contacts">👥 연락처·선사</a>
+      <a data-v="partners">🌏 파트너</a>
+      <div id="adminNav" style="display:none">
+        <div class="navsec">⚙ 설정 · 관리자</div>
+        <a data-v="archive">🗄 아카이브</a>
+        <a data-v="import">⬆ 가져오기</a>
+        <a data-v="logs">🔐 접속·입력 로그</a>
+      </div>
     </nav>
     <div class="tools" style="padding-bottom:2px">
       <div class="tools-h">🔗 회사 시스템</div>
@@ -385,7 +394,9 @@ async function checkConn(){
 /* ================= 라우터 ================= */
 const VIEWS={};
 let CURRENT='dashboard';
-function go(v){ CURRENT=v; document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+const ADMIN_VIEWS=['archive','import','logs'];
+function go(v){ if(ADMIN_VIEWS.includes(v)&&!(typeof ME!=='undefined'&&ME&&ME.role==='admin')){ toast('관리자 전용 메뉴입니다',true); return; }
+  CURRENT=v; document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
 document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>{ go(a.dataset.v); document.querySelector('.side').classList.remove('open'); }));
 
@@ -2409,7 +2420,7 @@ function applyUserbar(){ if(!ME)return; const ub=$('#userbar'); if(!ub)return; u
   $('#ubName').textContent=((ME.name||ME.u)+' '+(ME.title||'')).trim();
   $('#ubTitle').textContent=(ME.role==='admin'?'관리자':'직원')+' · '+(ME.u||'').toUpperCase();
   $('#ubAv').textContent=(ME.name||ME.u||'·').slice(0,1);
-  const nl=$('#navLogs'); if(nl)nl.style.display=(ME.role==='admin')?'flex':'none'; }
+  const an=$('#adminNav'); if(an)an.style.display=(ME.role==='admin')?'block':'none'; }
 function showGate(){ const g=$('#loginGate'); if(!g)return; g.style.display='flex';
   const bg=$('#lgBg'); if(bg)bg.style.backgroundImage="url('"+SHIP_URI+"')"; const lg=$('#lgLogo'); if(lg)lg.src=LOGO_URI;
   setTimeout(()=>{const x=$('#lgUser'); if(x)x.focus();},120); }
