@@ -2004,7 +2004,7 @@ window.saveFX=async function(){
 };
 /* ===== 국내 부대비용 (선사별 기준표) ===== */
 let LCVIEW={lane:'원양',port:'BUSAN',carrier:'',scope:'',orient:'v',lang:'ko',type:''};
-window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.scope=''; LCVIEW.port='BUSAN'; LCVIEW.type='';} if(k==='carrier'){LCVIEW.scope='';} VIEWS.charges(); };
+window.setLCV=function(k,v){ LCVIEW[k]=v; if(k==='lane'){LCVIEW.carrier=''; LCVIEW.scope=''; LCVIEW.port='BUSAN'; LCVIEW.type=''; LCVIEW.bedit=false;} if(k==='carrier'){LCVIEW.scope='';} VIEWS.charges(); };
 const LC_CARRIER_ORDER={'원양':['HMM','ONE','CMA','MAERSK','COSCO','HAPAG','ZIM'],'근해':['KMTC','흥아해운','범주해운 PANCON','SINOKOR','남성해운','동진상선','RCL']};
 const LC_PORTNM={BUSAN:'부산',INCHEON:'인천',KWANGYANG:'광양',POHANG:'포항',ULSAN:'울산'};
 const LC_PORTEN={BUSAN:'Busan',INCHEON:'Incheon',KWANGYANG:'Gwangyang',POHANG:'Pohang',ULSAN:'Ulsan'};
@@ -2128,13 +2128,50 @@ window.copyLCTable=function(){
   const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier,lang);
   const title=lang==='en'?`HAMEL KOREA · Domestic Local Charges · ${laneEN}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG@${portN}`:`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${portN}`;
   copyRich(lcEmailHTML(m,title),lcPlain(m,title)); };
-function lcBulkHTML(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
-  if(!Object.keys(terms).length)return '<div class="d">벌크 부대비용 데이터가 없습니다.</div>';
-  return Object.keys(terms).map(t=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 8px">⚓ ${esc(t)}</h3>
-    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">항목</th><th>요율</th><th>비고</th></tr></thead><tbody>
-    ${terms[t].map(x=>`<tr><td class="car" style="position:static"><b>${esc(x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'))}</td><td style="color:var(--mut)">${esc(x.note||'')}</td></tr>`).join('')}
-    </tbody></table></div></div>`).join('');
+function lcBulkHTML(bedit){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
+  const tkeys=Object.keys(terms);
+  if(!tkeys.length && !bedit)return '<div class="d">벌크 부대비용 데이터가 없습니다.</div>';
+  const ev=s=>esc(s==null?'':String(s));
+  let out=tkeys.map(t=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 8px">⚓ ${esc(t)}</h3>
+    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">항목</th><th>요율</th><th>비고</th>${bedit?'<th style="width:40px"></th>':''}</tr></thead><tbody>
+    ${terms[t].map(x=>bedit
+      ? `<tr data-bid="${x.id}"><td class="car" style="position:static"><input value="${ev(x.charge_code)}" data-bf="charge_code" style="width:100%;min-width:150px;font-weight:600"></td><td><input value="${ev(x.amount_text)}" data-bf="amount_text" style="width:100%;min-width:150px"></td><td><input value="${ev(x.note)}" data-bf="note" style="width:100%;min-width:120px"></td><td style="text-align:center"><button class="btn sm" onclick="delBulkRow('${x.id}')" title="행 삭제">✕</button></td></tr>`
+      : `<tr><td class="car" style="position:static"><b>${esc(x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'))}</td><td style="color:var(--mut)">${esc(x.note||'')}</td></tr>`
+    ).join('')}
+    </tbody></table></div>
+    ${bedit?`<button class="btn sm" style="margin-top:6px" onclick="addBulkRow('${encodeURIComponent(t)}')">＋ 행 추가</button>`:''}</div>`).join('');
+  if(bedit)out+=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"><input id="be_newterm" placeholder="새 터미널명 (예: KCTC/○○부두)" style="width:280px"> <button class="btn sm" onclick="addBulkTerminal()">＋ 터미널 추가</button></div>`;
+  return out;
 }
+async function reloadLCM(){ try{ LCM=await q('local_charge_master',b=>b.limit(2000)); }catch(e){} }
+async function flushBulkEdits(){ const trs=document.querySelectorAll('#main tr[data-bid]'); const ups=[];
+  trs.forEach(tr=>{ const id=tr.getAttribute('data-bid'); const cur=(LCM||[]).find(x=>x.id===id); if(!cur)return; const patch={};
+    tr.querySelectorAll('[data-bf]').forEach(inp=>{ const f=inp.getAttribute('data-bf'); const v=inp.value.trim(); if(String(cur[f]==null?'':cur[f])!==v)patch[f]=v; });
+    if(Object.keys(patch).length)ups.push({id,patch}); });
+  for(const u of ups){ try{ await SB.from('local_charge_master').update(u.patch).eq('id',u.id); const c=(LCM||[]).find(x=>x.id===u.id); if(c)Object.assign(c,u.patch); }catch(e){ toast('저장 실패: '+(e.message||e),true); } }
+  return ups.length; }
+window.copyBulkLC=function(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); if(!rows.length){toast('복사할 데이터가 없습니다',true);return;}
+  const terms={}; rows.forEach(x=>{(terms[x.terminal]=terms[x.terminal]||[]).push(x);});
+  const title='하멜코리아 국내 부대비용 · 벌크(중량물) 하역·부대 요율';
+  let html=`<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b"><div style="font-weight:700;font-size:15px;margin-bottom:8px">${esc(title)}</div>`;
+  const plain=[title];
+  Object.keys(terms).forEach(t=>{ html+=`<div style="font-weight:700;margin:12px 0 4px">⚓ ${esc(t)}</div><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr style="background:#f2f5f9"><th align="left">항목</th><th align="left">요율</th><th align="left">비고</th></tr>`;
+    plain.push('',`■ ${t}`);
+    terms[t].forEach(x=>{ const rate=x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'); html+=`<tr><td>${esc(x.charge_code||'')}</td><td>${esc(rate)}</td><td>${esc(x.note||'')}</td></tr>`; plain.push(`- ${x.charge_code||''}: ${rate}${x.note?'  ('+x.note+')':''}`); });
+    html+=`</table>`; });
+  html+=`<div style="color:#54637a;font-size:11px;margin-top:8px">※ 톤(F.TON) 기준 · VAT 별도 · 실제 물동량/조건에 따라 변동</div></div>`;
+  copyRich(html, plain.join('\n')); };
+window.saveBulkLC=async function(){ const n=await flushBulkEdits(); toast(n?`${n}개 항목 저장됨 — 기준표(DB) 반영`:'변경사항 없음'); LCVIEW.bedit=false; VIEWS.charges(); };
+window.addBulkRow=async function(tenc){ await flushBulkEdits(); const terminal=decodeURIComponent(tenc);
+  try{ await SB.from('local_charge_master').insert({lane:'벌크',terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
+  await reloadLCM(); VIEWS.charges(); };
+window.addBulkTerminal=async function(){ const el=document.getElementById('be_newterm'); const terminal=((el&&el.value)||'').trim(); if(!terminal){toast('터미널명을 입력하세요',true);return;}
+  await flushBulkEdits();
+  try{ await SB.from('local_charge_master').insert({lane:'벌크',terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
+  await reloadLCM(); VIEWS.charges(); };
+window.delBulkRow=async function(id){ await flushBulkEdits();
+  try{ await SB.from('local_charge_master').delete().eq('id',id); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; }
+  LCM=(LCM||[]).filter(x=>x.id!==id); VIEWS.charges(); };
 VIEWS.charges=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
   try{
@@ -2142,7 +2179,10 @@ VIEWS.charges=async function(){
     const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" style="flex:0 0 auto" onclick="setLCV('lane','${v}')">${l}</button>`;
     let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')}`;
     let table='',note='';
-    if(lane==='벌크'){ table=lcBulkHTML(); note='※ 마산항 벌크 하역·부대 요율 (KCTC). 톤(F.TON)당 기준.'; }
+    if(lane==='벌크'){ const bedit=!!LCVIEW.bedit;
+      controls+=`<button class="btn primary sm" style="flex:0 0 auto" onclick="copyBulkLC()">📋 메일용 표 복사</button>${bedit?`<button class="btn sm" style="flex:0 0 auto" onclick="saveBulkLC()">💾 저장</button><button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',false)">취소</button>`:`<button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',true)">✏ 수정</button>`}`;
+      table=lcBulkHTML(bedit);
+      note=bedit?'※ 수정 모드 — 항목·요율·비고 변경 후 「💾 저장」. 행/터미널 추가·삭제 시 직전 입력은 자동 저장됩니다. 모든 변경은 입력로그에 기록.':'※ 벌크(중량물) 하역·부대 요율 · 톤(F.TON) 기준 · VAT 별도. 「📋 메일용 표 복사」로 메일 붙여넣기, 변동 시 「✏ 수정」으로 갱신.'; }
     else {
       const ports=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.charge_code==='WFG'&&x.spec).map(x=>String(x.spec).split(' ')[0]))];
       if(!ports.includes(LCVIEW.port))LCVIEW.port=ports[0]||'BUSAN';
