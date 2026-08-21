@@ -2250,12 +2250,29 @@ function rfqBuild(){ const g=k=>RFQF.f[k]||''; const vol=`TOTAL GW ${g('gw')} kg
   const text=['[견적 취합]',...vs.map(x=>`${x.v} : ${x.d}`)].join('\n');
   return {html,text};
 }
+function rfqKg(w){ if(!w)return ''; const s=String(w); const n=parseFloat(s.replace(/[, ]/g,'')); if(isNaN(n))return ''; if(/(t|톤)/i.test(s)&&!/kg/i.test(s))return String(Math.round(n*1000)); return String(Math.round(n)); }
+function rfqCntr(r){ const map=[['cntr_20dv',"20'DV"],['cntr_40hq',"40'HQ"],['cntr_20fr',"20'FR"],['cntr_40fr',"40'FR"],['cntr_20rf',"20'RF"],['cntr_40rf',"40'RF"],['cntr_20ot',"20'OT"],['cntr_40ot',"40'OT"]]; const parts=[]; map.forEach(m=>{ const n=+r[m[0]]||0; if(n>0)parts.push(m[1]+' * '+n); }); return parts.join(', '); }
+window.rfqLoadReq=function(id){ if(!id){return;} rfqfFlush(); const r=(RFQF._reqs||[]).find(x=>x.id===id); if(!r){toast('인콰이어리를 찾을 수 없습니다',true);return;}
+  const f=RFQF.f;
+  if(r.commodity)f.commodity=r.commodity;
+  if(r.origin_port)f.pol=r.origin_port;
+  if(r.dest_port)f.pod=r.dest_port;
+  f.cbm=(r.volume_cbm!=null&&r.volume_cbm!=='')?String(r.volume_cbm):'';
+  const kg=rfqKg(r.weight); if(kg)f.gw=kg;
+  if(r.weight)f.gweight=r.weight;
+  if(r.pickup_addr)f.origin=r.pickup_addr;
+  if(r.delivery_addr)f.dest=r.delivery_addr;
+  const c=rfqCntr(r); if(c){ f.cntr=c; f.cfs_cntr=c; }
+  toast('인콰이어리 '+(r.job_no||'')+' 불러옴'); VIEWS.rfqform(); };
 window.rfqfPreview=function(){ rfqfFlush(); const el=$('#rfqfPrev'); if(el)el.innerHTML=rfqBuild().html; };
 window.rfqfCopy=function(){ rfqfFlush(); const b=rfqBuild(); copyRich(b.html,b.text); };
 window.rfqAddVendor=function(){ rfqfFlush(); RFQF.vendors.push({v:'',d:''}); VIEWS.rfqform(); };
 window.rfqDelVendor=function(i){ rfqfFlush(); RFQF.vendors.splice(i,1); VIEWS.rfqform(); };
-VIEWS.rfqform=function(){
+VIEWS.rfqform=async function(){
+  if(!RFQF._reqs){ try{ RFQF._reqs=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(60)); }catch(e){ RFQF._reqs=[]; } }
   const t=RFQF.type;
+  const reqOpts=`<option value="">＋ 인콰이어리에서 불러오기…</option>`+(RFQF._reqs||[]).map(r=>`<option value="${esc(r.id)}">${esc(r.job_no||'')} · ${esc(r.shipper||'무명')} · ${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</option>`).join('');
+  const loader=`<div class="row" style="margin-bottom:10px;gap:6px;align-items:center"><span class="d" style="margin:0">자동 채우기</span><select onchange="rfqLoadReq(this.value)" style="flex:1;min-width:0">${reqOpts}</select></div>`;
   const seg=RFQ_TYPES.map(x=>`<button class="segb${t===x[0]?' on':''}" style="flex:0 0 auto" onclick="setRFQType('${x[0]}')">${x[1]}</button>`).join(' ');
   let form='';
   if(t==='collect'){
@@ -2274,7 +2291,7 @@ VIEWS.rfqform=function(){
     <div class="sub">양식 선택 → 입력 → 「📋 메일 본문 복사」로 협력사 메일에 바로 붙여넣기</div>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin:10px 0 14px">${seg}</div>
     <div class="mgrid">
-      <div class="card"><h3>입력</h3>${form}
+      <div class="card"><h3>입력</h3>${t==='collect'?'':loader}${form}
         <div class="row" style="margin-top:12px"><button class="btn primary" onclick="rfqfCopy()">📋 메일 본문 복사</button></div></div>
       <div class="card"><h3>미리보기 <span class="d" style="display:inline">— 메일 붙여넣기 결과</span></h3><div id="rfqfPrev" style="overflow:auto">${b.html}</div></div>
     </div>
