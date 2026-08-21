@@ -296,6 +296,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
       <a data-v="intake">📥 인테이크(AI)</a>
       <a data-v="pipeline">🗂 파이프라인</a>
       <a data-v="rfq">🚚 RFQ·견적비교</a>
+      <a data-v="rfqform">✍ RFQ 양식</a>
       <a data-v="history">📜 히스토리 검색</a>
       <a data-v="rates">💱 요율</a>
       <a data-v="charges">🏭 국내 부대비용</a>
@@ -2214,6 +2215,70 @@ VIEWS.charges=async function(){
       ${controls}${table}
       <div class="d" style="margin-top:10px">${note} 값 수정은 기준표(DB)에 반영됩니다.</div>`;
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
+};
+
+/* ================= 협력사 RFQ 양식 작성기 (입력→메일 본문 복사) ================= */
+let RFQF={type:'air', f:{pol:'ICN', remark:'1. DIRECT, TS 요청\n2. 대략적인 t/time 요청', cfs_cntr:"40'HQ * 1"}, vendors:[{v:'',d:''},{v:'',d:''},{v:'',d:''}]};
+const RFQ_TYPES=[['air','✈ AIR'],['truck','🚚 트럭킹'],['cntr','📦 컨테이너'],['cfs','🏭 CFS'],['collect','📊 견적취합']];
+const RFQ_FIELDS={
+  air:[['commodity','COMMODITY (품목)','품목명'],['pol','POL (출발공항)','ICN'],['pod','POD (도착공항)','AIRPORT코드 (지역, 나라) 예: JFK (New York, USA)'],['gw','TOTAL GW (kgs)','총중량 kg'],['plt','PLT (파렛트)','파렛트 수'],['cbm','CBM','부피'],['remark','REMARK (요청사항)','']],
+  truck:[['gw','TOTAL GW (kgs)','총중량 kg'],['plt','PLT (파렛트)','파렛트 수'],['cbm','CBM','부피'],['origin','상차지','상차 주소/지역'],['dest','하차지','하차 주소/지역']],
+  cntr:[['commodity','Commodity (품목)','품목명'],['cntr','CNTR (컨테이너)',"예: 40'HQ * 1"],['gweight','GROSS WEIGHT','총중량'],['origin','상차지','상차 주소/지역'],['dest','하차지','하차 주소/지역']],
+  cfs:[['pol','POL','예: KRPUS'],['pod','POD','예: DEHAM'],['cfs_cntr','CNTR',"예: 40'HQ * 1"],['commodity','Commodity (품목)','품목명'],['gw','TOTAL GW (kgs)','총중량 kg'],['plt','PLT','파렛트 수'],['cbm','CBM','부피']]
+};
+window.setRFQType=function(t){ rfqfFlush(); RFQF.type=t; VIEWS.rfqform(); };
+function rfqfFlush(){ document.querySelectorAll('#main [data-rf]').forEach(el=>{ RFQF.f[el.getAttribute('data-rf')]=el.value; });
+  const vr=document.querySelectorAll('#main tr[data-rv]'); if(vr.length){ RFQF.vendors=[...vr].map(tr=>({v:((tr.querySelector('[data-vf="v"]')||{}).value)||'', d:((tr.querySelector('[data-vf="d"]')||{}).value)||''})); } }
+function rfqVal(k){ return RFQF.f[k]!=null?RFQF.f[k]:''; }
+function rfqTxtHtml(t){ return `<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b;white-space:pre-wrap;font-size:13.5px;line-height:1.55">${esc(t)}</div>`; }
+function rfqBuild(){ const g=k=>RFQF.f[k]||''; const vol=`TOTAL GW ${g('gw')} kgs / ${g('plt')} PLT / ${g('cbm')} CBM`;
+  if(RFQF.type==='air'){
+    const rows=[['COMMODITY',g('commodity')],['POL',g('pol')],['POD',g('pod')],['VOLUME',vol],['REMARK',g('remark')]];
+    let html=`<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b"><table border="1" cellspacing="0" cellpadding="7" style="border-collapse:collapse;font-size:13px;min-width:440px"><tr style="background:#1d4ed8;color:#fff"><th colspan="2" align="left">HAMEL KOREA RFQ</th></tr><tr style="background:#f2f5f9"><th align="left">DIST</th><th align="left">DETAIL</th></tr>`;
+    rows.forEach(r=>{ html+=`<tr><td style="font-weight:700;white-space:nowrap;vertical-align:top">${esc(r[0])}</td><td style="white-space:pre-line">${esc(r[1])}</td></tr>`; });
+    html+=`</table></div>`;
+    const text=['[HAMEL KOREA RFQ]',...rows.map(r=>r[0]==='REMARK'?`REMARK :\n${r[1]}`:`${r[0]} : ${r[1]}`)].join('\n');
+    return {html,text};
+  }
+  if(RFQF.type==='truck'){ const text=`하기 내용 참조하시어 운임 회신 부탁드립니다.\n\nCargo detail : ${vol}\n상차지 : ${g('origin')}\n하차지 : ${g('dest')}`; return {html:rfqTxtHtml(text),text}; }
+  if(RFQF.type==='cntr'){ const text=`하기 참조하시어 운임 회신 부탁드립니다.\n\n- Commodity : ${g('commodity')}\n- CNTR : ${g('cntr')}\n- GROSS WEIGHT : ${g('gweight')}\n상차지 : ${g('origin')}\n하차지 : ${g('dest')}`; return {html:rfqTxtHtml(text),text}; }
+  if(RFQF.type==='cfs'){ const text=`하기 내용 확인하시어 CFS 작업 비용 확인 부탁드립니다.\n\nPOL : ${g('pol')}\nPOD : ${g('pod')}\n- CNTR : ${g('cfs_cntr')}\n- Commodity : ${g('commodity')}\n- Cargo detail : ${vol}`; return {html:rfqTxtHtml(text),text}; }
+  const vs=RFQF.vendors||[];
+  let html=`<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b"><table border="1" cellspacing="0" cellpadding="7" style="border-collapse:collapse;font-size:13px;min-width:440px"><tr style="background:#f2f5f9"><th align="left">CONSOL</th><th align="left">DETAIL</th></tr>`;
+  vs.forEach(x=>{ html+=`<tr><td style="font-weight:700;white-space:nowrap;vertical-align:top">${esc(x.v)}</td><td style="white-space:pre-line">${esc(x.d)}</td></tr>`; });
+  html+=`</table></div>`;
+  const text=['[견적 취합]',...vs.map(x=>`${x.v} : ${x.d}`)].join('\n');
+  return {html,text};
+}
+window.rfqfPreview=function(){ rfqfFlush(); const el=$('#rfqfPrev'); if(el)el.innerHTML=rfqBuild().html; };
+window.rfqfCopy=function(){ rfqfFlush(); const b=rfqBuild(); copyRich(b.html,b.text); };
+window.rfqAddVendor=function(){ rfqfFlush(); RFQF.vendors.push({v:'',d:''}); VIEWS.rfqform(); };
+window.rfqDelVendor=function(i){ rfqfFlush(); RFQF.vendors.splice(i,1); VIEWS.rfqform(); };
+VIEWS.rfqform=function(){
+  const t=RFQF.type;
+  const seg=RFQ_TYPES.map(x=>`<button class="segb${t===x[0]?' on':''}" style="flex:0 0 auto" onclick="setRFQType('${x[0]}')">${x[1]}</button>`).join(' ');
+  let form='';
+  if(t==='collect'){
+    form=`<div class="d" style="margin-bottom:8px">협력사별 회신 견적을 취합해 비교표로 정리합니다.</div>
+      <table class="ctbl"><thead><tr><th>업체(CONSOL)</th><th>견적 내용(DETAIL)</th><th style="width:40px"></th></tr></thead><tbody>
+      ${(RFQF.vendors||[]).map((x,i)=>`<tr data-rv="${i}"><td><input data-vf="v" value="${esc(x.v)}" placeholder="업체명 (예: GGL)" style="width:100%;min-width:120px" oninput="rfqfPreview()"></td><td><input data-vf="d" value="${esc(x.d)}" placeholder="견적 / T-time / 비고" style="width:100%;min-width:200px" oninput="rfqfPreview()"></td><td style="text-align:center"><button class="btn sm" onclick="rfqDelVendor(${i})" title="행 삭제">✕</button></td></tr>`).join('')}
+      </tbody></table><button class="btn sm" style="margin-top:6px" onclick="rfqAddVendor()">＋ 업체 추가</button>`;
+  } else {
+    const flds=RFQ_FIELDS[t]||[];
+    form=`<div class="fields formgrid">${flds.map(fd=>{ const k=fd[0],lbl=fd[1],ph=fd[2]||''; const v=esc(rfqVal(k));
+      if(k==='remark')return `<div class="fld full"><label>${esc(lbl)}</label><textarea data-rf="${k}" rows="3" style="width:100%" oninput="rfqfPreview()" placeholder="${esc(ph)}">${v}</textarea></div>`;
+      return `<div class="fld"><label>${esc(lbl)}</label><input data-rf="${k}" value="${v}" placeholder="${esc(ph)}" oninput="rfqfPreview()"></div>`; }).join('')}</div>`;
+  }
+  const b=rfqBuild();
+  $('#main').innerHTML=`<h2>✍ RFQ 양식 <span class="d" style="font-weight:400">· 협력사 운임 문의</span></h2>
+    <div class="sub">양식 선택 → 입력 → 「📋 메일 본문 복사」로 협력사 메일에 바로 붙여넣기</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin:10px 0 14px">${seg}</div>
+    <div class="mgrid">
+      <div class="card"><h3>입력</h3>${form}
+        <div class="row" style="margin-top:12px"><button class="btn primary" onclick="rfqfCopy()">📋 메일 본문 복사</button></div></div>
+      <div class="card"><h3>미리보기 <span class="d" style="display:inline">— 메일 붙여넣기 결과</span></h3><div id="rfqfPrev" style="overflow:auto">${b.html}</div></div>
+    </div>
+    <div class="d" style="margin-top:10px">※ 복사 시 표·서식이 유지되며, 서식 미지원 메일은 자동으로 텍스트로 붙여넣기됩니다. 협력사 발송용 양식입니다.</div>`;
 };
 
 VIEWS.rates=async function(){
