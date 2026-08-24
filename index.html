@@ -2301,8 +2301,9 @@ VIEWS.rfqform=async function(){
 };
 
 /* ================= HD SITESOLUTION · 중국발(SHA/NGB/TAO) FR·COA 섹터 ================= */
-let HD={coa:[],ship:[],fStatus:'',fPol:''};
-const HD_STATUS=['예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
+let HD={coa:[],ship:[],fStatus:'',fPol:'',inOpen:false,inRows:null,inMeta:null};
+let HDRAW={text:'',html:'',image:null};
+const HD_STATUS=['문의','예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
 const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','BUSAN'];
 const HD_CNTR=["20'DC","40'HC","20'FR","40'FR","40'FV","40'OT","20'OT","40'OH"];
 const hdM=s=>String(s||'').slice(0,7);
@@ -2335,6 +2336,11 @@ function renderHD(){
   if(HD.tPol) tShip=tShip.filter(s=>s.pol===HD.tPol);
   if(HD.tType) tShip=tShip.filter(s=>s.cntr_type===HD.tType);
   if(HD.tKw){ const k=HD.tKw.toUpperCase(); tShip=tShip.filter(s=>String(s.pod||'').toUpperCase().includes(k)); }
+  if(HD.tPeriod){ const now=new Date(); let from='',to='';
+    if(HD.tPeriod==='ytd'){ from=now.getFullYear()+'-01-01'; }
+    else if(HD.tPeriod==='ly'){ from=(now.getFullYear()-1)+'-01-01'; to=(now.getFullYear()-1)+'-12-31'; }
+    else { const mm={'3m':3,'6m':6,'12m':12}[HD.tPeriod]||0; const d=new Date(now); d.setMonth(d.getMonth()-mm); from=d.toISOString().slice(0,10); }
+    tShip=tShip.filter(s=>{ const e=String(s.etd||'').slice(0,10); if(!e)return false; if(from&&e<from)return false; if(to&&e>to)return false; return true; }); }
   const TG={};
   tShip.forEach(s=>{ const key=normPod(s.pod)+'|'+(s.cntr_type||'-'); if(!TG[key])TG[key]={pod:normPod(s.pod),type:s.cntr_type||'-',rows:[]}; TG[key].rows.push(s); });
   const tGroups=Object.values(TG).map(g=>{ const sells=g.rows.map(r=>+r.selling).filter(v=>!isNaN(v));
@@ -2351,7 +2357,7 @@ function renderHD(){
   if(HD.cTrade) coaF=coaF.filter(c=>c.trade_region===HD.cTrade);
   if(HD.cType) coaF=coaF.filter(c=>c.cntr_type===HD.cType);
   if(HD.cKw){ const k=HD.cKw.toLowerCase(); coaF=coaF.filter(c=>(String(c.pod_country||'')+c.pod_port+c.carrier+(c.remark||'')).toLowerCase().includes(k)); }
-  const stBadge=s=>{ const c={'예약':'#8592a4','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[s]||'#54637a'; return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${c}">${esc(s||'-')}</span>`; };
+  const stBadge=s=>{ const c={'문의':'#6366f1','예약':'#8592a4','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[s]||'#54637a'; return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${c}">${esc(s||'-')}</span>`; };
   const coaOf=id=>HD.coa.find(c=>c.id===id);
   $('#main').innerHTML=`
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -2366,6 +2372,8 @@ function renderHD(){
       ${tile('누적 매출',money(revUSD),'선적 기준 USD')}
       ${tile('누적 마진',money(marginUSD),'(Selling−Buying)×수량',marginUSD>0?'var(--win)':marginUSD<0?'var(--loss)':null)}
     </div>
+
+    ${hdIntakeCard()}
 
     <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">📑 COA 계약 <span class="pill">${coaF.length}/${HD.coa.length}</span></h3>
       <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
@@ -2395,10 +2403,11 @@ function renderHD(){
 
     <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">📈 POD별 견적 추이 <span class="pill">${tGroups.length}</span></h3>
       <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <select onchange="setHDf('tPeriod',this.value)"><option value="">전체 기간</option>${[['3m','최근 3개월'],['6m','최근 6개월'],['12m','최근 12개월'],['ytd','올해'],['ly','작년']].map(([v,l])=>`<option value="${v}"${HD.tPeriod===v?' selected':''}>${l}</option>`).join('')}</select>
         <select onchange="setHDf('tPol',this.value)"><option value="">전체 POL</option>${HD_POLS.map(p=>`<option${HD.tPol===p?' selected':''}>${p}</option>`).join('')}</select>
         <select onchange="setHDf('tType',this.value)"><option value="">전체 타입</option>${HD_CNTR.map(t=>`<option${HD.tType===t?' selected':''}>${t}</option>`).join('')}</select>
         <input value="${esc(HD.tKw||'')}" placeholder="POD 검색 (예: MOMBASA)" onchange="setHDf('tKw',this.value)" style="width:170px">
-        ${(HD.tPol||HD.tType||HD.tKw)?`<button class="btn sm" onclick="HD.tPol='';HD.tType='';HD.tKw='';renderHD()">필터해제</button>`:''}</div></div>
+        ${(HD.tPeriod||HD.tPol||HD.tType||HD.tKw)?`<button class="btn sm" onclick="HD.tPeriod='';HD.tPol='';HD.tType='';HD.tKw='';renderHD()">필터해제</button>`:''}</div></div>
       ${tGroups.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>POD</th><th>타입</th><th class="num">건수</th><th class="num">최저</th><th class="num">평균</th><th class="num">최고</th><th class="num">최근</th><th>최근ETD</th><th>추이(Selling)</th><th></th></tr></thead><tbody>
         ${tGroups.slice(0,400).map(g=>`<tr><td><b>${esc(g.pod)}</b></td><td>${esc(g.type)}</td><td class="num mono">${g.n}</td><td class="num mono">${money(g.min)}</td><td class="num mono" style="font-weight:700">${money(g.avg)}</td><td class="num mono">${money(g.max)}</td><td class="num mono" style="color:var(--accent);font-weight:700">${money(g.latest)}</td><td class="mono" style="white-space:nowrap;color:var(--mut)">${esc(g.latestEtd)}</td><td>${hdSpark(g.spark)}</td><td style="text-align:right"><button class="btn sm" onclick="hdTrendDrill('${encodeURIComponent(g.pod)}','${encodeURIComponent(g.type)}')">이력</button></td></tr>`).join('')}
       </tbody></table></div>${tGroups.length>400?`<div class="d" style="margin-top:6px">${tGroups.length}개 중 상위 400개 표시</div>`:''}`:'<div class="d" style="margin-top:8px">추이 데이터가 없습니다.</div>'}
@@ -2417,6 +2426,96 @@ window.hdTrendDrill=function(podEnc,typeEnc){ const pod=decodeURIComponent(podEn
     ${rows.map(s=>`<tr><td class="mono" style="white-space:nowrap">${esc(s.etd||'-')}</td><td>${esc(s.status||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono" style="color:var(--accent);font-weight:700">${money(s.selling)}</td><td class="mono" style="color:var(--mut)">${esc(s.tms_no||'')}</td></tr>`).join('')}
     </tbody></table></div>`;
   showModal(body); };
+/* ---- HD 문의 인테이크 (메일 붙여넣기 → AI 읽기 → 선적 파이프라인 저장) ---- */
+function hdIntakeCard(){
+  const meta=HD.inMeta||null, rows=HD.inRows;
+  const stOpts=v=>HD_STATUS.map(s=>`<option${String(v||'문의')===s?' selected':''}>${s}</option>`).join('');
+  const polOpts=v=>`<option value="">-</option>`+HD_POLS.map(p=>`<option${v===p?' selected':''}>${p}</option>`).join('');
+  const typeOpts=v=>`<option value="">-</option>`+HD_CNTR.map(t=>`<option${v===t?' selected':''}>${t}</option>`).join('');
+  let preview='';
+  if(rows&&rows.length){
+    preview=`<div style="overflow:auto;max-height:440px;margin-top:10px"><table class="ctbl"><thead><tr><th>상태</th><th>POL</th><th>POD</th><th>타입</th><th class="num">수량</th><th>ETD</th><th>선사</th><th>호선</th><th>장비스펙</th><th class="num">Buying</th><th class="num">Selling</th><th></th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr>
+        <td><select onchange="hdInEdit(${i},'status',this.value)">${stOpts(r.status)}</select></td>
+        <td><select onchange="hdInEdit(${i},'pol',this.value)">${polOpts(r.pol)}</select></td>
+        <td><input value="${esc(r.pod||'')}" onchange="hdInEdit(${i},'pod',this.value)" style="width:130px"></td>
+        <td><select onchange="hdInEdit(${i},'cntr_type',this.value)">${typeOpts(r.cntr_type)}</select></td>
+        <td><input type="number" value="${esc(r.qty==null?'':r.qty)}" onchange="hdInEdit(${i},'qty',this.value)" style="width:58px"></td>
+        <td><input type="date" value="${esc(r.etd||'')}" onchange="hdInEdit(${i},'etd',this.value)"></td>
+        <td><input value="${esc(r.line||'')}" onchange="hdInEdit(${i},'line',this.value)" style="width:90px"></td>
+        <td><input value="${esc(r.vessel||'')}" onchange="hdInEdit(${i},'vessel',this.value)" style="width:120px"></td>
+        <td><input value="${esc(r.equipment_spec||'')}" onchange="hdInEdit(${i},'equipment_spec',this.value)" style="width:130px"></td>
+        <td><input type="number" value="${esc(r.buying==null?'':r.buying)}" onchange="hdInEdit(${i},'buying',this.value)" style="width:78px"></td>
+        <td><input type="number" value="${esc(r.selling==null?'':r.selling)}" onchange="hdInEdit(${i},'selling',this.value)" style="width:78px"></td>
+        <td style="text-align:right"><button class="btn sm" style="color:var(--loss)" onclick="hdInDel(${i})">✕</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn win" onclick="hdInSave()">＋ 선적 파이프라인에 저장 (${rows.length}건)</button><button class="btn sm" onclick="hdInAdd()">＋ 행 추가</button><span class="d" style="margin:0">저장 시 상태 「문의」로 쌓이고 아래 선적 표·POD 추이에 즉시 반영됩니다. 세부(치수·마감·비고)는 저장 후 「수정」에서 편집.</span></div>`;
+  }else if(rows){ preview=`<div class="d" style="margin-top:10px">읽었지만 선적 라인을 못 찾았습니다. 원문을 확인하거나 「행 추가」로 직접 입력하세요. <button class="btn sm" onclick="hdInAdd()">＋ 행 추가</button></div>`; }
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">📥 문의 인테이크 <span class="badge auto">AI</span> <span class="d" style="font-weight:400;display:inline">— J2K·은산·뉴월드 문의 메일을 읽어 선적 파이프라인으로</span></h3>
+      <button class="btn sm" onclick="HD.inOpen=!HD.inOpen;renderHD()">${HD.inOpen?'▲ 접기':'▼ 펼치기'}</button></div>
+    ${HD.inOpen?`
+    <div class="d" style="margin-top:6px">문의 <b>메일 본문·표를 복사→붙여넣기</b>(표 보존) · <b>표 스크린샷</b> · <b>.eml</b> — AI가 읽어 POL·POD·타입·수량·호선·요율 라인으로 정형화합니다.</div>
+    <textarea id="hdEmailRaw" placeholder="문의 메일/표 붙여넣기…(Ctrl+V로 표·이미지도 가능)" style="width:100%;min-height:110px;margin-top:8px;font-family:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--txt)" onpaste="hdIntakePaste(event)" oninput="hdIntakeText(this.value)">${esc(HDRAW.text||'')}</textarea>
+    <div id="hdInThumb" style="${HDRAW.image?'':'display:none;'}margin-top:8px">${HDRAW.image?`<img src="${HDRAW.image.dataUrl}" style="max-height:100px;border:1px solid var(--line);border-radius:8px;vertical-align:middle"> <button class="btn sm" onclick="hdClearImage()">이미지 제거</button>`:''}</div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="hdBtnFill" onclick="hdFillIntake()">🤖 AI 읽어채우기</button>
+      <label class="btn sm" style="cursor:pointer">🖼 이미지<input type="file" accept="image/*" style="display:none" onchange="hdImagePick(this)"></label>
+      <label class="btn sm" style="cursor:pointer">📎 .eml<input type="file" accept=".eml,message/rfc822" style="display:none" onchange="hdEmlPick(this)"></label>
+      <button class="btn sm" onclick="hdIntakeExample()">예시</button>
+      <button class="btn sm" onclick="hdInClear()">비우기</button>
+      <span id="hdInStat" class="d" style="margin:0">${meta?`✅ ${esc(meta.customer||'문의')} <span class="badge auto">${esc(meta.model||'')}</span> · 신뢰도 ${meta.confidence!=null?Math.round(meta.confidence*100)+'%':'-'}${(meta.missing&&meta.missing.length)?` · <span style="color:var(--loss)">확인필요: ${esc(meta.missing.join(', '))}</span>`:''}`:''}</span>
+    </div>${preview}`:''}
+  </div>`;
+}
+window.hdIntakeText=function(v){ HDRAW.text=v; if(!v)HDRAW.html=''; };
+window.hdIntakePaste=function(e){ try{ const cd=e.clipboardData; if(!cd)return;
+  const items=[...(cd.items||[])]; const img=items.find(it=>it.type&&it.type.indexOf('image/')===0);
+  if(img){ const f=img.getAsFile(); if(f){ e.preventDefault(); hdReadImage(f); return; } }
+  const html=cd.getData&&cd.getData('text/html');
+  if(html&&/<t[dhr]\b|<table/i.test(html)){ HDRAW.html=html; } else { HDRAW.html=''; }
+  setTimeout(()=>{ HDRAW.text=($('#hdEmailRaw')?.value||'').trim(); },0);
+}catch(err){} };
+function hdReadImage(file){ if(!file)return; const r=new FileReader(); r.onload=()=>{ const m=/^data:([^;]+);base64,(.*)$/.exec(r.result||''); if(m){ HDRAW.image={media_type:m[1],data:m[2],dataUrl:r.result}; HDRAW.html=''; renderHD(); } }; r.readAsDataURL(file); }
+window.hdImagePick=function(input){ const f=input.files&&input.files[0]; if(f)hdReadImage(f); input.value=''; };
+window.hdClearImage=function(){ HDRAW.image=null; renderHD(); };
+window.hdEmlPick=async function(input){ const f=input.files&&input.files[0]; if(!f)return; try{ const txt=await f.text(); HDRAW.text=txt.slice(0,18000); HDRAW.html=''; HDRAW.image=null; renderHD(); }catch(e){ toast('eml 읽기 실패',true); } input.value=''; };
+window.hdIntakeExample=function(){ HDRAW={text:`HD사이트솔루션 중국발 견적 문의드립니다. (은산)\n1) SHANGHAI → MOMBASA, KENYA / 40'FR 2대 / 굴착기 CAT320 (L1050 W340 H360cm, 대당 22T) / Cargo Ready 9/15 / 견적 부탁드립니다.\n2) NINGBO → DURBAN / 40'FV 1대 / 발전기 1대 18T / ETD 9월 말 희망.`,html:'',image:null}; HD.inRows=null; HD.inMeta=null; HD.inOpen=true; renderHD(); };
+window.hdInEdit=function(i,k,v){ if(HD.inRows&&HD.inRows[i]) HD.inRows[i][k]=v; };
+window.hdInDel=function(i){ if(HD.inRows){ HD.inRows.splice(i,1); renderHD(); } };
+window.hdInAdd=function(){ HD.inRows=HD.inRows||[]; HD.inRows.push({status:'문의'}); HD.inOpen=true; renderHD(); };
+window.hdInClear=function(){ HDRAW={text:'',html:'',image:null}; HD.inRows=null; HD.inMeta=null; renderHD(); };
+window.hdFillIntake=async function(){
+  HDRAW.text=($('#hdEmailRaw')?.value||HDRAW.text||'').trim();
+  const hasImg=!!(HDRAW.image&&HDRAW.image.data), hasHtml=!!HDRAW.html, hasText=!!HDRAW.text;
+  if(!hasImg&&!hasHtml&&!hasText){ toast('문의 메일/표/이미지를 넣으세요',true); return; }
+  const btn=$('#hdBtnFill'); if(btn){ btn.disabled=true; btn.textContent='🤖 AI 분석 중…'; }
+  const payload=hasImg?{image:{media_type:HDRAW.image.media_type,data:HDRAW.image.data}}:hasHtml?{html:HDRAW.html}:{text:HDRAW.text};
+  try{
+    const r=await callParse('hd_intake',payload);
+    if(r&&r.ok&&r.data){
+      const d=r.data, lines=Array.isArray(d.lines)?d.lines:[];
+      HD.inRows=lines.map(x=>({status:'문의',pol:x.pol||'',pod:(x.pod!=null?String(x.pod):'').toUpperCase(),cntr_type:x.cntr_type||'',qty:x.qty!=null?String(x.qty):'',etd:x.etd||'',cargo_ready:x.cargo_ready||'',deadline:x.deadline||'',line:x.line||'',vessel:x.vessel||'',buying:x.buying!=null?x.buying:'',selling:x.selling!=null?x.selling:'',equipment_spec:x.equipment_spec||'',fr_dims:x.fr_dims||'',weight:x.weight||'',remark:x.remark||''}));
+      HD.inMeta={customer:d.customer||'',confidence:d.confidence,missing:Array.isArray(d.missing)?d.missing:[],model:r.model||''};
+      HD.inOpen=true;
+      toast(HD.inRows.length?`🤖 ${HD.inRows.length}개 라인 읽음 — 검수 후 저장하세요`:'읽었으나 라인을 못 찾음 — 원문 확인',!HD.inRows.length);
+    } else { throw new Error((r&&(r.message||r.error))||'AI 응답 없음'); }
+  }catch(e){ toast('AI 실패: '+(e.message||e),true); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='🤖 AI 읽어채우기'; } renderHD(); }
+};
+window.hdInSave=async function(){
+  const rows=(HD.inRows||[]).filter(r=>r&&((r.pod&&String(r.pod).trim())||r.pol||r.cntr_type));
+  if(!rows.length){ toast('저장할 라인이 없습니다 (POD/POL/타입 중 하나는 필요)',true); return; }
+  const ins=rows.map(r=>({status:r.status||'문의',pol:r.pol||null,pod:(r.pod||'').trim()||null,cntr_type:r.cntr_type||null,
+    qty:num(r.qty),etd:r.etd||null,cargo_ready:r.cargo_ready||null,deadline:(r.deadline||'').trim()||null,
+    line:(r.line||'').trim()||null,vessel:(r.vessel||'').trim()||null,buying:num(r.buying),selling:num(r.selling),
+    equipment_spec:(r.equipment_spec||'').trim()||null,fr_dims:(r.fr_dims||'').trim()||null,weight:(r.weight||'').trim()||null,remark:(r.remark||'').trim()||null}));
+  try{ await SB.from('hd_shipment').insert(ins); toast(`${ins.length}건 선적 파이프라인 저장됨`); }
+  catch(e){ toast('저장 실패: '+(e.message||e),true); return; }
+  HDRAW={text:'',html:'',image:null}; HD.inRows=null; HD.inMeta=null;
+  await loadHD(); renderHD();
+};
 /* ---- HD 입력/수정 모달 ---- */
 function hdFld(lbl,id,val,ph,type){ const t=type||'text'; return `<div class="fld"><label>${esc(lbl)}</label><input id="${id}" type="${t}" value="${esc(val==null?'':val)}" placeholder="${esc(ph||'')}"></div>`; }
 function hdSel(lbl,id,val,opts,blank){ return `<div class="fld"><label>${esc(lbl)}</label><select id="${id}">${(blank?`<option value="">${esc(blank)}</option>`:'')}${opts.map(o=>`<option${String(val||'')===String(o)?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }
