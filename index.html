@@ -2328,6 +2328,14 @@ function renderHD(){
   let ship=HD.ship.slice();
   if(HD.fStatus) ship=ship.filter(s=>(s.status||'')===HD.fStatus);
   if(HD.fPol) ship=ship.filter(s=>(s.pol||'')===HD.fPol);
+  // COA 필터
+  const hdUniq=(arr,k)=>[...new Set(arr.map(x=>x[k]).filter(Boolean))].sort();
+  const cPols=hdUniq(HD.coa,'pol'), cTrades=hdUniq(HD.coa,'trade_region'), cTypes=hdUniq(HD.coa,'cntr_type');
+  let coaF=HD.coa.slice();
+  if(HD.cPol) coaF=coaF.filter(c=>c.pol===HD.cPol);
+  if(HD.cTrade) coaF=coaF.filter(c=>c.trade_region===HD.cTrade);
+  if(HD.cType) coaF=coaF.filter(c=>c.cntr_type===HD.cType);
+  if(HD.cKw){ const k=HD.cKw.toLowerCase(); coaF=coaF.filter(c=>(String(c.pod_country||'')+c.pod_port+c.carrier+(c.remark||'')).toLowerCase().includes(k)); }
   const stBadge=s=>{ const c={'예약':'#8592a4','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[s]||'#54637a'; return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${c}">${esc(s||'-')}</span>`; };
   const coaOf=id=>HD.coa.find(c=>c.id===id);
   $('#main').innerHTML=`
@@ -2344,11 +2352,17 @@ function renderHD(){
       ${tile('누적 마진',money(marginUSD),'(Selling−Buying)×수량',marginUSD>0?'var(--win)':marginUSD<0?'var(--loss)':null)}
     </div>
 
-    <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">📑 COA 계약 <span class="pill">${HD.coa.length}</span></h3>
-      <button class="btn primary sm" onclick="hdNewCoa()">＋ 계약 추가</button></div>
-      ${HD.coa.length?`<div style="overflow:auto;margin-top:8px"><table class="ctbl"><thead><tr><th>선사</th><th>POL</th><th>POD</th><th>트레이드</th><th>타입</th><th class="num">약정</th><th class="num">계약요율</th><th class="num">Selling</th><th style="min-width:120px">소진율</th><th class="num">잔여</th><th>유효</th><th></th></tr></thead><tbody>
-        ${HD.coa.map(c=>{const d=hdDraw(c.id);const rem=(+c.committed_qty||0)-d;const pct=c.committed_qty?Math.round(d/c.committed_qty*100):0;return `<tr><td><b>${esc(c.carrier||'')}</b></td><td>${esc(c.pol||'')}</td><td>${esc(c.pod_port||c.pod_country||'')}</td><td style="color:var(--mut)">${esc(c.trade_region||'')}</td><td>${esc(c.cntr_type||'')}</td><td class="num mono">${(+c.committed_qty||0).toLocaleString()}</td><td class="num mono">${money(c.contract_rate)}</td><td class="num mono">${money(c.selling_rate)}</td><td>${hdBar(pct,pct>=90?'var(--loss)':pct>=70?'var(--amber)':'var(--win)')}</td><td class="num mono" style="${rem<0?'color:var(--loss);font-weight:700':''}">${rem.toLocaleString()}</td><td class="mono" style="white-space:nowrap;color:var(--mut)">${esc(c.validity||'')}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditCoa('${c.id}')">수정</button></td></tr>`;}).join('')}
-      </tbody></table></div>`:'<div class="d" style="margin-top:8px">등록된 COA 계약이 없습니다. 「＋ 계약 추가」로 시작하세요.</div>'}
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">📑 COA 계약 <span class="pill">${coaF.length}/${HD.coa.length}</span></h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <select onchange="setHDf('cPol',this.value)"><option value="">전체 POL</option>${cPols.map(p=>`<option${HD.cPol===p?' selected':''}>${esc(p)}</option>`).join('')}</select>
+        <select onchange="setHDf('cTrade',this.value)"><option value="">전체 트레이드</option>${cTrades.map(t=>`<option${HD.cTrade===t?' selected':''}>${esc(t)}</option>`).join('')}</select>
+        <select onchange="setHDf('cType',this.value)"><option value="">전체 타입</option>${cTypes.map(t=>`<option${HD.cType===t?' selected':''}>${esc(t)}</option>`).join('')}</select>
+        <input value="${esc(HD.cKw||'')}" placeholder="도착지·국가 검색" onchange="setHDf('cKw',this.value)" style="width:150px">
+        ${(HD.cPol||HD.cTrade||HD.cType||HD.cKw)?`<button class="btn sm" onclick="HD.cPol='';HD.cTrade='';HD.cType='';HD.cKw='';renderHD()">필터해제</button>`:''}
+        <button class="btn primary sm" onclick="hdNewCoa()">＋ 계약 추가</button></div></div>
+      ${coaF.length?`<div style="overflow:auto;max-height:460px;margin-top:8px"><table class="ctbl"><thead><tr><th>선사</th><th>POL</th><th>POD</th><th>트레이드</th><th>타입</th><th class="num">약정</th><th class="num">계약요율</th><th class="num">Selling</th><th style="min-width:120px">소진율</th><th class="num">잔여</th><th>유효</th><th></th></tr></thead><tbody>
+        ${coaF.map(c=>{const d=hdDraw(c.id);const rem=(+c.committed_qty||0)-d;const pct=c.committed_qty?Math.round(d/c.committed_qty*100):0;return `<tr><td><b>${esc(c.carrier||'')}</b></td><td>${esc(c.pol||'')}</td><td>${esc(c.pod_port||c.pod_country||'')}</td><td style="color:var(--mut)">${esc(c.trade_region||'')}</td><td>${esc(c.cntr_type||'')}</td><td class="num mono">${(+c.committed_qty||0).toLocaleString()}</td><td class="num mono">${money(c.contract_rate)}</td><td class="num mono">${money(c.selling_rate)}</td><td>${hdBar(pct,pct>=90?'var(--loss)':pct>=70?'var(--amber)':'var(--win)')}</td><td class="num mono" style="${rem<0?'color:var(--loss);font-weight:700':''}">${rem.toLocaleString()}</td><td class="mono" style="white-space:nowrap;color:var(--mut)">${esc(c.validity||'')}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditCoa('${c.id}')">수정</button></td></tr>`;}).join('')}
+      </tbody></table></div>`:'<div class="d" style="margin-top:8px">조건에 맞는 계약이 없습니다.</div>'}
     </div>
 
     <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">🚢 선적 진행 <span class="pill">${ship.length}/${HD.ship.length}</span></h3>
