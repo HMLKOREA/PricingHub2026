@@ -301,6 +301,8 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
       <a data-v="rates">💱 요율</a>
       <a data-v="charges">🏭 국내 부대비용</a>
       <a data-v="ports">🌐 포트코드</a>
+      <div class="navsec">🏗 HD SITESOLUTION</div>
+      <a data-v="hd">🏗 FR·COA 섹터</a>
       <div class="navsec">👥 Contacts</div>
       <a data-v="contacts">👥 연락처·선사</a>
       <a data-v="partners">🌏 파트너</a>
@@ -2297,6 +2299,142 @@ VIEWS.rfqform=async function(){
     </div>
     <div class="d" style="margin-top:10px">※ 복사 시 표·서식이 유지되며, 서식 미지원 메일은 자동으로 텍스트로 붙여넣기됩니다. 협력사 발송용 양식입니다.</div>`;
 };
+
+/* ================= HD SITESOLUTION · 중국발(SHA/NGB/TAO) FR·COA 섹터 ================= */
+let HD={coa:[],ship:[],fStatus:'',fPol:''};
+const HD_STATUS=['예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
+const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','BUSAN'];
+const HD_CNTR=["20'DC","40'HC","20'FR","40'FR","40'FV","40'OT","20'OT","40'OH"];
+const hdM=s=>String(s||'').slice(0,7);
+const hdDraw=id=>HD.ship.filter(s=>s.coa_id===id&&s.status!=='취소').reduce((a,s)=>a+(+s.qty||0),0);
+const hdCoaLabel=c=>`${c.carrier||'-'} · ${c.pol||'?'}→${c.pod_port||c.pod_country||'?'} · ${c.cntr_type||''}`;
+window.setHDf=function(k,v){ HD[k]=v; renderHD(); };
+async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.coa=[]; }
+  try{ HD.ship=await q('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
+VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
+function hdBar(pct,col){ const p=Math.max(0,Math.min(100,pct||0)); return `<div style="background:var(--panel2);border-radius:6px;height:16px;min-width:80px;position:relative"><div style="height:100%;border-radius:6px;background:${col};width:${p}%"></div><span style="position:absolute;left:6px;top:0;font-size:10px;line-height:16px;color:var(--txt)">${p}%</span></div>`; }
+function renderHD(){
+  const money=v=>v==null||v===''?'-':'$'+(+v).toLocaleString();
+  const thisM=hdM(new Date().toISOString());
+  const totCommit=HD.coa.reduce((a,c)=>a+(+c.committed_qty||0),0);
+  const totDrawn=HD.coa.reduce((a,c)=>a+hdDraw(c.id),0);
+  const drawRate=totCommit?Math.round(totDrawn/totCommit*100):null;
+  const active=HD.ship.filter(s=>!['도착','취소'].includes(s.status));
+  const mShip=HD.ship.filter(s=>hdM(s.etd||s.created_at)===thisM&&s.status!=='취소');
+  const marginUSD=HD.ship.filter(s=>s.status!=='취소').reduce((a,s)=>a+((+s.selling||0)-(+s.buying||0))*(+s.qty||0),0);
+  const revUSD=HD.ship.filter(s=>s.status!=='취소').reduce((a,s)=>a+(+s.selling||0)*(+s.qty||0),0);
+  const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
+  // 선적 필터
+  let ship=HD.ship.slice();
+  if(HD.fStatus) ship=ship.filter(s=>(s.status||'')===HD.fStatus);
+  if(HD.fPol) ship=ship.filter(s=>(s.pol||'')===HD.fPol);
+  const stBadge=s=>{ const c={'예약':'#8592a4','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[s]||'#54637a'; return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${c}">${esc(s||'-')}</span>`; };
+  const coaOf=id=>HD.coa.find(c=>c.id===id);
+  $('#main').innerHTML=`
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div><h2 style="margin:0">🏗 HD SITESOLUTION <span class="d" style="font-weight:400">· 중국발 FR·COA 섹터</span></h2>
+      <div class="sub" style="margin:2px 0 0">상해·닝보·청도 발 FR/COA 계약·선적 통합 관리 · 약정물량 대비 소진율 추적</div></div>
+    </div>
+    <div class="kpis">
+      ${tile('COA 계약',HD.coa.length+'건','활성 항로')}
+      ${tile('약정물량',totCommit.toLocaleString()+' 대','연간 계약 합계')}
+      ${tile('소진율',drawRate==null?'–':drawRate+'%',`${totDrawn.toLocaleString()} / ${totCommit.toLocaleString()} 대`,drawRate==null?null:(drawRate>=90?'var(--loss)':drawRate>=70?'var(--amber)':'var(--win)'))}
+      ${tile('이번달 선적',mShip.length+'건','ETD 기준')}
+      ${tile('누적 매출',money(revUSD),'선적 기준 USD')}
+      ${tile('누적 마진',money(marginUSD),'(Selling−Buying)×수량',marginUSD>0?'var(--win)':marginUSD<0?'var(--loss)':null)}
+    </div>
+
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">📑 COA 계약 <span class="pill">${HD.coa.length}</span></h3>
+      <button class="btn primary sm" onclick="hdNewCoa()">＋ 계약 추가</button></div>
+      ${HD.coa.length?`<div style="overflow:auto;margin-top:8px"><table class="ctbl"><thead><tr><th>선사</th><th>POL</th><th>POD</th><th>트레이드</th><th>타입</th><th class="num">약정</th><th class="num">계약요율</th><th class="num">Selling</th><th style="min-width:120px">소진율</th><th class="num">잔여</th><th>유효</th><th></th></tr></thead><tbody>
+        ${HD.coa.map(c=>{const d=hdDraw(c.id);const rem=(+c.committed_qty||0)-d;const pct=c.committed_qty?Math.round(d/c.committed_qty*100):0;return `<tr><td><b>${esc(c.carrier||'')}</b></td><td>${esc(c.pol||'')}</td><td>${esc(c.pod_port||c.pod_country||'')}</td><td style="color:var(--mut)">${esc(c.trade_region||'')}</td><td>${esc(c.cntr_type||'')}</td><td class="num mono">${(+c.committed_qty||0).toLocaleString()}</td><td class="num mono">${money(c.contract_rate)}</td><td class="num mono">${money(c.selling_rate)}</td><td>${hdBar(pct,pct>=90?'var(--loss)':pct>=70?'var(--amber)':'var(--win)')}</td><td class="num mono" style="${rem<0?'color:var(--loss);font-weight:700':''}">${rem.toLocaleString()}</td><td class="mono" style="white-space:nowrap;color:var(--mut)">${esc(c.validity||'')}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditCoa('${c.id}')">수정</button></td></tr>`;}).join('')}
+      </tbody></table></div>`:'<div class="d" style="margin-top:8px">등록된 COA 계약이 없습니다. 「＋ 계약 추가」로 시작하세요.</div>'}
+    </div>
+
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">🚢 선적 진행 <span class="pill">${ship.length}/${HD.ship.length}</span></h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <select onchange="setHDf('fStatus',this.value)"><option value="">전체 상태</option>${HD_STATUS.map(s=>`<option${HD.fStatus===s?' selected':''}>${s}</option>`).join('')}</select>
+        <select onchange="setHDf('fPol',this.value)"><option value="">전체 POL</option>${HD_POLS.map(p=>`<option${HD.fPol===p?' selected':''}>${p}</option>`).join('')}</select>
+        <button class="btn primary sm" onclick="hdNewShip()">＋ 선적 추가</button></div></div>
+      ${ship.length?`<div style="overflow:auto;margin-top:8px"><table class="ctbl"><thead><tr><th>TMS</th><th>상태</th><th>BKG</th><th>POL</th><th>POD</th><th>ETD</th><th>선사</th><th>호선</th><th>타입</th><th class="num">수량</th><th class="num">Buying</th><th class="num">Selling</th><th class="num">마진</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
+        ${ship.map(s=>{const mg=((+s.selling||0)-(+s.buying||0))*(+s.qty||0);const co=coaOf(s.coa_id);return `<tr><td class="mono">${esc(s.tms_no||'')}</td><td>${stBadge(s.status)}</td><td class="mono" style="color:var(--mut)">${esc(s.booking_no||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc(co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
+      </tbody></table></div>`:'<div class="d" style="margin-top:8px">조건에 맞는 선적이 없습니다.</div>'}
+      <div class="d" style="margin-top:8px">※ 선적을 COA에 연결하면 위 계약의 소진율·잔여물량에 자동 반영됩니다. 상태 「취소」는 소진·매출 집계에서 제외.</div>
+    </div>`;
+}
+/* ---- HD 입력/수정 모달 ---- */
+function hdFld(lbl,id,val,ph,type){ const t=type||'text'; return `<div class="fld"><label>${esc(lbl)}</label><input id="${id}" type="${t}" value="${esc(val==null?'':val)}" placeholder="${esc(ph||'')}"></div>`; }
+function hdSel(lbl,id,val,opts,blank){ return `<div class="fld"><label>${esc(lbl)}</label><select id="${id}">${(blank?`<option value="">${esc(blank)}</option>`:'')}${opts.map(o=>`<option${String(val||'')===String(o)?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }
+window.hdNewCoa=function(){ hdCoaModal(null); };
+window.hdEditCoa=function(id){ hdCoaModal(HD.coa.find(c=>c.id===id)||null); };
+function hdCoaModal(c){ c=c||{};
+  showModal(`<h3>${c.id?'✏ COA 계약 수정':'＋ COA 계약 추가'}</h3>
+    <div class="fields formgrid" style="margin-top:8px">
+      ${hdFld('선사/코로더','hc_carrier',c.carrier,'예: 은산, SINOKOR')}
+      ${hdSel('POL','hc_pol',c.pol,HD_POLS,'선택')}
+      ${hdFld('도착국','hc_country',c.pod_country,'예: GERMANY')}
+      ${hdFld('도착항','hc_port',c.pod_port,'예: HAMBURG')}
+      ${hdFld('트레이드/대륙','hc_trade',c.trade_region,'예: 북유럽, 지중해')}
+      ${hdSel('컨테이너 타입','hc_type',c.cntr_type,HD_CNTR,'선택')}
+      ${hdFld('약정물량(연간)','hc_commit',c.committed_qty,'대 수','number')}
+      ${hdFld('계약요율(USD)','hc_rate',c.contract_rate,'Target Rate','number')}
+      ${hdFld('Selling(USD)','hc_sell',c.selling_rate,'','number')}
+      ${hdFld('유효/만료일','hc_valid',c.validity,'','date')}
+      ${hdFld('TMS No.','hc_tms',c.tms_no,'')}
+      <div class="fld full"><label>비고</label><input id="hc_remark" value="${esc(c.remark||'')}" placeholder="특이사항"></div>
+    </div>
+    <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary" onclick="hdSaveCoa('${c.id||''}')">저장</button>${c.id?`<button class="btn" style="color:var(--loss)" onclick="hdDelCoa('${c.id}')">삭제</button>`:''}</div>`);
+}
+window.hdSaveCoa=async function(id){ const g=x=>($('#'+x)||{}).value; const row={
+    carrier:g('hc_carrier').trim(),pol:g('hc_pol'),pod_country:g('hc_country').trim(),pod_port:g('hc_port').trim(),
+    trade_region:g('hc_trade').trim(),cntr_type:g('hc_type'),committed_qty:num(g('hc_commit')),contract_rate:num(g('hc_rate')),
+    selling_rate:num(g('hc_sell')),validity:g('hc_valid')||null,tms_no:g('hc_tms').trim(),remark:g('hc_remark').trim() };
+  try{ if(id){ await SB.from('hd_coa').update(row).eq('id',id); } else { await SB.from('hd_coa').insert(row); } toast('COA 계약 저장됨'); }
+  catch(e){ toast('저장 실패: '+(e.message||e),true); return; }
+  closeModal(); await loadHD(); renderHD(); };
+window.hdDelCoa=async function(id){ try{ await SB.from('hd_coa').delete().eq('id',id); toast('계약 삭제됨'); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; } closeModal(); await loadHD(); renderHD(); };
+window.hdNewShip=function(){ hdShipModal(null); };
+window.hdEditShip=function(id){ hdShipModal(HD.ship.find(s=>s.id===id)||null); };
+function hdShipModal(s){ s=s||{};
+  const coaOpts=`<option value="">— COA 연결 안함 —</option>`+HD.coa.map(c=>`<option value="${c.id}"${s.coa_id===c.id?' selected':''}>${esc(hdCoaLabel(c))}</option>`).join('');
+  showModal(`<h3>${s.id?'✏ 선적 수정':'＋ 선적 추가'}</h3>
+    <div class="fld full" style="margin-top:8px"><label>COA 계약 연결</label><select id="hs_coa">${coaOpts}</select></div>
+    <div class="fields formgrid" style="margin-top:8px">
+      ${hdFld('TMS No.','hs_tms',s.tms_no,'내부 관리번호')}
+      ${hdSel('상태','hs_status',s.status||'예약',HD_STATUS)}
+      ${hdFld('BKG No.','hs_bkg',s.booking_no,'')}
+      ${hdSel('POL','hs_pol',s.pol,HD_POLS,'선택')}
+      ${hdFld('POD','hs_pod',s.pod,'예: HAMBURG, GERMANY')}
+      ${hdFld('ETD','hs_etd',s.etd,'','date')}
+      ${hdFld('Cargo Ready','hs_cr',s.cargo_ready,'','date')}
+      ${hdFld('ETA','hs_eta',s.eta,'','date')}
+      ${hdFld('마감기한','hs_deadline',s.deadline,'예: 6/30(TUE) 10:00')}
+      ${hdFld('선사(LINE)','hs_line',s.line,'예: MAERSK')}
+      ${hdFld('호선(VESSEL)','hs_vessel',s.vessel,'예: MSC GULSUN 504W')}
+      ${hdSel('컨테이너 타입','hs_type',s.cntr_type,HD_CNTR,'선택')}
+      ${hdFld('수량','hs_qty',s.qty,'대','number')}
+      ${hdFld('Buying(USD)','hs_buy',s.buying,'원가 단가','number')}
+      ${hdFld('Selling(USD)','hs_sell',s.selling,'매출 단가','number')}
+      ${hdFld('장비 스펙','hs_equip',s.equipment_spec,'예: 굴착기 320 2대')}
+      ${hdFld('FR 치수','hs_dims',s.fr_dims,'L×W×H cm')}
+      ${hdFld('중량','hs_weight',s.weight,'예: 25T')}
+      ${hdFld('담당','hs_owner',s.owner,'')}
+    </div>
+    <label class="row" style="gap:6px;margin-top:8px;cursor:pointer"><input type="checkbox" id="hs_oog"${s.oog?' checked':''}> OOG(규격초과)</label>
+    <div class="fld full" style="margin-top:6px"><label>비고</label><input id="hs_remark" value="${esc(s.remark||'')}" placeholder="루팅·특이사항"></div>
+    <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary" onclick="hdSaveShip('${s.id||''}')">저장</button>${s.id?`<button class="btn" style="color:var(--loss)" onclick="hdDelShip('${s.id}')">삭제</button>`:''}</div>`);
+}
+window.hdSaveShip=async function(id){ const g=x=>($('#'+x)||{}).value; const row={
+    coa_id:g('hs_coa')||null,tms_no:g('hs_tms').trim(),status:g('hs_status'),booking_no:g('hs_bkg').trim(),
+    pol:g('hs_pol'),pod:g('hs_pod').trim(),etd:g('hs_etd')||null,cargo_ready:g('hs_cr')||null,eta:g('hs_eta')||null,
+    deadline:g('hs_deadline').trim(),line:g('hs_line').trim(),vessel:g('hs_vessel').trim(),cntr_type:g('hs_type'),
+    qty:num(g('hs_qty')),buying:num(g('hs_buy')),selling:num(g('hs_sell')),equipment_spec:g('hs_equip').trim(),
+    fr_dims:g('hs_dims').trim(),weight:g('hs_weight').trim(),owner:g('hs_owner').trim(),
+    oog:!!($('#hs_oog')||{}).checked,remark:g('hs_remark').trim() };
+  try{ if(id){ await SB.from('hd_shipment').update(row).eq('id',id); } else { await SB.from('hd_shipment').insert(row); } toast('선적 저장됨'); }
+  catch(e){ toast('저장 실패: '+(e.message||e),true); return; }
+  closeModal(); await loadHD(); renderHD(); };
+window.hdDelShip=async function(id){ try{ await SB.from('hd_shipment').delete().eq('id',id); toast('선적 삭제됨'); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; } closeModal(); await loadHD(); renderHD(); };
 
 VIEWS.rates=async function(){
   try{ if(!PORTDB.length){ try{ PORTDB=await q('ports',b=>b.order('code')); }catch(e){} }
