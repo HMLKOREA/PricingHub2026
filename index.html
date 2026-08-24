@@ -2325,9 +2325,24 @@ function renderHD(){
   const revUSD=HD.ship.filter(s=>s.status!=='취소').reduce((a,s)=>a+(+s.selling||0)*(+s.qty||0),0);
   const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   // 선적 필터
+  const normPod=p=>String(p||'').split(',')[0].trim().toUpperCase();
   let ship=HD.ship.slice();
   if(HD.fStatus) ship=ship.filter(s=>(s.status||'')===HD.fStatus);
   if(HD.fPol) ship=ship.filter(s=>(s.pol||'')===HD.fPol);
+  if(HD.fKw){ const k=HD.fKw.toUpperCase(); ship=ship.filter(s=>((s.pod||'')+(s.vessel||'')+(s.tms_no||'')+(s.line||'')).toUpperCase().includes(k)); }
+  // POD별 견적 추이 집계
+  let tShip=HD.ship.filter(s=>s.selling!=null&&s.pod);
+  if(HD.tPol) tShip=tShip.filter(s=>s.pol===HD.tPol);
+  if(HD.tType) tShip=tShip.filter(s=>s.cntr_type===HD.tType);
+  if(HD.tKw){ const k=HD.tKw.toUpperCase(); tShip=tShip.filter(s=>String(s.pod||'').toUpperCase().includes(k)); }
+  const TG={};
+  tShip.forEach(s=>{ const key=normPod(s.pod)+'|'+(s.cntr_type||'-'); if(!TG[key])TG[key]={pod:normPod(s.pod),type:s.cntr_type||'-',rows:[]}; TG[key].rows.push(s); });
+  const tGroups=Object.values(TG).map(g=>{ const sells=g.rows.map(r=>+r.selling).filter(v=>!isNaN(v));
+    const withEtd=g.rows.filter(r=>r.etd).sort((a,b)=>String(a.etd).localeCompare(String(b.etd)));
+    const latest=withEtd.length?withEtd[withEtd.length-1]:g.rows[g.rows.length-1];
+    return {pod:g.pod,type:g.type,n:g.rows.length,min:Math.min.apply(0,sells),max:Math.max.apply(0,sells),
+      avg:Math.round(sells.reduce((a,b)=>a+b,0)/sells.length),latest:+latest.selling,latestEtd:latest.etd||'',
+      spark:withEtd.map(r=>+r.selling)}; }).sort((a,b)=>b.n-a.n);
   // COA 필터
   const hdUniq=(arr,k)=>[...new Set(arr.map(x=>x[k]).filter(Boolean))].sort();
   const cPols=hdUniq(HD.coa,'pol'), cTrades=hdUniq(HD.coa,'trade_region'), cTypes=hdUniq(HD.coa,'cntr_type');
@@ -2369,13 +2384,39 @@ function renderHD(){
       <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
         <select onchange="setHDf('fStatus',this.value)"><option value="">전체 상태</option>${HD_STATUS.map(s=>`<option${HD.fStatus===s?' selected':''}>${s}</option>`).join('')}</select>
         <select onchange="setHDf('fPol',this.value)"><option value="">전체 POL</option>${HD_POLS.map(p=>`<option${HD.fPol===p?' selected':''}>${p}</option>`).join('')}</select>
+        <input value="${esc(HD.fKw||'')}" placeholder="POD·호선·TMS 검색" onchange="setHDf('fKw',this.value)" style="width:160px">
+        ${(HD.fStatus||HD.fPol||HD.fKw)?`<button class="btn sm" onclick="HD.fStatus='';HD.fPol='';HD.fKw='';renderHD()">필터해제</button>`:''}
         <button class="btn primary sm" onclick="hdNewShip()">＋ 선적 추가</button></div></div>
-      ${ship.length?`<div style="overflow:auto;margin-top:8px"><table class="ctbl"><thead><tr><th>TMS</th><th>상태</th><th>BKG</th><th>POL</th><th>POD</th><th>ETD</th><th>선사</th><th>호선</th><th>타입</th><th class="num">수량</th><th class="num">Buying</th><th class="num">Selling</th><th class="num">마진</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
-        ${ship.map(s=>{const mg=((+s.selling||0)-(+s.buying||0))*(+s.qty||0);const co=coaOf(s.coa_id);return `<tr><td class="mono">${esc(s.tms_no||'')}</td><td>${stBadge(s.status)}</td><td class="mono" style="color:var(--mut)">${esc(s.booking_no||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc(co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
-      </tbody></table></div>`:'<div class="d" style="margin-top:8px">조건에 맞는 선적이 없습니다.</div>'}
+      ${ship.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>TMS</th><th>상태</th><th>BKG</th><th>POL</th><th>POD</th><th>ETD</th><th>선사</th><th>호선</th><th>타입</th><th class="num">수량</th><th class="num">Buying</th><th class="num">Selling</th><th class="num">마진</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
+        ${ship.slice(0,300).map(s=>{const mg=((+s.selling||0)-(+s.buying||0))*(+s.qty||0);const co=coaOf(s.coa_id);return `<tr><td class="mono">${esc(s.tms_no||'')}</td><td>${stBadge(s.status)}</td><td class="mono" style="color:var(--mut)">${esc(s.booking_no||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc(co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
+      </tbody></table></div>${ship.length>300?`<div class="d" style="margin-top:6px">${ship.length}건 중 최근 300건 표시 — 검색으로 좁혀보세요</div>`:''}`:'<div class="d" style="margin-top:8px">조건에 맞는 선적이 없습니다.</div>'}
       <div class="d" style="margin-top:8px">※ 선적을 COA에 연결하면 위 계약의 소진율·잔여물량에 자동 반영됩니다. 상태 「취소」는 소진·매출 집계에서 제외.</div>
+    </div>
+
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h3 style="margin:0">📈 POD별 견적 추이 <span class="pill">${tGroups.length}</span></h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <select onchange="setHDf('tPol',this.value)"><option value="">전체 POL</option>${HD_POLS.map(p=>`<option${HD.tPol===p?' selected':''}>${p}</option>`).join('')}</select>
+        <select onchange="setHDf('tType',this.value)"><option value="">전체 타입</option>${HD_CNTR.map(t=>`<option${HD.tType===t?' selected':''}>${t}</option>`).join('')}</select>
+        <input value="${esc(HD.tKw||'')}" placeholder="POD 검색 (예: MOMBASA)" onchange="setHDf('tKw',this.value)" style="width:170px">
+        ${(HD.tPol||HD.tType||HD.tKw)?`<button class="btn sm" onclick="HD.tPol='';HD.tType='';HD.tKw='';renderHD()">필터해제</button>`:''}</div></div>
+      ${tGroups.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>POD</th><th>타입</th><th class="num">건수</th><th class="num">최저</th><th class="num">평균</th><th class="num">최고</th><th class="num">최근</th><th>최근ETD</th><th>추이(Selling)</th><th></th></tr></thead><tbody>
+        ${tGroups.slice(0,400).map(g=>`<tr><td><b>${esc(g.pod)}</b></td><td>${esc(g.type)}</td><td class="num mono">${g.n}</td><td class="num mono">${money(g.min)}</td><td class="num mono" style="font-weight:700">${money(g.avg)}</td><td class="num mono">${money(g.max)}</td><td class="num mono" style="color:var(--accent);font-weight:700">${money(g.latest)}</td><td class="mono" style="white-space:nowrap;color:var(--mut)">${esc(g.latestEtd)}</td><td>${hdSpark(g.spark)}</td><td style="text-align:right"><button class="btn sm" onclick="hdTrendDrill('${encodeURIComponent(g.pod)}','${encodeURIComponent(g.type)}')">이력</button></td></tr>`).join('')}
+      </tbody></table></div>${tGroups.length>400?`<div class="d" style="margin-top:6px">${tGroups.length}개 중 상위 400개 표시</div>`:''}`:'<div class="d" style="margin-top:8px">추이 데이터가 없습니다.</div>'}
+      <div class="d" style="margin-top:8px">※ POD×컨테이너타입별 과거 Selling 요율 분포 — 최저/평균/최고/최근과 시간순 추이(스파크라인). 「이력」으로 건별 요율 히스토리 확인. (전 상태 포함, 요율 있는 건만 집계)</div>
     </div>`;
 }
+function hdSpark(vals){ if(!vals||vals.length<2)return '<span class="d" style="margin:0">–</span>'; const w=120,h=22,mn=Math.min.apply(0,vals),mx=Math.max.apply(0,vals),rng=(mx-mn)||1;
+  const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-2-((v-mn)/rng)*(h-4)).toFixed(1)}`).join(' ');
+  const up=vals[vals.length-1]>=vals[0]; return `<svg width="${w}" height="${h}" style="vertical-align:middle;display:inline-block"><polyline points="${pts}" fill="none" stroke="${up?'#dc2626':'#16a34a'}" stroke-width="1.5"/></svg>`; }
+window.hdTrendDrill=function(podEnc,typeEnc){ const pod=decodeURIComponent(podEnc), type=decodeURIComponent(typeEnc);
+  const np=p=>String(p||'').split(',')[0].trim().toUpperCase();
+  const rows=HD.ship.filter(s=>np(s.pod)===pod&&(s.cntr_type||'-')===type&&s.selling!=null).sort((a,b)=>String(a.etd||'').localeCompare(String(b.etd||'')));
+  const money=v=>v==null||v===''?'-':'$'+(+v).toLocaleString();
+  const body=`<h3>📈 ${esc(pod)} · ${esc(type)} <span class="d" style="display:inline">— 요율 이력 ${rows.length}건</span></h3>
+    <div style="overflow:auto;max-height:60vh;margin-top:8px"><table class="ctbl"><thead><tr><th>ETD</th><th>상태</th><th>POL</th><th>POD(원문)</th><th>선사</th><th>호선</th><th class="num">수량</th><th class="num">Buying</th><th class="num">Selling</th><th>TMS</th></tr></thead><tbody>
+    ${rows.map(s=>`<tr><td class="mono" style="white-space:nowrap">${esc(s.etd||'-')}</td><td>${esc(s.status||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono" style="color:var(--accent);font-weight:700">${money(s.selling)}</td><td class="mono" style="color:var(--mut)">${esc(s.tms_no||'')}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  showModal(body); };
 /* ---- HD 입력/수정 모달 ---- */
 function hdFld(lbl,id,val,ph,type){ const t=type||'text'; return `<div class="fld"><label>${esc(lbl)}</label><input id="${id}" type="${t}" value="${esc(val==null?'':val)}" placeholder="${esc(ph||'')}"></div>`; }
 function hdSel(lbl,id,val,opts,blank){ return `<div class="fld"><label>${esc(lbl)}</label><select id="${id}">${(blank?`<option value="">${esc(blank)}</option>`:'')}${opts.map(o=>`<option${String(val||'')===String(o)?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }
