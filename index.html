@@ -2305,7 +2305,7 @@ let HD={coa:[],ship:[],fStatus:'',fPol:'',inOpen:false,inRows:null,inMeta:null};
 let HDRAW={text:'',html:'',image:null};
 const HD_STATUS=['문의','예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
 const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','BUSAN'];
-const HD_CNTR=["20'DC","40'HC","20'FR","40'FR","40'FV","40'OT","20'OT","40'OH"];
+const HD_CNTR=["DC 20'","DC 40'HC","DG 20'","DG 40'HC","FR 20'","FR 40'","FR OH 20'","FR OH 40'","FR OWH 20'","FR OWH 40'"];
 const hdM=s=>String(s||'').slice(0,7);
 const hdDraw=id=>HD.ship.filter(s=>s.coa_id===id&&s.status!=='취소').reduce((a,s)=>a+(+s.qty||0),0);
 const hdCoaLabel=c=>`${c.carrier||'-'} · ${c.pol||'?'}→${c.pod_port||c.pod_country||'?'} · ${c.cntr_type||''}`;
@@ -2481,7 +2481,7 @@ function hdReadImage(file){ if(!file)return; const r=new FileReader(); r.onload=
 window.hdImagePick=function(input){ const f=input.files&&input.files[0]; if(f)hdReadImage(f); input.value=''; };
 window.hdClearImage=function(){ HDRAW.image=null; renderHD(); };
 window.hdEmlPick=async function(input){ const f=input.files&&input.files[0]; if(!f)return; try{ const txt=await f.text(); HDRAW.text=txt.slice(0,18000); HDRAW.html=''; HDRAW.image=null; renderHD(); }catch(e){ toast('eml 읽기 실패',true); } input.value=''; };
-window.hdIntakeExample=function(){ HDRAW={text:`HD사이트솔루션 중국발 견적 문의드립니다. (은산)\n1) SHANGHAI → MOMBASA, KENYA / 40'FR 2대 / 굴착기 CAT320 (L1050 W340 H360cm, 대당 22T) / Cargo Ready 9/15 / 견적 부탁드립니다.\n2) NINGBO → DURBAN / 40'FV 1대 / 발전기 1대 18T / ETD 9월 말 희망.`,html:'',image:null}; HD.inRows=null; HD.inMeta=null; HD.inOpen=true; renderHD(); };
+window.hdIntakeExample=function(){ HDRAW={text:`HD사이트솔루션 중국발 견적 문의드립니다. (은산)\n1) SHANGHAI → MOMBASA, KENYA / 40'FR 2대 / 굴착기 CAT320 (L1050 W340 H360cm, 대당 22T) / Cargo Ready 9/15 / 견적 부탁드립니다.\n2) NINGBO → DURBAN / 40' 플랫랙 1대 / 발전기 1대 18T / ETD 9월 말 희망.`,html:'',image:null}; HD.inRows=null; HD.inMeta=null; HD.inOpen=true; renderHD(); };
 window.hdInEdit=function(i,k,v){ if(HD.inRows&&HD.inRows[i]) HD.inRows[i][k]=v; };
 window.hdInDel=function(i){ if(HD.inRows){ HD.inRows.splice(i,1); renderHD(); } };
 window.hdInAdd=function(){ HD.inRows=HD.inRows||[]; HD.inRows.push({status:'문의'}); HD.inOpen=true; renderHD(); };
