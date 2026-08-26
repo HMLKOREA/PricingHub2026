@@ -2304,7 +2304,7 @@ VIEWS.rfqform=async function(){
 let HD={coa:[],ship:[],fStatus:'',fPol:'',inOpen:false,inRows:null,inMeta:null};
 let HDRAW={text:'',html:'',image:null};
 const HD_STATUS=['문의','예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
-const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','BUSAN'];
+const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','XINGANG','BUSAN'];
 const HD_CNTR=["DC 20'","DC 40'HC","DG 20'","DG 40'HC","FR 20'","FR 40'","FR OH 20'","FR OH 40'","FR OWH 20'","FR OWH 40'"];
 const hdM=s=>String(s||'').slice(0,7);
 const hdDraw=id=>HD.ship.filter(s=>s.coa_id===id&&s.status!=='취소').reduce((a,s)=>a+(+s.qty||0),0);
@@ -2409,8 +2409,8 @@ function renderHD(){
         <span class="d" style="margin:0;font-size:11px">정렬: ${esc({status:'상태',pol:'POL',pod:'POD',etd:'ETD',qty:'수량',buying:'Buying',selling:'Selling',margin:'마진'}[HD.sortKey||'etd'])} ${HD.sortDir==='asc'?'↑':'↓'}</span>
         ${(HD.fStatus||HD.fPol||HD.fKw||HD.fMinBuy!=null||HD.fMinSell!=null||HD.sortKey)?`<button class="btn sm" onclick="HD.fStatus='';HD.fPol='';HD.fKw='';HD.fMinBuy=null;HD.fMinSell=null;HD.sortKey='';HD.sortDir='';renderHD()">필터·정렬해제</button>`:''}
         <button class="btn primary sm" onclick="hdNewShip()">＋ 선적 추가</button></div></div>
-      ${ship.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>TMS</th>${sth('상태','status')}<th>BKG</th>${sth('POL','pol')}${sth('POD','pod')}${sth('ETD','etd')}<th>선사</th><th>호선</th><th>타입</th>${sth('수량','qty',1)}${sth('Buying','buying',1)}${sth('Selling','selling',1)}${sth('마진','margin',1)}<th class="num">마진율</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
-        ${ship.slice(0,300).map(s=>{const mg=mgOf(s);const mp=(+s.selling)?Math.round(((+s.selling||0)-(+s.buying||0))/(+s.selling)*100):null;const co=coaOf(s.coa_id);return `<tr><td class="mono">${esc(s.tms_no||'')}</td><td>${stBadge(s.status)}</td><td class="mono" style="color:var(--mut)">${esc(s.booking_no||'')}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td class="num mono" style="${mp==null?'color:var(--mut2)':mp>=15?'color:var(--win)':mp<0?'color:var(--loss)':'color:var(--amber)'}">${mp==null?'–':mp+'%'}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc((co.customer||co.carrier||'')+' '+co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
+      ${ship.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>관리번호</th><th>문의처</th>${sth('상태','status')}${sth('POL','pol')}${sth('POD','pod')}${sth('ETD','etd')}<th>선사</th><th>호선</th><th>타입</th>${sth('수량','qty',1)}${sth('Buying','buying',1)}${sth('Selling','selling',1)}${sth('마진','margin',1)}<th class="num">마진율</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
+        ${ship.slice(0,300).map(s=>{const mg=mgOf(s);const mp=(+s.selling)?Math.round(((+s.selling||0)-(+s.buying||0))/(+s.selling)*100):null;const co=coaOf(s.coa_id);return `<tr><td class="mono" style="white-space:nowrap">${esc(s.ref_no||s.tms_no||'')}</td><td>${esc(s.customer||'')}</td><td>${stBadge(s.status)}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td class="num mono" style="${mp==null?'color:var(--mut2)':mp>=15?'color:var(--win)':mp<0?'color:var(--loss)':'color:var(--amber)'}">${mp==null?'–':mp+'%'}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc((co.customer||co.carrier||'')+' '+co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
       </tbody></table></div>${ship.length>300?`<div class="d" style="margin-top:6px">${ship.length}건 중 최근 300건 표시 — 검색으로 좁혀보세요</div>`:''}`:'<div class="d" style="margin-top:8px">조건에 맞는 선적이 없습니다.</div>'}
       <div class="d" style="margin-top:8px">※ 선적을 COA에 연결하면 위 계약의 소진율·잔여물량에 자동 반영됩니다. 상태 「취소」는 소진·매출 집계에서 제외.</div>
     </div>
@@ -2448,19 +2448,21 @@ function hdIntakeCard(){
   const typeOpts=v=>`<option value="">-</option>`+HD_CNTR.map(t=>`<option${v===t?' selected':''}>${t}</option>`).join('');
   let preview='';
   if(rows&&rows.length){
-    preview=`<div style="overflow:auto;max-height:440px;margin-top:10px"><table class="ctbl"><thead><tr><th>상태</th><th>POL</th><th>POD</th><th>타입</th><th class="num">수량</th><th>ETD</th><th>선사</th><th>호선</th><th>장비스펙</th><th class="num">Buying</th><th class="num">Selling</th><th></th></tr></thead><tbody>
+    preview=`<div style="overflow:auto;max-height:440px;margin-top:10px"><table class="ctbl"><thead><tr><th>문의처</th><th>관리번호</th><th>상태</th><th>POL</th><th>POD</th><th>타입</th><th class="num">수량</th><th>ETD/카고레디</th><th>품목</th><th>장비/치수</th><th class="num">중량</th><th class="num">Buying</th><th class="num">Selling</th><th></th></tr></thead><tbody>
       ${rows.map((r,i)=>`<tr>
+        <td><input value="${esc(r.customer||'')}" onchange="hdInEdit(${i},'customer',this.value)" style="width:66px"></td>
+        <td><input value="${esc(r.ref_no||'')}" onchange="hdInEdit(${i},'ref_no',this.value)" style="width:110px"></td>
         <td><select onchange="hdInEdit(${i},'status',this.value)">${stOpts(r.status)}</select></td>
         <td><select onchange="hdInEdit(${i},'pol',this.value)">${polOpts(r.pol)}</select></td>
-        <td><input value="${esc(r.pod||'')}" onchange="hdInEdit(${i},'pod',this.value)" style="width:130px"></td>
+        <td><input value="${esc(r.pod||'')}" onchange="hdInEdit(${i},'pod',this.value)" style="width:120px"></td>
         <td><select onchange="hdInEdit(${i},'cntr_type',this.value)">${typeOpts(r.cntr_type)}</select></td>
-        <td><input type="number" value="${esc(r.qty==null?'':r.qty)}" onchange="hdInEdit(${i},'qty',this.value)" style="width:58px"></td>
-        <td><input type="date" value="${esc(r.etd||'')}" onchange="hdInEdit(${i},'etd',this.value)"></td>
-        <td><input value="${esc(r.line||'')}" onchange="hdInEdit(${i},'line',this.value)" style="width:90px"></td>
-        <td><input value="${esc(r.vessel||'')}" onchange="hdInEdit(${i},'vessel',this.value)" style="width:120px"></td>
-        <td><input value="${esc(r.equipment_spec||'')}" onchange="hdInEdit(${i},'equipment_spec',this.value)" style="width:130px"></td>
-        <td><input type="number" value="${esc(r.buying==null?'':r.buying)}" onchange="hdInEdit(${i},'buying',this.value)" style="width:78px"></td>
-        <td><input type="number" value="${esc(r.selling==null?'':r.selling)}" onchange="hdInEdit(${i},'selling',this.value)" style="width:78px"></td>
+        <td><input type="number" value="${esc(r.qty==null?'':r.qty)}" onchange="hdInEdit(${i},'qty',this.value)" style="width:52px"></td>
+        <td><input value="${esc(r.etd||r.cargo_ready||'')}" onchange="hdInEdit(${i},'cargo_ready',this.value)" style="width:96px" placeholder="ISO/원문"></td>
+        <td><input value="${esc(r.commodity||'')}" onchange="hdInEdit(${i},'commodity',this.value)" style="width:100px"></td>
+        <td><input value="${esc(r.fr_dims||r.equipment_spec||'')}" onchange="hdInEdit(${i},'fr_dims',this.value)" style="width:130px"></td>
+        <td><input value="${esc(r.weight||'')}" onchange="hdInEdit(${i},'weight',this.value)" style="width:64px"></td>
+        <td><input type="number" value="${esc(r.buying==null?'':r.buying)}" onchange="hdInEdit(${i},'buying',this.value)" style="width:72px"></td>
+        <td><input type="number" value="${esc(r.selling==null?'':r.selling)}" onchange="hdInEdit(${i},'selling',this.value)" style="width:72px"></td>
         <td style="text-align:right"><button class="btn sm" style="color:var(--loss)" onclick="hdInDel(${i})">✕</button></td></tr>`).join('')}
       </tbody></table></div>
       <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn win" onclick="hdInSave()">＋ 선적 파이프라인에 저장 (${rows.length}건)</button><button class="btn sm" onclick="hdInAdd()">＋ 행 추가</button><span class="d" style="margin:0">저장 시 상태 「문의」로 쌓이고 아래 선적 표·POD 추이에 즉시 반영됩니다. 세부(치수·마감·비고)는 저장 후 「수정」에서 편집.</span></div>`;
@@ -2509,9 +2511,9 @@ window.hdFillIntake=async function(){
   try{
     const r=await callParse('hd_intake',payload);
     if(r&&r.ok&&r.data){
-      const d=r.data, lines=Array.isArray(d.lines)?d.lines:[];
-      HD.inRows=lines.map(x=>({status:'문의',pol:x.pol||'',pod:(x.pod!=null?String(x.pod):'').toUpperCase(),cntr_type:x.cntr_type||'',qty:x.qty!=null?String(x.qty):'',etd:x.etd||'',cargo_ready:x.cargo_ready||'',deadline:x.deadline||'',line:x.line||'',vessel:x.vessel||'',buying:x.buying!=null?x.buying:'',selling:x.selling!=null?x.selling:'',equipment_spec:x.equipment_spec||'',fr_dims:x.fr_dims||'',weight:x.weight||'',remark:x.remark||''}));
-      HD.inMeta={customer:d.customer||'',confidence:d.confidence,missing:Array.isArray(d.missing)?d.missing:[],model:r.model||''};
+      const d=r.data, lines=Array.isArray(d.lines)?d.lines:[], cust=d.customer||'';
+      HD.inRows=lines.map(x=>({status:'문의',customer:cust,ref_no:x.ref_no||'',pol:x.pol||'',pod:(x.pod!=null?String(x.pod):'').toUpperCase(),cntr_type:x.cntr_type||'',qty:x.qty!=null?String(x.qty):'',etd:x.etd||'',cargo_ready:x.cargo_ready||'',deadline:x.deadline||'',line:x.line||'',vessel:x.vessel||'',buying:x.buying!=null?x.buying:'',selling:x.selling!=null?x.selling:'',equipment_spec:x.equipment_spec||x.commodity||'',commodity:x.commodity||'',fr_dims:x.fr_dims||'',weight:x.weight||'',remark:x.remark||''}));
+      HD.inMeta={customer:cust,confidence:d.confidence,missing:Array.isArray(d.missing)?d.missing:[],model:r.model||''};
       HD.inOpen=true;
       toast(HD.inRows.length?`🤖 ${HD.inRows.length}개 라인 읽음 — 검수 후 저장하세요`:'읽었으나 라인을 못 찾음 — 원문 확인',!HD.inRows.length);
     } else { throw new Error((r&&(r.message||r.error))||'AI 응답 없음'); }
@@ -2521,10 +2523,11 @@ window.hdFillIntake=async function(){
 window.hdInSave=async function(){
   const rows=(HD.inRows||[]).filter(r=>r&&((r.pod&&String(r.pod).trim())||r.pol||r.cntr_type));
   if(!rows.length){ toast('저장할 라인이 없습니다 (POD/POL/타입 중 하나는 필요)',true); return; }
-  const ins=rows.map(r=>({status:r.status||'문의',pol:r.pol||null,pod:(r.pod||'').trim()||null,cntr_type:r.cntr_type||null,
+  const ins=rows.map(r=>({status:r.status||'문의',customer:(r.customer||'').trim()||null,ref_no:(r.ref_no||'').trim()||null,tms_no:(r.ref_no||'').trim()||null,
+    pol:r.pol||null,pod:(r.pod||'').trim()||null,cntr_type:r.cntr_type||null,
     qty:num(r.qty),etd:r.etd||null,cargo_ready:r.cargo_ready||null,deadline:(r.deadline||'').trim()||null,
     line:(r.line||'').trim()||null,vessel:(r.vessel||'').trim()||null,buying:num(r.buying),selling:num(r.selling),
-    equipment_spec:(r.equipment_spec||'').trim()||null,fr_dims:(r.fr_dims||'').trim()||null,weight:(r.weight||'').trim()||null,remark:(r.remark||'').trim()||null}));
+    equipment_spec:(r.equipment_spec||'').trim()||null,commodity:(r.commodity||'').trim()||null,fr_dims:(r.fr_dims||'').trim()||null,weight:(r.weight||'').trim()||null,remark:(r.remark||'').trim()||null}));
   try{ await SB.from('hd_shipment').insert(ins); toast(`${ins.length}건 선적 파이프라인 저장됨`); }
   catch(e){ toast('저장 실패: '+(e.message||e),true); return; }
   HDRAW={text:'',html:'',image:null}; HD.inRows=null; HD.inMeta=null;
