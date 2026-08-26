@@ -2472,13 +2472,13 @@ function hdIntakeCard(){
       <h3 style="margin:0">📥 문의 인테이크 <span class="badge auto">AI</span> <span class="d" style="font-weight:400;display:inline">— J2K·은산·뉴월드 문의 메일을 읽어 선적 파이프라인으로</span></h3>
       <button class="btn sm" onclick="HD.inOpen=!HD.inOpen;renderHD()">${HD.inOpen?'▲ 접기':'▼ 펼치기'}</button></div>
     ${HD.inOpen?`
-    <div class="d" style="margin-top:6px">문의 <b>메일 본문·표를 복사→붙여넣기</b>(표 보존) · <b>표 스크린샷</b> · <b>.eml</b> — AI가 읽어 POL·POD·타입·수량·호선·요율 라인으로 정형화합니다.</div>
+    <div class="d" style="margin-top:6px">문의 <b>메일 본문·표를 복사→붙여넣기</b>(표 보존) · <b>표 스크린샷</b> · <b>.eml / .msg</b>(아웃룩 원본 그대로) — AI가 읽어 POL·POD·타입·수량·호선·요율 라인으로 정형화합니다.</div>
     <textarea id="hdEmailRaw" placeholder="문의 메일/표 붙여넣기…(Ctrl+V로 표·이미지도 가능)" style="width:100%;min-height:110px;margin-top:8px;font-family:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--txt)" onpaste="hdIntakePaste(event)" oninput="hdIntakeText(this.value)">${esc(HDRAW.text||'')}</textarea>
     <div id="hdInThumb" style="${HDRAW.image?'':'display:none;'}margin-top:8px">${HDRAW.image?`<img src="${HDRAW.image.dataUrl}" style="max-height:100px;border:1px solid var(--line);border-radius:8px;vertical-align:middle"> <button class="btn sm" onclick="hdClearImage()">이미지 제거</button>`:''}</div>
     <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn primary" id="hdBtnFill" onclick="hdFillIntake()">🤖 AI 읽어채우기</button>
       <label class="btn sm" style="cursor:pointer">🖼 이미지<input type="file" accept="image/*" style="display:none" onchange="hdImagePick(this)"></label>
-      <label class="btn sm" style="cursor:pointer">📎 .eml<input type="file" accept=".eml,message/rfc822" style="display:none" onchange="hdEmlPick(this)"></label>
+      <label class="btn sm" style="cursor:pointer">📎 .eml/.msg<input type="file" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" style="display:none" onchange="hdEmlPick(this)"></label>
       <button class="btn sm" onclick="hdIntakeExample()">예시</button>
       <button class="btn sm" onclick="hdInClear()">비우기</button>
       <span id="hdInStat" class="d" style="margin:0">${meta?`✅ ${esc(meta.customer||'문의')} <span class="badge auto">${esc(meta.model||'')}</span> · 신뢰도 ${meta.confidence!=null?Math.round(meta.confidence*100)+'%':'-'}${(meta.missing&&meta.missing.length)?` · <span style="color:var(--loss)">확인필요: ${esc(meta.missing.join(', '))}</span>`:''}`:''}</span>
@@ -2496,7 +2496,38 @@ window.hdIntakePaste=function(e){ try{ const cd=e.clipboardData; if(!cd)return;
 function hdReadImage(file){ if(!file)return; const r=new FileReader(); r.onload=()=>{ const m=/^data:([^;]+);base64,(.*)$/.exec(r.result||''); if(m){ HDRAW.image={media_type:m[1],data:m[2],dataUrl:r.result}; HDRAW.html=''; renderHD(); } }; r.readAsDataURL(file); }
 window.hdImagePick=function(input){ const f=input.files&&input.files[0]; if(f)hdReadImage(f); input.value=''; };
 window.hdClearImage=function(){ HDRAW.image=null; renderHD(); };
-window.hdEmlPick=async function(input){ const f=input.files&&input.files[0]; if(!f)return; try{ const txt=await f.text(); HDRAW.text=txt.slice(0,18000); HDRAW.html=''; HDRAW.image=null; renderHD(); }catch(e){ toast('eml 읽기 실패',true); } input.value=''; };
+/* ── Outlook .msg (OLE2/CFBF) 파서: 제목+본문 추출 ── */
+function parseMsgBuffer(buf){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);
+  if(!(u8[0]===0xD0&&u8[1]===0xCF&&u8[2]===0x11&&u8[3]===0xE0)) throw new Error('OLE 형식 아님');
+  const SEC=1<<dv.getUint16(30,true),MINI=1<<dv.getUint16(32,true);
+  const dirStart=dv.getUint32(48,true),miniCut=dv.getUint32(56,true),miniFatStart=dv.getUint32(60,true),difatStart=dv.getUint32(68,true);
+  const secOff=id=>512+id*SEC; const fatSecs=[];
+  for(let i=0;i<109;i++){const v=dv.getUint32(76+i*4,true);if(v<0xFFFFFFFE)fatSecs.push(v);}
+  let ds=difatStart,g=0; while(ds<0xFFFFFFFE&&g++<100000){const base=secOff(ds),cnt=(SEC/4)-1;for(let i=0;i<cnt;i++){const v=dv.getUint32(base+i*4,true);if(v<0xFFFFFFFE)fatSecs.push(v);}ds=dv.getUint32(base+cnt*4,true);}
+  const FAT=[]; for(const fs of fatSecs){const base=secOff(fs);for(let i=0;i<SEC/4;i++)FAT.push(dv.getUint32(base+i*4,true));}
+  const chain=s=>{const o=[];let c=s,n=0;while(c<0xFFFFFFFE&&c<FAT.length&&n++<2000000){o.push(c);c=FAT[c];}return o;};
+  const readBig=(s,sz)=>{const secs=chain(s),o=new Uint8Array(secs.length*SEC);secs.forEach((x,i)=>o.set(u8.subarray(secOff(x),secOff(x)+SEC),i*SEC));return sz!=null?o.subarray(0,sz):o;};
+  const dsecs=chain(dirStart),dir=new Uint8Array(dsecs.length*SEC);dsecs.forEach((x,i)=>dir.set(u8.subarray(secOff(x),secOff(x)+SEC),i*SEC));
+  const dvd=new DataView(dir.buffer,dir.byteOffset,dir.byteLength),ents=[];
+  for(let e=0;e<dir.length/128;e++){const o=e*128,nl=dvd.getUint16(o+64,true);if(nl<=0){ents.push(null);continue;}let name='';for(let i=0;i<(nl/2-1);i++)name+=String.fromCharCode(dvd.getUint16(o+i*2,true));ents.push({name,type:dir[o+66],start:dvd.getUint32(o+116,true),size:dvd.getUint32(o+120,true)});}
+  const root=ents.find(x=>x&&x.type===5);let miniS=new Uint8Array(0),MFAT=[];
+  if(root){miniS=readBig(root.start,root.size);const ms=chain(miniFatStart),mf=new Uint8Array(ms.length*SEC);ms.forEach((x,i)=>mf.set(u8.subarray(secOff(x),secOff(x)+SEC),i*SEC));const mdv=new DataView(mf.buffer,mf.byteOffset,mf.byteLength);for(let i=0;i<mf.length/4;i++)MFAT.push(mdv.getUint32(i*4,true));}
+  const readMini=(s,sz)=>{const o=new Uint8Array(Math.ceil(sz/MINI)*MINI);let c=s,i=0,n=0;while(c<0xFFFFFFFE&&n++<2000000){o.set(miniS.subarray(c*MINI,c*MINI+MINI),i*MINI);i++;c=MFAT[c];}return o.subarray(0,sz);};
+  const read=en=>!en||!en.size?new Uint8Array(0):(en.size<miniCut?readMini(en.start,en.size):readBig(en.start,en.size));
+  const find=suf=>ents.find(x=>x&&x.type===2&&x.name.indexOf('__substg1.0_'+suf)===0);
+  const u16=b=>{let s='';for(let i=0;i+1<b.length;i+=2)s+=String.fromCharCode(b[i]|(b[i+1]<<8));return s;};
+  const ansi=b=>{for(const cs of ['euc-kr','utf-8']){try{const t=new TextDecoder(cs).decode(b);if(t&&!/�{3,}/.test(t))return t;}catch(e){}}let s='';for(const x of b)s+=String.fromCharCode(x);return s;};
+  const prop=h=>{let e=find(h+'001F');if(e)return u16(read(e));e=find(h+'001E');if(e)return ansi(read(e));return '';};
+  return {subject:(prop('0037')||'').trim(),body:prop('1000')||''};
+}
+async function fileIsMsg(f){ if(/\.msg$/i.test(f.name))return true; try{const b=new Uint8Array(await f.slice(0,4).arrayBuffer());return b[0]===0xD0&&b[1]===0xCF&&b[2]===0x11&&b[3]===0xE0;}catch(e){return false;} }
+window.hdEmlPick=async function(input){ const f=input.files&&input.files[0]; if(!f)return;
+  try{ let txt;
+    if(await fileIsMsg(f)){ const ab=await f.arrayBuffer(); const m=parseMsgBuffer(ab); txt=((m.subject?'제목: '+m.subject+'\n':'')+m.body).trim(); if(!txt) throw new Error('본문 추출 실패'); }
+    else { txt=await f.text(); }
+    HDRAW.text=txt.slice(0,18000); HDRAW.html=''; HDRAW.image=null; renderHD(); toast('메일 로드됨 — 「🤖 AI 읽어채우기」를 누르세요'); }
+  catch(e){ toast('메일 읽기 실패: '+(e.message||e),true); } input.value=''; };
 window.hdIntakeExample=function(){ HDRAW={text:`HD사이트솔루션 중국발 견적 문의드립니다. (은산)\n1) SHANGHAI → MOMBASA, KENYA / 40'FR 2대 / 굴착기 CAT320 (L1050 W340 H360cm, 대당 22T) / Cargo Ready 9/15 / 견적 부탁드립니다.\n2) NINGBO → DURBAN / 40' 플랫랙 1대 / 발전기 1대 18T / ETD 9월 말 희망.`,html:'',image:null}; HD.inRows=null; HD.inMeta=null; HD.inOpen=true; renderHD(); };
 window.hdInEdit=function(i,k,v){ if(HD.inRows&&HD.inRows[i]) HD.inRows[i][k]=v; };
 window.hdInDel=function(i){ if(HD.inRows){ HD.inRows.splice(i,1); renderHD(); } };
