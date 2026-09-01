@@ -391,6 +391,10 @@ const fxToKRW=(amt,cur)=>(+amt||0)*(FX[(cur||'KRW').toUpperCase()]||1);
 async function loadFX(){ try{ const rows=await q('app_settings'); rows.forEach(r=>{ if(r.key==='fx_usd')FX.USD=+r.value||FX.USD; if(r.key==='fx_eur')FX.EUR=+r.value||FX.EUR; if(r.key==='fx_cny')FX.CNY=+r.value||FX.CNY; }); }catch(e){} }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 async function q(table,build){ if(!SB) throw new Error('no client'); let r=SB.from(table).select('*'); if(build)r=build(r); const {data,error}=await r; if(error)throw error; return data||[]; }
+/* 서버 max-rows(1000) 초과 테이블 전량 로드 — 페이지 단위로 이어붙임 */
+async function qAll(table,build){ if(!SB) throw new Error('no client'); const PAGE=1000; let all=[],from=0;
+  while(true){ let r=SB.from(table).select('*'); if(build)r=build(r); r=r.range(from,from+PAGE-1); const {data,error}=await r; if(error)throw error; const chunk=data||[]; all=all.concat(chunk); if(chunk.length<PAGE)break; from+=PAGE; if(from>100000)break; }
+  return all; }
 
 /* ================= 연결 확인 ================= */
 async function checkConn(){
@@ -2313,7 +2317,7 @@ const hdCoaLabel=c=>`${c.customer||c.carrier||'-'} · ${c.pol||'?'}→${c.pod_po
 window.setHDf=function(k,v){ HD[k]=v; renderHD(); };
 window.hdSort=function(k){ if(HD.sortKey===k){ HD.sortDir=HD.sortDir==='asc'?'desc':'asc'; } else { HD.sortKey=k; HD.sortDir=(k==='buying'||k==='selling'||k==='margin'||k==='qty')?'desc':'asc'; } renderHD(); };
 async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.coa=[]; }
-  try{ HD.ship=await q('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
+  try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
 VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
 function hdBar(pct,col){ const p=Math.max(0,Math.min(100,pct||0)); return `<div style="background:var(--panel2);border-radius:6px;height:16px;min-width:80px;position:relative"><div style="height:100%;border-radius:6px;background:${col};width:${p}%"></div><span style="position:absolute;left:6px;top:0;font-size:10px;line-height:16px;color:var(--txt)">${p}%</span></div>`; }
 function renderHD(){
