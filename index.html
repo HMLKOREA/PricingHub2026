@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>하멜코리아 · 견적 허브</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
 :root{--bg:#eef2f7;--panel:#ffffff;--panel2:#f2f5f9;--line:#dae1ea;--txt:#17202b;--mut:#54637a;--mut2:#8592a4;
 --accent:#2563eb;--win:#16a34a;--loss:#dc2626;--amber:#b45309;--b:#7c5cff;}
@@ -2316,6 +2317,86 @@ const hdDrawM=id=>{const m=new Date().toISOString().slice(0,7);return HD.ship.fi
 const hdCoaLabel=c=>`${c.customer||c.carrier||'-'} · ${c.pol||'?'}→${c.pod_port||c.pod_country||'?'} · ${c.cntr_type||''}`;
 window.setHDf=function(k,v){ HD[k]=v; renderHD(); };
 window.hdSort=function(k){ if(HD.sortKey===k){ HD.sortDir=HD.sortDir==='asc'?'desc':'asc'; } else { HD.sortKey=k; HD.sortDir=(k==='buying'||k==='selling'||k==='margin'||k==='qty')?'desc':'asc'; } renderHD(); };
+window.hdWeeklyExcel=async function(btn){
+  if(typeof ExcelJS==='undefined'){ toast('엑셀 모듈 로드 실패 — 새로고침 후 다시 시도',true); return; }
+  if(!HD.ship||!HD.ship.length){ toast('부킹 데이터가 없습니다',true); return; }
+  if(btn){ btn.disabled=true; btn._t=btn.textContent; btn.textContent='생성 중…'; }
+  try{
+    const pick=((document.getElementById('hdWeekPick')||{}).value)||new Date().toISOString().slice(0,10);
+    const base=new Date(pick+'T00:00:00');
+    const dow=(base.getDay()+6)%7;                    // 월=0
+    const mon=new Date(base); mon.setDate(base.getDate()-dow);
+    const sun=new Date(mon);  sun.setDate(mon.getDate()+6);
+    const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const monS=iso(mon), sunS=iso(sun);
+    const tt=new Date(base); tt.setDate(base.getDate()+3-((base.getDay()+6)%7));
+    const w1=new Date(tt.getFullYear(),0,4);
+    const wk=1+Math.round(((tt-w1)/864e5-3+((w1.getDay()+6)%7))/7);
+    const inWeek=ds=>{ if(!ds)return false; const d=String(ds).slice(0,10); return d>=monS&&d<=sunS; };
+
+    const all=HD.ship;
+    const active=all.filter(s=>s.status!=='취소');
+    const cancelled=all.filter(s=>s.status==='취소');
+    const newThisWeek=all.filter(s=>inWeek(s.created_at));
+    const etdThisWeek=active.filter(s=>inWeek(s.etd));
+    const qtyOf=s=>+s.qty||0;
+    const sum=arr=>arr.reduce((a,s)=>a+qtyOf(s),0);
+    const mgOf=s=>((+s.selling||0)-(+s.buying||0))*qtyOf(s);
+    const groupBy=(arr,keyf)=>{ const m=new Map(); arr.forEach(s=>{const k=(keyf(s)||'(미지정)'); if(!m.has(k))m.set(k,{n:0,qty:0,mg:0,sell:0}); const o=m.get(k); o.n++; o.qty+=qtyOf(s); o.mg+=mgOf(s); o.sell+=(+s.selling||0)*qtyOf(s);}); return [...m.entries()].map(([k,v])=>({k,...v})).sort((a,b)=>b.qty-a.qty||b.n-a.n); };
+    const byStatus=groupBy(active,s=>s.status), byPol=groupBy(active,s=>s.pol), byCust=groupBy(active,s=>s.customer), byType=groupBy(active,s=>s.cntr_type);
+
+    const wb=new ExcelJS.Workbook(); wb.creator='하멜코리아 견적허브'; wb.created=new Date();
+    const NAVY='FF1F3A5F', LBLUE='FFDCE6F2', GREY='FFF2F5F9', LINE='FFBFC9D9', WHITE='FFFFFFFF', MUT='FF54637A';
+    const border={top:{style:'thin',color:{argb:LINE}},left:{style:'thin',color:{argb:LINE}},bottom:{style:'thin',color:{argb:LINE}},right:{style:'thin',color:{argb:LINE}}};
+    const hdFill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}};
+    const subFill={type:'pattern',pattern:'solid',fgColor:{argb:LBLUE}};
+    const greyFill={type:'pattern',pattern:'solid',fgColor:{argb:GREY}};
+
+    const ws=wb.addWorksheet('부킹현황요약',{views:[{showGridLines:false}]});
+    ws.columns=[{width:22},{width:16},{width:16},{width:16},{width:16},{width:16}];
+    ws.mergeCells('A1:F1'); const tc=ws.getCell('A1'); tc.value='하멜코리아 · HD 주간 부킹 현황 리포트'; tc.font={bold:true,size:16,color:{argb:NAVY}}; ws.getRow(1).height=26;
+    ws.mergeCells('A2:F2'); const sc=ws.getCell('A2'); sc.value=`리포트 주간: ${monS} ~ ${sunS} (${base.getFullYear()}년 ${wk}주차)    |    생성: ${new Date().toLocaleString('ko-KR')}`; sc.font={size:10,color:{argb:MUT}};
+    let r=4;
+    const kpis=[['활성 부킹(건)',active.length],['총 물량(F)',sum(active)],['이번주 신규(건)',newThisWeek.length],['이번주 출항예정(건)',etdThisWeek.length],['취소(건)',cancelled.length]];
+    kpis.forEach((k,i)=>{ const c=ws.getCell(r,i+1); c.value=k[0]; c.font={bold:true,size:9,color:{argb:WHITE}}; c.fill=hdFill; c.alignment={horizontal:'center'}; c.border=border;
+      const v=ws.getCell(r+1,i+1); v.value=k[1]; v.font={bold:true,size:14,color:{argb:NAVY}}; v.alignment={horizontal:'center'}; v.fill=greyFill; v.border=border; });
+    ws.getRow(r).height=16; ws.getRow(r+1).height=24; r+=3;
+    const addTable=(label,rows,startRow)=>{ let rr=startRow;
+      const h=ws.getCell(rr,1); h.value=label; h.font={bold:true,size:11,color:{argb:NAVY}}; rr++;
+      ['구분','건수','물량(F)','매출합계($)','물량비중'].forEach((t,i)=>{const c=ws.getCell(rr,i+1);c.value=t;c.font={bold:true,size:9,color:{argb:WHITE}};c.fill=hdFill;c.alignment={horizontal:i?'center':'left'};c.border=border;});
+      rr++;
+      const tot=rows.reduce((a,x)=>a+x.qty,0)||1;
+      rows.forEach((x,idx)=>{ [x.k,x.n,x.qty,Math.round(x.sell),x.qty/tot].forEach((v,i)=>{const c=ws.getCell(rr,i+1);c.value=v;c.border=border;c.font={size:9};c.alignment={horizontal:i===0?'left':(i===4?'center':'right')};if(i===2)c.numFmt='#,##0';if(i===3)c.numFmt='$#,##0';if(i===4)c.numFmt='0.0%';if(idx%2)c.fill=greyFill;}); rr++; });
+      [ '합계',rows.reduce((a,x)=>a+x.n,0),rows.reduce((a,x)=>a+x.qty,0),Math.round(rows.reduce((a,x)=>a+x.sell,0)),1 ].forEach((v,i)=>{const c=ws.getCell(rr,i+1);c.value=v;c.border=border;c.font={bold:true,size:9};c.fill=subFill;c.alignment={horizontal:i===0?'left':(i===4?'center':'right')};if(i===2)c.numFmt='#,##0';if(i===3)c.numFmt='$#,##0';if(i===4)c.numFmt='0.0%';});
+      return rr+2; };
+    r=addTable('■ 상태별',byStatus,r);
+    r=addTable('■ POL(선적항)별',byPol,r);
+    r=addTable('■ 수주사별',byCust,r);
+    r=addTable('■ 컨테이너 타입별',byType,r);
+
+    const ds=wb.addWorksheet('부킹상세',{views:[{state:'frozen',ySplit:1,showGridLines:false}]});
+    const cols=[['No',6],['등록일',12],['상태',10],['수주사',16],['관리번호',16],['POL',12],['POD',20],['타입',12],['수량(F)',9],['ETD',12],['카고레디',12],['선사',12],['선명',16],['품목',20],['중량',12],['Buying($)',12],['Selling($)',12],['마진($)',12],['마진율',9],['담당',10],['COA연결',22],['비고',24]];
+    ds.columns=cols.map(c=>({header:c[0],width:c[1]}));
+    ds.getRow(1).eachCell(c=>{c.font={bold:true,size:9,color:{argb:WHITE}};c.fill=hdFill;c.alignment={horizontal:'center',vertical:'middle'};c.border=border;}); ds.getRow(1).height=20;
+    const coaLabel=id=>{const c=HD.coa.find(x=>x.id===id);return c?`${c.customer||c.carrier||''} ${c.pol||''}→${c.pod_port||c.pod_country||''}`.trim():'';};
+    active.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach((s,i)=>{
+      const sell=+s.selling||0, buy=+s.buying||0, qty=qtyOf(s), mg=(sell-buy)*qty, mp=sell?(sell-buy)/sell:null;
+      const row=ds.addRow([ i+1,(s.created_at||'').slice(0,10),s.status||'',s.customer||'',s.ref_no||s.tms_no||'',s.pol||'',s.pod||'',s.cntr_type||'',qty||'',s.etd||'',s.cargo_ready||'',s.line||'',s.vessel||'',s.commodity||s.equipment_spec||'',s.weight||'',buy||'',sell||'',mg||'',mp,s.owner||'',coaLabel(s.coa_id),s.remark||'' ]);
+      row.eachCell({includeEmpty:true},(c,cn)=>{c.border=border;c.font={size:9};c.alignment={vertical:'middle',horizontal:([9,16,17,18,19].includes(cn))?'right':'left'};});
+      row.getCell(9).numFmt='#,##0'; row.getCell(16).numFmt='$#,##0'; row.getCell(17).numFmt='$#,##0'; row.getCell(18).numFmt='$#,##0'; row.getCell(19).numFmt='0%';
+      if(i%2)row.eachCell({includeEmpty:true},c=>{c.fill=greyFill;});
+    });
+    ds.autoFilter={from:{row:1,column:1},to:{row:1,column:cols.length}};
+    if(cancelled.length){ ds.addRow([]); const nr=ds.addRow(['※ 취소 '+cancelled.length+"건은 상세에서 제외됨 (요약 KPI에만 반영)"]); nr.getCell(1).font={italic:true,size:9,color:{argb:MUT}}; }
+
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`하멜코리아_HD주간부킹현황_${monS}~${sunS}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    toast(`주간 부킹 리포트 생성 완료 — 활성 ${active.length}건 · 물량 ${sum(active).toLocaleString()}F · 이번주 신규 ${newThisWeek.length}건`);
+  }catch(e){ toast('리포트 생성 실패: '+(e.message||e),true); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=btn._t||'📊 주간 부킹 리포트'; } }
+};
 async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.coa=[]; }
   try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
 VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
@@ -2412,6 +2493,8 @@ function renderHD(){
         <input type="number" value="${HD.fMinSell!=null?HD.fMinSell:''}" placeholder="Selling≥" onchange="setHDf('fMinSell',this.value===''?null:+this.value)" style="width:90px" title="Selling 이상">
         <span class="d" style="margin:0;font-size:11px">정렬: ${esc({status:'상태',pol:'POL',pod:'POD',etd:'ETD',qty:'수량',buying:'Buying',selling:'Selling',margin:'마진'}[HD.sortKey||'etd'])} ${HD.sortDir==='asc'?'↑':'↓'}</span>
         ${(HD.fStatus||HD.fPol||HD.fKw||HD.fMinBuy!=null||HD.fMinSell!=null||HD.sortKey)?`<button class="btn sm" onclick="HD.fStatus='';HD.fPol='';HD.fKw='';HD.fMinBuy=null;HD.fMinSell=null;HD.sortKey='';HD.sortDir='';renderHD()">필터·정렬해제</button>`:''}
+        <span class="d" style="margin:0 0 0 4px;font-size:11px">주간</span><input type="date" id="hdWeekPick" value="${today10()}" style="width:140px" title="이 날짜가 포함된 주(월~일) 기준으로 리포트 생성">
+        <button class="btn sm" onclick="hdWeeklyExcel(this)" title="주간 부킹 현황 보고서(Excel)로 내보내기">📊 주간 부킹 리포트</button>
         <button class="btn primary sm" onclick="hdNewShip()">＋ 선적 추가</button></div></div>
       ${ship.length?`<div style="overflow:auto;max-height:520px;margin-top:8px"><table class="ctbl"><thead><tr><th>관리번호</th><th>문의처</th>${sth('상태','status')}${sth('POL','pol')}${sth('POD','pod')}${sth('ETD','etd')}<th>선사</th><th>호선</th><th>타입</th>${sth('수량','qty',1)}${sth('Buying','buying',1)}${sth('Selling','selling',1)}${sth('마진','margin',1)}<th class="num">마진율</th><th>담당</th><th>COA</th><th></th></tr></thead><tbody>
         ${ship.slice(0,300).map(s=>{const mg=mgOf(s);const mp=(+s.selling)?Math.round(((+s.selling||0)-(+s.buying||0))/(+s.selling)*100):null;const co=coaOf(s.coa_id);return `<tr><td class="mono" style="white-space:nowrap">${esc(s.ref_no||s.tms_no||'')}</td><td>${esc(s.customer||'')}</td><td>${stBadge(s.status)}</td><td>${esc(s.pol||'')}</td><td>${esc(s.pod||'')}</td><td class="mono" style="white-space:nowrap">${esc(s.etd||'')}</td><td>${esc(s.line||'')}</td><td style="white-space:nowrap">${esc(s.vessel||'')}</td><td>${esc(s.cntr_type||'')}</td><td class="num mono">${(+s.qty||0)}</td><td class="num mono">${money(s.buying)}</td><td class="num mono">${money(s.selling)}</td><td class="num mono" style="${mg>0?'color:var(--win)':mg<0?'color:var(--loss)':''}">${money(mg)}</td><td class="num mono" style="${mp==null?'color:var(--mut2)':mp>=15?'color:var(--win)':mp<0?'color:var(--loss)':'color:var(--amber)'}">${mp==null?'–':mp+'%'}</td><td>${esc(s.owner||'')}</td><td style="color:var(--mut);white-space:nowrap">${co?esc((co.customer||co.carrier||'')+' '+co.pol+'→'+(co.pod_port||co.pod_country||'')):'–'}</td><td style="text-align:right"><button class="btn sm" onclick="hdEditShip('${s.id}')">수정</button></td></tr>`;}).join('')}
@@ -2449,7 +2532,7 @@ function hdIntakeCard(){
   const meta=HD.inMeta||null, rows=HD.inRows;
   const stOpts=v=>HD_STATUS.map(s=>`<option${String(v||'문의')===s?' selected':''}>${s}</option>`).join('');
   const polOpts=v=>`<option value="">-</option>`+HD_POLS.map(p=>`<option${v===p?' selected':''}>${p}</option>`).join('');
-  const typeOpts=v=>`<option value="">-</option>`+HD_CNTR.map(t=>`<option${v===t?' selected':''}>${t}</option>`).join('');
+  const typeOpts=v=>{const vv=String(v||'');const extra=(vv&&!HD_CNTR.includes(vv))?`<option selected>${esc(vv)}</option>`:'';return `<option value="">-</option>`+extra+HD_CNTR.map(t=>`<option${vv===t?' selected':''}>${t}</option>`).join('');};
   let preview='';
   if(rows&&rows.length){
     preview=`<div style="overflow:auto;max-height:440px;margin-top:10px"><table class="ctbl"><thead><tr><th>문의처</th><th>관리번호</th><th>상태</th><th>POL</th><th>POD</th><th>타입</th><th class="num">수량</th><th>ETD/카고레디</th><th>품목</th><th>장비/치수</th><th class="num">중량</th><th class="num">Buying</th><th class="num">Selling</th><th></th></tr></thead><tbody>
@@ -2570,7 +2653,7 @@ window.hdInSave=async function(){
 };
 /* ---- HD 입력/수정 모달 ---- */
 function hdFld(lbl,id,val,ph,type){ const t=type||'text'; return `<div class="fld"><label>${esc(lbl)}</label><input id="${id}" type="${t}" value="${esc(val==null?'':val)}" placeholder="${esc(ph||'')}"></div>`; }
-function hdSel(lbl,id,val,opts,blank){ return `<div class="fld"><label>${esc(lbl)}</label><select id="${id}">${(blank?`<option value="">${esc(blank)}</option>`:'')}${opts.map(o=>`<option${String(val||'')===String(o)?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }
+function hdSel(lbl,id,val,opts,blank){ const v=String(val||''); const extra=(v&&!opts.some(o=>String(o)===v))?`<option selected>${esc(v)}</option>`:''; return `<div class="fld"><label>${esc(lbl)}</label><select id="${id}">${(blank?`<option value="">${esc(blank)}</option>`:'')}${extra}${opts.map(o=>`<option${v===String(o)?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }
 window.hdNewCoa=function(){ hdCoaModal(null); };
 window.hdEditCoa=function(id){ hdCoaModal(HD.coa.find(c=>c.id===id)||null); };
 function hdCoaModal(c){ c=c||{};
