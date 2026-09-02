@@ -255,6 +255,63 @@ table.lctbl td.miss{color:var(--mut2);text-align:center}
 table.lctbl.lcvert td,table.lctbl.lcvert th{white-space:normal}
 table.lctbl.lcvert td.num{font-weight:700}
 table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);border-top:2px solid var(--line);font-size:11.5px}
+/* ===== 데일리 부킹 보드 ===== */
+.hdb{margin-bottom:14px}
+.hdb-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.hdb-seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.hdb-seg button{border:0;background:transparent;color:var(--mut);font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer}
+.hdb-seg button.on{background:var(--navy,#1f3a5f);color:#fff}
+.hdb-tgl{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;user-select:none;background:var(--panel)}
+.hdb-tgl .dt{width:28px;height:16px;border-radius:9px;background:var(--line);position:relative;transition:.2s;flex:0 0 auto}
+.hdb-tgl .dt::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:.2s}
+.hdb-tgl.on{color:var(--accent,#2563eb)}
+.hdb-tgl.on .dt{background:var(--accent,#2563eb)}
+.hdb-tgl.on .dt::after{left:14px}
+.hdb-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
+.hdb-kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;position:relative;overflow:hidden}
+.hdb-kpi .kb{position:absolute;left:0;top:0;bottom:0;width:3px}
+.hdb-kpi .kl{font-size:11px;color:var(--mut);font-weight:600}
+.hdb-kpi .kv{font-size:22px;font-weight:800;margin-top:4px;line-height:1;letter-spacing:-.5px}
+.hdb-kpi .kv small{font-size:12px;color:var(--mut2);font-weight:600}
+.hdb-kpi .kn{font-size:10.5px;color:var(--mut2);margin-top:5px;font-weight:600}
+.hdb-pipe{display:grid;grid-template-columns:repeat(6,1fr)}
+.hdb-st{position:relative;padding:11px 10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;transition:.12s}
+.hdb-st:first-child{border-radius:10px 0 0 10px}
+.hdb-st:last-child{border-radius:0 10px 10px 0}
+.hdb-st:not(:first-child){border-left:0}
+.hdb-st.on,.hdb-st:hover{background:var(--panel);box-shadow:inset 0 0 0 2px var(--accent,#2563eb)}
+.hdb-st .stn{font-size:11px;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:5px}
+.hdb-st .stc{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.5px}
+.hdb-st .stv{font-size:10.5px;color:var(--mut2);font-weight:600;margin-top:1px}
+.hdb-st .pin{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.hdb-st .arw{position:absolute;right:-8px;top:50%;transform:translateY(-50%);z-index:2;font-size:11px;color:var(--mut2);background:var(--bg);width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.hdb-st:last-child .arw{display:none}
+.hdb-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:12px}
+.hdb-act{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.hdb-act:last-child{border-bottom:0}
+.hdb-act .ai{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
+.hdb-act .at{flex:1;min-width:0}
+.hdb-act .at b{font-size:12px}
+.hdb-act .at div{font-size:11px;color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdb-act .aw{font-size:11px;font-weight:700;white-space:nowrap}
+.hdb-feed .fd{display:flex;align-items:center;gap:8px;margin:12px 0 7px;font-size:11.5px;font-weight:700;color:var(--navy,#1f3a5f)}
+.hdb-feed .fd .fc{font-size:10.5px;color:var(--mut);font-weight:600;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:1px 8px}
+.hdb-feed .fd .fl{flex:1;height:1px;background:var(--line)}
+.hdb-bk{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px}
+.hdb-bk .bc{font-weight:800;font-size:11.5px}
+.hdb-bk .bc small{display:block;font-weight:600;color:var(--mut2);font-size:9.5px;margin-top:1px}
+.hdb-bk .bl{font-weight:700;font-size:12.5px}
+.hdb-bk .bl .a{color:var(--mut2);margin:0 4px}
+.hdb-bk .bm{font-size:10.5px;color:var(--mut);margin-top:1px}
+.hdb-bk .br{text-align:right}
+.hdb-bk .bq{font-weight:800;font-size:13px}
+.hdb-bk .bq small{font-size:9.5px;color:var(--mut2)}
+.hdb-empty{padding:20px;text-align:center;color:var(--mut2);font-size:12px;line-height:1.6}
+.hdb-mini{display:flex;gap:6px;margin-top:10px}
+.hdb-mini .m{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+.hdb-mini .m .ml{font-size:10px;color:var(--mut2);font-weight:700}
+.hdb-mini .m .mv{font-size:13px;font-weight:800;margin-top:1px}
+@media(max-width:900px){.hdb-kpis{grid-template-columns:repeat(2,1fr)}.hdb-pipe{grid-template-columns:repeat(3,1fr)}.hdb-st:nth-child(3){border-radius:0 10px 0 0}.hdb-st:nth-child(4){border-radius:0 0 0 10px;border-left:1px solid var(--line)}.hdb-st:not(:first-child){border-left:1px solid var(--line)}.hdb-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -2306,7 +2363,7 @@ VIEWS.rfqform=async function(){
 };
 
 /* ================= HD SITESOLUTION · 중국발(SHA/NGB/TAO) FR·COA 섹터 ================= */
-let HD={coa:[],ship:[],fStatus:'',fPol:'',inOpen:false,inRows:null,inMeta:null};
+let HD={coa:[],ship:[],fStatus:'',fPol:'',inOpen:false,inRows:null,inMeta:null,bPeriod:7,bReal:true};
 let HDRAW={text:'',html:'',image:null};
 const HD_STATUS=['문의','예약','부킹확정','SI제출','마감','선적완료','출항','도착','취소'];
 const HD_POLS=['SHANGHAI','NINGBO','QINGDAO','XINGANG','BUSAN'];
@@ -2401,6 +2458,66 @@ async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{a
   try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
 VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
 function hdBar(pct,col){ const p=Math.max(0,Math.min(100,pct||0)); return `<div style="background:var(--panel2);border-radius:6px;height:16px;min-width:80px;position:relative"><div style="height:100%;border-radius:6px;background:${col};width:${p}%"></div><span style="position:absolute;left:6px;top:0;font-size:10px;line-height:16px;color:var(--txt)">${p}%</span></div>`; }
+window.hdSetBoard=function(k,v){ HD[k]=v; renderHD(); };
+window.hdBoardStage=function(st){ HD.fStatus=(HD.fStatus===st?'':st); renderHD();
+  if(HD.fStatus){ const c=[...document.querySelectorAll('#main .card')].find(x=>/🚢 선적 진행/.test(x.textContent||'')); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } };
+function hdDailyBoard(){
+  const T=new Date(), TS=T.toISOString().slice(0,10);
+  const P=HD.bPeriod||7, REAL=HD.bReal!==false;
+  const dOff=n=>{const d=new Date(T);d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+  const dayA=s=>Math.round((new Date(TS)-new Date(String(s).slice(0,10)))/864e5);
+  const dayT=s=>Math.round((new Date(String(s).slice(0,10))-new Date(TS))/864e5);
+  const md=s=>{s=String(s||'').slice(0,10);return s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'';};
+  const isReal=s=>!!(s.customer||s.ref_no||s.commodity);
+  const qn=s=>+s.qty||0, sm=a=>a.reduce((x,s)=>x+qn(s),0);
+  const STG=[['문의','#6366f1','📥'],['예약','#3b82f6','📝'],['부킹확정','#2563eb','✅'],['SI제출','#7c3aed','📤'],['마감','#b45309','🔒'],['선적완료','#0891b2','🚢']];
+  const rows=HD.ship.filter(s=>(!REAL||isReal(s))&&s.created_at&&dayA(s.created_at)>=0&&dayA(s.created_at)<=(P-1));
+  const todayNew=rows.filter(s=>String(s.created_at).slice(0,10)===TS);
+  const activeR=rows.filter(s=>!['선적완료','도착','취소'].includes(s.status));
+  const etdSoon=rows.filter(s=>s.etd&&dayT(s.etd)>=0&&dayT(s.etd)<=5&&s.status!=='취소');
+  const crSoon=rows.filter(s=>s.cargo_ready&&dayT(s.cargo_ready)>=0&&dayT(s.cargo_ready)<=3&&s.status!=='취소');
+  const stalled=rows.filter(s=>(s.status==='문의'||s.status==='예약')&&dayA(s.created_at)>=5);
+  const kpi=(kb,kl,kv,ku,kn)=>`<div class="hdb-kpi"><div class="kb" style="background:${kb}"></div><div class="kl">${kl}</div><div class="kv">${kv}<small> ${ku}</small></div><div class="kn">${kn}</div></div>`;
+  const kpis=`<div class="hdb-kpis">
+    ${kpi('var(--accent,#2563eb)','오늘 신규',todayNew.length,'건',sm(todayNew)+'F')}
+    ${kpi('var(--navy,#1f3a5f)','기간 신규('+P+'일)',rows.length,'건',sm(rows)+'F')}
+    ${kpi('#2563eb','활성 파이프라인',activeR.length,'건',sm(activeR)+'F 진행중')}
+    ${kpi('var(--amber)','ETD 임박(≤5일)',etdSoon.length,'건',etdSoon.length?'출항 준비':'없음')}
+    ${kpi('var(--loss)','정체(≥5일)',stalled.length,'건',stalled.length?'팔로업 필요':'양호')}
+  </div>`;
+  const pipe=`<div class="hdb-pipe">${STG.map(([k,c,i])=>{const g=rows.filter(s=>s.status===k);const on=HD.fStatus===k?' on':'';return `<div class="hdb-st${on}" onclick="hdBoardStage('${k}')" title="클릭 시 아래 선적표를 '${k}'로 필터"><div class="stn"><span class="pin" style="background:${c}"></span>${i} ${k}</div><div class="stc" style="color:${g.length?c:'var(--mut2)'}">${g.length}</div><div class="stv">${sm(g)}F</div><div class="arw">→</div></div>`;}).join('')}</div>`;
+  const days=[];for(let i=13;i>=0;i--)days.push(dOff(i));
+  const cnts=days.map(d=>sm(rows.filter(s=>String(s.created_at).slice(0,10)===d)));
+  const mx=Math.max(3,...cnts),W=560,H=170,pd=22,bw=(W-pd*2)/days.length;
+  let chart=`<line x1="${pd}" y1="${H-22}" x2="${W-pd}" y2="${H-22}" stroke="var(--line)"/>`;
+  days.forEach((d,i)=>{const h=(cnts[i]/mx)*(H-52),x=pd+i*bw+bw*.16,w=bw*.68,y=H-22-h,td=d===TS,col=td?'var(--accent,#2563eb)':cnts[i]?'#2c527f':'var(--line)';chart+=`<rect x="${x}" y="${y}" width="${w}" height="${Math.max(h,1)}" rx="2" fill="${col}"/>`;if(cnts[i])chart+=`<text x="${x+w/2}" y="${y-3}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--mut)">${cnts[i]}</text>`;if(i%2===0||td)chart+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--mut2)"${td?' font-weight="800"':''}>${md(d)}</text>`;});
+  const mini=`<div class="hdb-mini">${['QINGDAO','NINGBO','SHANGHAI'].map(p=>{const g=rows.filter(s=>(s.pol||'')===p);return `<div class="m"><div class="ml">${p}</div><div class="mv">${g.length}<span style="font-size:10px;color:var(--mut2);font-weight:600"> 건·${sm(g)}F</span></div></div>`;}).join('')}</div>`;
+  const acts=[];
+  crSoon.forEach(s=>acts.push(['📦','#fef3c7','#92400e',(s.customer||'미지정')+' '+String(s.pod||'').split(',')[0],'카고레디 '+md(s.cargo_ready)+' · '+(s.cntr_type||'')+' '+qn(s)+'F','D-'+dayT(s.cargo_ready),'var(--amber)']));
+  etdSoon.forEach(s=>acts.push(['🚢','#dbeafe','#1e40af',(s.customer||'미지정')+' '+(s.pol||'')+'→'+String(s.pod||'').split(',')[0],'ETD '+md(s.etd)+' · '+(s.status||''),'D-'+dayT(s.etd),'var(--win)']));
+  stalled.forEach(s=>acts.push(['⏳','#fee2e2','#991b1b',(s.customer||'미지정')+' '+String(s.pod||'').split(',')[0],(s.status||'')+' '+dayA(s.created_at)+'일 정체 · '+(s.ref_no||s.tms_no||'—'),dayA(s.created_at)+'일','var(--loss)']));
+  const actHtml=acts.length?acts.slice(0,8).map(a=>`<div class="hdb-act"><div class="ai" style="background:${a[1]};color:${a[2]}">${a[0]}</div><div class="at"><b>${esc(a[3])}</b><div>${esc(a[4])}</div></div><div class="aw" style="color:${a[6]}">${a[5]}</div></div>`).join(''):`<div class="hdb-empty">🎉 임박·정체 건 없음 — 파이프라인 원활</div>`;
+  const badge=st=>{const c={'문의':'#6366f1','예약':'#3b82f6','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[st]||'#54637a';return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;color:#fff;background:${c}">${esc(st||'-')}</span>`;};
+  const byDay={};rows.slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))).forEach(s=>{const d=String(s.created_at).slice(0,10);(byDay[d]=byDay[d]||[]).push(s);});
+  const fdays=Object.keys(byDay).sort((a,b)=>b.localeCompare(a)).slice(0,7);
+  const feed=fdays.length?fdays.map(d=>{const label=d===TS?'오늘':d===dOff(1)?'어제':md(d)+' ('+['일','월','화','수','목','금','토'][new Date(d).getDay()]+')';const g=byDay[d];return `<div class="hdb-feed"><div class="fd">${label}<span class="fc">${g.length}건·${sm(g)}F</span><span class="fl"></span></div>${g.slice(0,10).map(s=>`<div class="hdb-bk"><div><div class="bc">${esc(s.customer||'미지정')}</div><small>${esc(s.ref_no||s.tms_no||'—')}</small></div><div><div class="bl">${esc(s.pol||'?')}<span class="a">→</span>${esc(String(s.pod||'?').split(',')[0])}</div><div class="bm">${esc([s.cntr_type,s.commodity].filter(Boolean).join(' · '))}${s.cargo_ready?' · CR '+md(s.cargo_ready):''}${s.etd?' · ETD '+md(s.etd):''}</div></div><div class="br">${badge(s.status)}<div class="bq">${qn(s)}<small>F</small></div></div></div>`).join('')}</div>`;}).join(''):`<div class="hdb-empty">${REAL?'아직 신규 입력 부킹이 없습니다.<br>인테이크(AI)에서 문의를 저장하면 여기에 매일 실시간으로 쌓입니다.':'해당 기간 부킹이 없습니다.'}</div>`;
+  return `<div class="hdb card" style="padding:14px 16px">
+    <div class="hdb-head">
+      <div><h3 style="margin:0">📅 데일리 부킹 보드 <span class="d" style="font-weight:400;font-size:12px">· 인테이크→파이프라인 실시간</span></h3></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <div class="hdb-seg">${[[1,'오늘'],[7,'7일'],[30,'30일']].map(([v,l])=>`<button class="${P==v?'on':''}" onclick="hdSetBoard('bPeriod',${v})">${l}</button>`).join('')}</div>
+        <div class="hdb-tgl${REAL?' on':''}" onclick="hdSetBoard('bReal',${!REAL})" title="인테이크로 실제 입력된 신규 부킹만 표시 (가격리스트 임포트 제외)"><span class="dt"></span>실입력만</div>
+      </div>
+    </div>
+    ${kpis}
+    ${pipe}
+    <div class="hdb-grid">
+      <div><div class="row between" style="margin-bottom:6px"><b style="font-size:12.5px">📈 일별 신규 유입</b><span class="d" style="font-size:11px">최근 14일 · 물량(F)</span></div><svg viewBox="0 0 560 170" style="width:100%;display:block">${chart}</svg>${mini}</div>
+      <div><div class="row between" style="margin-bottom:6px"><b style="font-size:12.5px">⚡ 오늘의 액션</b><span class="d" style="font-size:11px">${acts.length}건</span></div>${actHtml}</div>
+    </div>
+    <div style="margin-top:14px"><div class="row between" style="margin-bottom:2px"><b style="font-size:12.5px">🗂 최근 신규 부킹</b><span class="d" style="font-size:11px">${rows.length}건 · 최근 ${fdays.length}일</span></div>${feed}</div>
+  </div>`;
+}
 function renderHD(){
   const money=v=>v==null||v===''?'-':'$'+(+v).toLocaleString();
   const thisM=hdM(new Date().toISOString());
@@ -2468,6 +2585,8 @@ function renderHD(){
       ${tile('누적 매출',money(revUSD),'선적 기준 USD')}
       ${tile('누적 마진',money(marginUSD),'(Selling−Buying)×수량',marginUSD>0?'var(--win)':marginUSD<0?'var(--loss)':null)}
     </div>
+
+    ${hdDailyBoard()}
 
     ${hdIntakeCard()}
 
