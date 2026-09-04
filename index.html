@@ -2467,7 +2467,8 @@ window.hdWeeklyExcel=async function(btn){
   finally{ if(btn){ btn.disabled=false; btn.textContent=btn._t||'📊 주간 부킹 리포트'; } }
 };
 async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.coa=[]; }
-  try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; } }
+  try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; }
+  try{ HD.partners=await q('contacts',b=>b.eq('automation_linked',true).limit(2000)); }catch(e){ HD.partners=[]; } }
 VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
 function hdBar(pct,col){ const p=Math.max(0,Math.min(100,pct||0)); return `<div style="background:var(--panel2);border-radius:6px;height:16px;min-width:80px;position:relative"><div style="height:100%;border-radius:6px;background:${col};width:${p}%"></div><span style="position:absolute;left:6px;top:0;font-size:10px;line-height:16px;color:var(--txt)">${p}%</span></div>`; }
 window.hdSetBoard=function(k,v){ HD[k]=v; renderHD(); };
@@ -2817,6 +2818,17 @@ window.hdSaveCoa=async function(id){ const g=x=>($('#'+x)||{}).value; const row=
 window.hdDelCoa=async function(id){ try{ await SB.from('hd_coa').delete().eq('id',id); toast('계약 삭제됨'); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; } closeModal(); await loadHD(); renderHD(); };
 window.hdNewShip=function(){ hdShipModal(null); };
 window.hdEditShip=function(id){ hdShipModal(HD.ship.find(s=>s.id===id)||null); };
+function hdRecoHTML(pol,pod,cargo){
+  const pool=HD.partners||[];
+  if(!pool.length) return `<div class="d">자동화 후보 파트너가 없습니다 — 「🌏 파트너 → 내 파트너」에서 자동화 On + 포트·화물타입을 채우면 여기에 추천이 뜹니다.</div>`;
+  if(!pol&&!pod&&!cargo) return `<div class="d">POL·POD·타입을 입력하면 추천이 표시됩니다.</div>`;
+  const seen=new Set();
+  const ranked=pool.map(c=>({c,s:(window.routeScore?routeScore(c,pol,pod,cargo):0)})).filter(x=>x.s>0)
+    .sort((a,b)=>b.s-a.s).filter(x=>{const k=(x.c.company_name||'').trim().toLowerCase(); if(seen.has(k))return false; seen.add(k); return true;}).slice(0,5);
+  if(!ranked.length) return `<div class="d" style="color:var(--amber)">이 레인·타입에 맞는 자동화 파트너 없음 (파트너 프로필을 더 채워보세요).</div>`;
+  const subj=encodeURIComponent(`[HAMEL RFQ] ${pol||''} → ${pod||''} ${cargo||''}`);
+  return ranked.map(({c,s})=>`<div class="row" style="gap:8px;align-items:center;padding:5px 8px;border:1px solid ${s>=3?'var(--win)':'var(--line)'};border-radius:8px;margin-bottom:4px">${s>=3?'<span style="font-size:10px;color:var(--win);font-weight:800">추천</span>':''}<b style="font-size:12px">${esc(c.company_name)}</b><span class="d" style="margin:0">${esc(c.main_ports||'')} · ${esc(c.cargo_type||'')}</span><span style="margin-left:auto;font-weight:800;color:${s>=3?'var(--win)':'var(--mut)'}">${s}점</span>${c.email?`<a class="btn sm" href="mailto:${esc(c.email)}?subject=${subj}" target="_blank" rel="noopener" style="text-decoration:none" title="메일 초안 열기">✉</a>`:''}</div>`).join('');
+}
 function hdShipModal(s){ s=s||{};
   const coaOpts=`<option value="">— COA 연결 안함 —</option>`+HD.coa.map(c=>`<option value="${c.id}"${s.coa_id===c.id?' selected':''}>${esc(hdCoaLabel(c))}</option>`).join('');
   showModal(`<h3>${s.id?'✏ 선적 수정':'＋ 선적 추가'}</h3>
@@ -2842,6 +2854,7 @@ function hdShipModal(s){ s=s||{};
       ${hdFld('중량','hs_weight',s.weight,'예: 25T')}
       ${hdFld('담당','hs_owner',s.owner,'')}
     </div>
+    <div class="card" style="margin-top:10px;padding:10px 12px;border-color:var(--accent)"><div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:12.5px">🧭 추천 파트너</b><span class="d" style="margin:0">${esc(s.pol||'?')} → ${esc(s.pod||'?')} · ${esc(s.cntr_type||'?')}</span></div><div style="margin-top:6px">${hdRecoHTML(s.pol,s.pod,s.cntr_type)}</div></div>
     <label class="row" style="gap:6px;margin-top:8px;cursor:pointer"><input type="checkbox" id="hs_oog"${s.oog?' checked':''}> OOG(규격초과)</label>
     <div class="fld full" style="margin-top:6px"><label>비고</label><input id="hs_remark" value="${esc(s.remark||'')}" placeholder="루팅·특이사항"></div>
     <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary" onclick="hdSaveShip('${s.id||''}')">저장</button>${s.id?`<button class="btn" style="color:var(--loss)" onclick="hdDelShip('${s.id}')">삭제</button>`:''}</div>`);
