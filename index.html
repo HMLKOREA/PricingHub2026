@@ -641,9 +641,11 @@ window.openReq=async function(id){
     try{ QLINES=await q('quote_lines',b=>b.eq('quote_request_id',id).order('created_at')); }catch(e){ QLINES=[]; }
     const f=(l,v)=>`<div class="fld"><label>${l}</label><div>${esc(v||'-')}</div></div>`;
     const cnt=cntSummary(r);
+    const _pool=await routePool(); const _rc=r.is_fr?'FR':r.is_rf?'RF':(r.cargo_type==='FCL'?'DC':r.cargo_type||'');
     $('#main').innerHTML=`<h2>${r.job_no?`<span style="color:var(--accent)">${esc(r.job_no)}</span> · `:''}${esc(r.shipper||'(화주)')} <span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span>${(r.is_oog||r.is_fr||r.is_rf)?` <span style="font-size:12px;color:var(--amber)">[${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}]</span>`:''}</h2>
      <div class="sub">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')} · ${esc(r.channel||'')} · ${esc(r.ship_kind||'')}${r.commodity?' · '+esc(r.commodity):''}${r.special_note?' · '+esc(r.special_note):''}</div>
      <div class="row"><button class="btn sm" onclick="go('pipeline')">← 목록</button><button class="btn win sm" onclick="openBooking('${id}')">✅ 수주·부킹 전환</button><button class="btn primary sm" onclick="openVendorMail('${id}')">📧 협력사 메일</button><button class="btn sm" onclick="copyJobText()">📋 사비스/BL 복사</button><a class="btn sm" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener" style="text-decoration:none">💳 AP·결재 ↗</a></div>
+     <div class="card" style="margin-top:12px;border-color:var(--accent)"><div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:12.5px">🧭 추천 파트너</b><span class="d" style="margin:0">${esc(r.origin_port||'?')} → ${esc(r.dest_port||'?')} · ${esc(_rc||r.cargo_type||'?')}</span></div><div style="margin-top:6px">${recoHTML(_pool,r.origin_port,r.dest_port,_rc)}</div></div>
      <div class="card" style="margin-top:12px"><h3>인콰이어리 상세</h3>
       ${(()=>{const kv=[['거래구분',r.channel],['HML 담당',r.owner||r.assigned_to],['운송구분',r.ship_kind],['방향',r.direction],['Trans/Mode',[r.cargo_type,r.mode].filter(Boolean).join(' / ')],['인코텀즈',r.incoterms],['화주',r.shipper],['화주 담당',r.shipper_contact],['POL',r.origin_port],['POD',r.dest_port],['Pick-up',r.pickup_addr],['Delivery',r.delivery_addr],['품목',r.commodity],['컨테이너',cnt],['중량',r.weight?r.weight+' kg':''],['Volume',r.volume_cbm?r.volume_cbm+' CBM':''],['화물치수(L×W×H)',r.dimensions],['특수화물',r.special_types||[r.is_oog&&'OOG',r.is_fr&&'FLAT RACK',r.is_rf&&'REEFER'].filter(Boolean).join(', ')],['마감',r.deadline],['BKG#',r.bkg_no],['선정선사',r.selected_carrier],['수주일',r.won_at?String(r.won_at).slice(0,10):''],['실주사유',r.win_loss_reason]];
         let t='';for(let i=0;i<kv.length;i+=2){const a=kv[i],b=kv[i+1];t+=`<tr><th class="kv">${a[0]}</th><td>${esc(a[1]||'-')}</td><th class="kv">${b?b[0]:''}</th><td>${b?esc(b[1]||'-'):''}</td></tr>`;}
@@ -2818,8 +2820,10 @@ window.hdSaveCoa=async function(id){ const g=x=>($('#'+x)||{}).value; const row=
 window.hdDelCoa=async function(id){ try{ await SB.from('hd_coa').delete().eq('id',id); toast('계약 삭제됨'); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; } closeModal(); await loadHD(); renderHD(); };
 window.hdNewShip=function(){ hdShipModal(null); };
 window.hdEditShip=function(id){ hdShipModal(HD.ship.find(s=>s.id===id)||null); };
-function hdRecoHTML(pol,pod,cargo){
-  const pool=HD.partners||[];
+let ROUTE_POOL=null;
+async function routePool(){ if(ROUTE_POOL)return ROUTE_POOL; try{ ROUTE_POOL=await q('contacts',b=>b.eq('automation_linked',true).limit(2000)); }catch(e){ ROUTE_POOL=[]; } return ROUTE_POOL; }
+function recoHTML(pool,pol,pod,cargo){
+  pool=pool||[];
   if(!pool.length) return `<div class="d">자동화 후보 파트너가 없습니다 — 「🌏 파트너 → 내 파트너」에서 자동화 On + 포트·화물타입을 채우면 여기에 추천이 뜹니다.</div>`;
   if(!pol&&!pod&&!cargo) return `<div class="d">POL·POD·타입을 입력하면 추천이 표시됩니다.</div>`;
   const seen=new Set();
@@ -2829,6 +2833,7 @@ function hdRecoHTML(pol,pod,cargo){
   const subj=encodeURIComponent(`[HAMEL RFQ] ${pol||''} → ${pod||''} ${cargo||''}`);
   return ranked.map(({c,s})=>`<div class="row" style="gap:8px;align-items:center;padding:5px 8px;border:1px solid ${s>=3?'var(--win)':'var(--line)'};border-radius:8px;margin-bottom:4px">${s>=3?'<span style="font-size:10px;color:var(--win);font-weight:800">추천</span>':''}<b style="font-size:12px">${esc(c.company_name)}</b><span class="d" style="margin:0">${esc(c.main_ports||'')} · ${esc(c.cargo_type||'')}</span><span style="margin-left:auto;font-weight:800;color:${s>=3?'var(--win)':'var(--mut)'}">${s}점</span>${c.email?`<a class="btn sm" href="mailto:${esc(c.email)}?subject=${subj}" target="_blank" rel="noopener" style="text-decoration:none" title="메일 초안 열기">✉</a>`:''}</div>`).join('');
 }
+function hdRecoHTML(pol,pod,cargo){ return recoHTML(HD.partners,pol,pod,cargo); }
 function hdShipModal(s){ s=s||{};
   const coaOpts=`<option value="">— COA 연결 안함 —</option>`+HD.coa.map(c=>`<option value="${c.id}"${s.coa_id===c.id?' selected':''}>${esc(hdCoaLabel(c))}</option>`).join('');
   showModal(`<h3>${s.id?'✏ 선적 수정':'＋ 선적 추가'}</h3>
