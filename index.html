@@ -2988,7 +2988,9 @@ window.pmToggleAuto=async function(id){ const c=PMINE.find(x=>x.id===id); if(!c)
   try{ const {error}=await SB.from('contacts').update({automation_linked:nv}).eq('id',id); if(error)throw error; c.automation_linked=nv; toast(nv?'라우팅 후보 On':'후보 제외'); renderPmine(); }catch(e){ toast(e.message||e,true); } };
 window.pmRoute=function(){ const out=document.getElementById('pr_out'); if(!out)return; const {pol,pod,cargo}=PMROUTE;
   if(!pol&&!pod&&!cargo){ out.innerHTML='<div class="d">POL·POD·화물타입을 입력하세요.</div>'; return; }
-  const ranked=PMINE.map(c=>({c,s:routeScore(c,pol,pod,cargo)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||((b.c.automation_linked?1:0)-(a.c.automation_linked?1:0))).slice(0,10);
+  const seen=new Set();
+  const ranked=PMINE.map(c=>({c,s:routeScore(c,pol,pod,cargo)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||((b.c.automation_linked?1:0)-(a.c.automation_linked?1:0)))
+    .filter(x=>{const k=(x.c.company_name||'').trim().toLowerCase(); if(seen.has(k))return false; seen.add(k); return true;}).slice(0,10);
   if(!ranked.length){ out.innerHTML='<div class="d" style="color:var(--amber)">매칭 파트너 없음 — 파트너의 주요포트·화물타입을 채우면 추천이 나옵니다.</div>'; return; }
   out.innerHTML=`<div class="d" style="margin-bottom:5px">추천 ${ranked.length}곳 (점수순 · 3점↑ 자동추천)</div>`+ranked.map(({c,s})=>`<div class="row" style="gap:8px;align-items:center;padding:6px 9px;border:1px solid ${s>=3?'var(--win)':'var(--line)'};border-radius:9px;margin-bottom:5px">${s>=3?'<span style="font-size:10px;color:var(--win);font-weight:800">추천</span>':''}<b style="font-size:12.5px">${esc(c.company_name)}</b><span class="pill">${esc(c.sub_category||'')}</span><span class="d" style="margin:0">${esc(c.main_ports||'-')} · ${esc(c.cargo_type||'-')}</span>${c.automation_linked?'<span style="font-size:10px;color:var(--accent);font-weight:700">자동화</span>':''}<span style="margin-left:auto;font-weight:800;color:${s>=3?'var(--win)':'var(--mut)'}">${s}점</span></div>`).join('');
 };
