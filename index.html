@@ -2834,6 +2834,54 @@ function recoHTML(pool,pol,pod,cargo){
   return ranked.map(({c,s})=>`<div class="row" style="gap:8px;align-items:center;padding:5px 8px;border:1px solid ${s>=3?'var(--win)':'var(--line)'};border-radius:8px;margin-bottom:4px">${s>=3?'<span style="font-size:10px;color:var(--win);font-weight:800">추천</span>':''}<b style="font-size:12px">${esc(c.company_name)}</b><span class="d" style="margin:0">${esc(c.main_ports||'')} · ${esc(c.cargo_type||'')}</span><span style="margin-left:auto;font-weight:800;color:${s>=3?'var(--win)':'var(--mut)'}">${s}점</span>${c.email?`<a class="btn sm" href="mailto:${esc(c.email)}?subject=${subj}" target="_blank" rel="noopener" style="text-decoration:none" title="메일 초안 열기">✉</a>`:''}</div>`).join('');
 }
 function hdRecoHTML(pol,pod,cargo){ return recoHTML(HD.partners,pol,pod,cargo); }
+/* ===== 메일 → 컨택 추출 (공유 엣지 extract-contacts) ===== */
+let CE={list:[],picks:{},saved:0};
+window.pmExtractOpen=function(){ CE={list:[],picks:{},saved:0}; showModal(ceHTML()); };
+function ceHTML(){
+  if(!CE.list.length){
+    return `<h3>📇 메일 → 컨택 추출</h3><div class="d">받은 메일(고객사·해외 에이전트 등)을 붙여넣으면 AI가 모든 컨택포인트를 뽑아 파트너 마스터에 추가합니다. 해외 에이전트가 소개한 한국 담당자도 함께 잡습니다.</div>
+     <textarea id="ce_text" placeholder="메일 원문(발신자·서명 포함) 붙여넣기…" style="width:100%;height:200px;margin-top:10px;box-sizing:border-box"></textarea>
+     <div class="row" style="margin-top:10px"><button class="btn primary" id="ce_btn" onclick="pmExtractRun()">🤖 컨택 추출</button></div>`;
+  }
+  const pickN=Object.values(CE.picks).filter(Boolean).length, dupN=CE.list.filter(c=>c._dup).length;
+  return `<h3>📇 추출된 컨택 <span class="pill">${CE.list.length}</span></h3><div class="d">체크한 것만 저장됩니다. <span style="color:var(--loss)">중복 ${dupN}건</span>은 기본 해제(기존 이메일 존재).</div>
+   <div style="max-height:340px;overflow:auto;margin-top:10px">
+   ${CE.list.map((c,i)=>`<label class="row" style="gap:8px;align-items:flex-start;padding:8px;border:1px solid ${CE.picks[i]?'var(--accent)':'var(--line)'};border-radius:9px;margin-bottom:6px;cursor:pointer">
+     <input type="checkbox" ${CE.picks[i]?'checked':''} onchange="CE.picks[${i}]=this.checked;showModal(ceHTML())" style="margin-top:3px">
+     <div style="flex:1;min-width:0">
+       <div><b>${esc(c.name||'(이름없음)')}</b> · ${esc(c.company||'')} ${c.side==='korea'?'<span class="pill" style="background:#e0e7ff;color:#3730a3">한국</span>':c.side==='overseas'?'<span class="pill" style="background:#dcfce7;color:#166534">해외</span>':''} ${c._dup?'<span class="pill" style="background:#fee2e2;color:#b4232a">중복</span>':''}</div>
+       <div class="d" style="margin:2px 0 0">${esc(c.email||'')}${c.mobile?' · '+esc(c.mobile):''}${c.phone?' · '+esc(c.phone):''}${c.city_port?' · '+esc(c.city_port):''}${c.cargo_hint?' · '+esc(c.cargo_hint):''}</div>
+       <div class="d" style="margin:1px 0 0;color:var(--mut2)">${[c.job_title,c.country,c.source].filter(Boolean).map(esc).join(' · ')}</div>
+     </div></label>`).join('')}
+   </div>
+   <div class="row" style="margin-top:12px;gap:8px"><button class="btn win" onclick="pmExtractSave()">✓ 체크 저장 (${pickN})</button><button class="btn" onclick="pmExtractOpen()">↺ 다시</button></div>
+   ${CE.saved?`<div style="margin-top:8px;color:var(--win)">✓ ${CE.saved}건 파트너 마스터에 저장됨</div>`:''}`;
+}
+window.pmExtractRun=async function(){
+  const t=(document.getElementById('ce_text')?.value||'').trim(); if(!t){ toast('메일을 붙여넣으세요',true); return; }
+  const btn=document.getElementById('ce_btn'); if(btn){ btn.disabled=true; btn.textContent='추출 중…'; }
+  try{
+    const r=await fetch(SUPA_URL+'/functions/v1/extract-contacts',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},body:JSON.stringify({text:t.slice(0,40000)})});
+    const d=await r.json(); if(!d.ok) throw new Error(d.error||'추출 실패');
+    const list=d.contacts||[];
+    const emails=list.map(c=>(c.email||'').toLowerCase()).filter(Boolean);
+    let have=new Set();
+    if(emails.length){ try{ const {data}=await SB.from('contacts').select('email').in('email',emails); have=new Set((data||[]).map(x=>(x.email||'').toLowerCase())); }catch(e){} }
+    list.forEach(c=>{ c._dup=!!(c.email&&have.has((c.email||'').toLowerCase())); });
+    CE.list=list; CE.picks={}; list.forEach((c,i)=>{ CE.picks[i]=!c._dup; });
+    showModal(ceHTML()); toast(`컨택 ${list.length}건 추출`);
+  }catch(e){ toast(e.message||e,true); if(btn){ btn.disabled=false; btn.textContent='🤖 컨택 추출'; } }
+};
+window.pmExtractSave=async function(){
+  const rows=CE.list.filter((c,i)=>CE.picks[i]).map(c=>({
+    company_name:c.company||c.name||'(미상)', contact_name:c.name||null, email:c.email||null, phone:c.phone||null, mobile:c.mobile||null, messenger:c.messenger||null, job_title:c.job_title||null,
+    country_region:[c.country,c.city_port].filter(Boolean).join('/')||null, main_ports:(c.city_port||'').toUpperCase()||null, cargo_type:c.cargo_hint||null,
+    major_category:(c.role_type==='carrier'?'선사':c.role_type==='trucker'?'운송사':'협력사'), sub_category:(c.side==='korea'?'국내포워더':'해외파트너'),
+    automation_linked:true, notes:'메일추출('+(c.source||'')+')' }));
+  if(!rows.length){ toast('선택된 컨택 없음',true); return; }
+  try{ const {error}=await SB.from('contacts').insert(rows); if(error)throw error; CE.saved=rows.length; PMINE=[]; ROUTE_POOL=null; toast(rows.length+'건 저장 · 파트너 마스터 반영'); showModal(ceHTML()); }
+  catch(e){ toast(e.message||e,true); }
+};
 function hdShipModal(s){ s=s||{};
   const coaOpts=`<option value="">— COA 연결 안함 —</option>`+HD.coa.map(c=>`<option value="${c.id}"${s.coa_id===c.id?' selected':''}>${esc(hdCoaLabel(c))}</option>`).join('');
   showModal(`<h3>${s.id?'✏ 선적 수정':'＋ 선적 추가'}</h3>
@@ -2990,7 +3038,7 @@ window.renderPmine=async function(){
      </div>
      <div id="pr_out" style="margin-top:8px"></div>
    </div>
-   <div class="card"><div class="row"><input id="pmq" value="${esc(kw)}" placeholder="업체·담당·이메일·국가·포트 검색" style="flex:1;min-width:200px" oninput="renderPmine()"><button class="btn primary" onclick="newContactBlank()">＋ 파트너 추가</button></div>
+   <div class="card"><div class="row"><input id="pmq" value="${esc(kw)}" placeholder="업체·담당·이메일·국가·포트 검색" style="flex:1;min-width:200px" oninput="renderPmine()"><button class="btn" onclick="pmExtractOpen()" title="메일에서 컨택포인트 자동 추출">📇 메일→컨택 추출</button><button class="btn primary" onclick="newContactBlank()">＋ 파트너 추가</button></div>
      <div class="row" style="margin-top:8px;flex-wrap:wrap">${['',...subs].map(s=>`<button class="pchip${(PDIR.msub||'')===(s==='(미분류)'?'(미분류)':s)?' on':''}" data-s="${esc(s)}" onclick="PDIR.msub=this.dataset.s;renderPmine()">${s===''?'전체 '+PMINE.length:esc(s)+' '+subCount(s)}</button>`).join('')}</div>
    </div>
    <div class="card"><div class="d">${rows.length}건${PDIR.msub?' · 중분류: '+esc(PDIR.msub):''} <span style="color:var(--mut2)">· 자동화 칸을 눌러 라우팅 후보 On/Off</span></div><div style="overflow:auto"><table><thead><tr><th>업체</th><th>중분류</th><th>주요포트</th><th>화물</th><th>자동화</th><th>담당</th><th>이메일</th><th></th></tr></thead><tbody>
