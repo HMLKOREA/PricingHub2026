@@ -312,6 +312,15 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 .hdb-mini .m .ml{font-size:10px;color:var(--mut2);font-weight:700}
 .hdb-mini .m .mv{font-size:13px;font-weight:800;margin-top:1px}
 @media(max-width:900px){.hdb-kpis{grid-template-columns:repeat(2,1fr)}.hdb-pipe{grid-template-columns:repeat(3,1fr)}.hdb-st:nth-child(3){border-radius:0 10px 0 0}.hdb-st:nth-child(4){border-radius:0 0 0 10px;border-left:1px solid var(--line)}.hdb-st:not(:first-child){border-left:1px solid var(--line)}.hdb-grid{grid-template-columns:1fr}}
+/* ===== 데이터 챗봇 ===== */
+.dc-u{display:flex;justify-content:flex-end;margin:7px 0}
+.dc-a{display:flex;justify-content:flex-start;margin:7px 0}
+.dc-bub{max-width:82%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.65;word-break:break-word}
+.dc-me{background:var(--accent,#2563eb);color:#fff;border-bottom-right-radius:4px}
+.dc-bot{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-bottom-left-radius:4px}
+.dc-dots{animation:dcbl 1s infinite}
+@keyframes dcbl{50%{opacity:.3}}
+.navbadge{font-size:9px;font-weight:800;background:var(--accent,#2563eb);color:#fff;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -347,23 +356,25 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
   <aside class="side">
     <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA" title="대시보드로 이동" onclick="go('dashboard')"><div class="brandsub">견적 · 부킹 허브</div></div>
     <nav id="nav">
-      <div class="navsec">📊 Daily Dashboard</div>
+      <div class="navsec">🏠 홈 · AI</div>
       <a data-v="dashboard" class="active">📊 대시보드</a>
       <a data-v="daily">🗓 데일리 리포트</a>
-      <div class="navsec">💰 Pricing</div>
+      <a data-v="datachat">💬 데이터 챗봇 <span class="navbadge">AI</span></a>
+      <div class="navsec">📋 견적 · 영업</div>
       <a data-v="intake">📥 인테이크(AI)</a>
       <a data-v="pipeline">🗂 파이프라인</a>
       <a data-v="rfq">🚚 RFQ·견적비교</a>
       <a data-v="rfqform">✍ RFQ 양식</a>
       <a data-v="history">📜 히스토리 검색</a>
+      <div class="navsec">🏗 HD 사이트솔루션</div>
+      <a data-v="hd">🏗 FR·COA 섹터</a>
+      <div class="navsec">📚 기준정보</div>
       <a data-v="rates">💱 요율</a>
       <a data-v="charges">🏭 국내 부대비용</a>
       <a data-v="ports">🌐 포트코드</a>
-      <div class="navsec">🏗 HD SITESOLUTION</div>
-      <a data-v="hd">🏗 FR·COA 섹터</a>
-      <div class="navsec">👥 Contacts</div>
-      <a data-v="contacts">👥 연락처·선사</a>
+      <div class="navsec">🤝 파트너 · 연락처</div>
       <a data-v="partners">🌏 파트너</a>
+      <a data-v="contacts">👥 연락처·선사</a>
       <div id="adminNav" style="display:none">
         <div class="navsec">⚙ 설정 · 관리자</div>
         <a data-v="archive">🗄 아카이브</a>
@@ -2881,6 +2892,45 @@ window.pmExtractSave=async function(){
   if(!rows.length){ toast('선택된 컨택 없음',true); return; }
   try{ const {error}=await SB.from('contacts').insert(rows); if(error)throw error; CE.saved=rows.length; PMINE=[]; ROUTE_POOL=null; toast(rows.length+'건 저장 · 파트너 마스터 반영'); showModal(ceHTML()); }
   catch(e){ toast(e.message||e,true); }
+};
+/* ===== 데이터 챗봇 (data-chat 엣지 · text-to-SQL) ===== */
+let DCHAT={msgs:[],busy:false};
+const DC_SUGGEST=['부산발 운임 제일 싼 캐리어 top5','이번달 HD 부킹 물량(F)과 매출','수주 파이프라인 단계별 건수','청도발 FR 40 평균 매입가','안트베르펜 보낼 파트너 추천'];
+VIEWS.datachat=function(){
+  $('#main').innerHTML=`<h2>💬 데이터 챗봇 <span class="d" style="font-weight:400;font-size:13px">· 사내 데이터를 자연어로</span></h2>
+   <div class="sub">운임·부킹·견적·파트너·기록 등 허브의 모든 데이터를 분석해 답합니다. (읽기전용 · 최종 판단은 사람)</div>
+   <div class="card" style="max-width:920px">
+     <div id="dcScroll" style="max-height:480px;overflow:auto;padding:4px"></div>
+     <div id="dcChips" style="margin:10px 0 6px;display:flex;flex-wrap:wrap;gap:6px"></div>
+     <div class="row" style="gap:8px"><textarea id="dcInput" placeholder="예: 부산발 함부르크 운임 제일 싼 캐리어 3개 알려줘" style="flex:1;height:54px;resize:vertical;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();dcSend();}"></textarea><button class="btn primary" id="dcBtn" onclick="dcSend()" style="align-self:stretch;min-width:70px">전송</button></div>
+     <div class="d" style="margin-top:4px">Ctrl/⌘+Enter 전송 · 답변의 「실행 SQL」로 근거 확인 · 대화 맥락 유지</div>
+   </div>`;
+  dcRender();
+};
+function dcRender(){
+  const sc=document.getElementById('dcScroll'); if(!sc)return;
+  if(!DCHAT.msgs.length && !DCHAT.busy){ sc.innerHTML=`<div class="empty" style="padding:26px">무엇이든 물어보세요 — 아래 예시를 눌러도 됩니다.</div>`; }
+  else sc.innerHTML=DCHAT.msgs.map(m=>dcBubble(m)).join('')+(DCHAT.busy?`<div class="dc-a"><div class="dc-bub dc-bot">분석 중 <span class="dc-dots">●●●</span></div></div>`:'');
+  sc.scrollTop=sc.scrollHeight;
+  const chips=document.getElementById('dcChips'); if(chips) chips.innerHTML=DC_SUGGEST.map(s=>`<button class="pchip" onclick="dcAsk(this.dataset.q)" data-q="${esc(s)}">${esc(s)}</button>`).join('');
+}
+function dcBubble(m){
+  if(m.role==='user') return `<div class="dc-u"><div class="dc-bub dc-me">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`;
+  const sql=(m.sql&&m.sql.length)?`<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--mut);font-size:11px">실행 SQL ${m.sql.length}건 보기</summary><pre style="white-space:pre-wrap;font-size:11px;background:var(--panel);border:1px solid var(--line);padding:8px;border-radius:8px;margin-top:4px;overflow:auto">${esc(m.sql.join('\n\n'))}</pre></details>`:'';
+  return `<div class="dc-a"><div class="dc-bub dc-bot">${esc(m.content).replace(/\n/g,'<br>')}${sql}</div></div>`;
+}
+window.dcAsk=function(q){ const el=document.getElementById('dcInput'); if(el)el.value=q; dcSend(); };
+window.dcSend=async function(){
+  const el=document.getElementById('dcInput'); const q=(el&&el.value||'').trim(); if(!q||DCHAT.busy)return;
+  DCHAT.msgs.push({role:'user',content:q}); if(el)el.value=''; DCHAT.busy=true; dcRender();
+  const btn=document.getElementById('dcBtn'); if(btn)btn.disabled=true;
+  try{
+    const history=DCHAT.msgs.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:m.content}));
+    const r=await fetch(SUPA_URL+'/functions/v1/data-chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},body:JSON.stringify({question:q,history:history.slice(0,-1)})});
+    const d=await r.json(); if(!d.ok) throw new Error(d.error||'응답 실패');
+    DCHAT.msgs.push({role:'assistant',content:d.answer||'(빈 응답)',sql:d.sql||[]});
+  }catch(e){ DCHAT.msgs.push({role:'assistant',content:'⚠ 오류: '+(e.message||e),sql:[]}); }
+  DCHAT.busy=false; if(btn)btn.disabled=false; dcRender();
 };
 function hdShipModal(s){ s=s||{};
   const coaOpts=`<option value="">— COA 연결 안함 —</option>`+HD.coa.map(c=>`<option value="${c.id}"${s.coa_id===c.id?' selected':''}>${esc(hdCoaLabel(c))}</option>`).join('');
