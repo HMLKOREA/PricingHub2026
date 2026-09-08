@@ -40,6 +40,7 @@ h2{font-size:18px;margin:0 0 4px}
 .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:8px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
 .btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.win{background:var(--win);border-color:var(--win);color:#fff}.btn.sm{padding:4px 9px;font-size:11.5px}
+.btn.danger{background:var(--loss);border-color:var(--loss);color:#fff}.btn.ghost-danger{color:var(--loss);border-color:var(--loss);background:transparent}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 input,select,textarea{background:#fff;border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;font-size:13px;font-family:inherit}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
@@ -660,7 +661,7 @@ window.openReq=async function(id){
     const _pool=await routePool(); const _rc=r.is_fr?'FR':r.is_rf?'RF':(r.cargo_type==='FCL'?'DC':r.cargo_type||'');
     $('#main').innerHTML=`<h2>${r.job_no?`<span style="color:var(--accent)">${esc(r.job_no)}</span> · `:''}${esc(r.shipper||'(화주)')} <span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span>${(r.is_oog||r.is_fr||r.is_rf)?` <span style="font-size:12px;color:var(--amber)">[${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}]</span>`:''}</h2>
      <div class="sub">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')} · ${esc(r.channel||'')} · ${esc(r.ship_kind||'')}${r.commodity?' · '+esc(r.commodity):''}${r.special_note?' · '+esc(r.special_note):''}</div>
-     <div class="row"><button class="btn sm" onclick="go('pipeline')">← 목록</button><button class="btn win sm" onclick="openBooking('${id}')">✅ 수주·부킹 전환</button><button class="btn primary sm" onclick="openVendorMail('${id}')">📧 협력사 메일</button><button class="btn sm" onclick="copyJobText()">📋 사비스/BL 복사</button><a class="btn sm" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener" style="text-decoration:none">💳 AP·결재 ↗</a></div>
+     <div class="row"><button class="btn sm" onclick="go('pipeline')">← 목록</button><button class="btn win sm" onclick="openBooking('${id}')">✅ 수주·부킹 전환</button><button class="btn primary sm" onclick="openVendorMail('${id}')">📧 협력사 메일</button><button class="btn sm" onclick="copyJobText()">📋 사비스/BL 복사</button><a class="btn sm" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener" style="text-decoration:none">💳 AP·결재 ↗</a><span style="flex:1"></span><button class="btn sm" onclick="editReq('${id}')">✏ 수정</button><button class="btn ghost-danger sm" onclick="delReq('${id}')">🗑 삭제</button></div>
      <div class="card" style="margin-top:12px;border-color:var(--accent)"><div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:12.5px">🧭 추천 파트너</b><span class="d" style="margin:0">${esc(r.origin_port||'?')} → ${esc(r.dest_port||'?')} · ${esc(_rc||r.cargo_type||'?')}</span></div><div style="margin-top:6px">${recoHTML(_pool,r.origin_port,r.dest_port,_rc)}</div></div>
      <div class="card" style="margin-top:12px"><h3>인콰이어리 상세</h3>
       ${(()=>{const kv=[['거래구분',r.channel],['HML 담당',r.owner||r.assigned_to],['운송구분',r.ship_kind],['방향',r.direction],['Trans/Mode',[r.cargo_type,r.mode].filter(Boolean).join(' / ')],['인코텀즈',r.incoterms],['화주',r.shipper],['화주 담당',r.shipper_contact],['POL',r.origin_port],['POD',r.dest_port],['Pick-up',r.pickup_addr],['Delivery',r.delivery_addr],['품목',r.commodity],['컨테이너',cnt],['중량',r.weight?r.weight+' kg':''],['Volume',r.volume_cbm?r.volume_cbm+' CBM':''],['화물치수(L×W×H)',r.dimensions],['특수화물',r.special_types||[r.is_oog&&'OOG',r.is_fr&&'FLAT RACK',r.is_rf&&'REEFER'].filter(Boolean).join(', ')],['마감',r.deadline],['BKG#',r.bkg_no],['선정선사',r.selected_carrier],['수주일',r.won_at?String(r.won_at).slice(0,10):''],['실주사유',r.win_loss_reason]];
@@ -676,6 +677,57 @@ window.openReq=async function(id){
        </tbody></table>`:'<div class="d">RFQ 탭에서 벤더 견적을 수집·비교하세요.</div>'}</div>`;
     renderQuoteLines(id);
   }catch(e){ toast(e.message||e,true); }
+};
+/* ── JOB 수정: DB 레코드 → 인테이크 폼(JOBW)으로 역매핑 ── */
+window.editReq=async function(id){
+  try{
+    let r=(window.__req&&window.__req.id===id)?window.__req:null;
+    if(!r){ const rows=await q('quote_requests',b=>b.eq('id',id)); r=rows[0]; }
+    if(!r){ toast('레코드를 찾을 수 없습니다',true); return; }
+    const s=v=>(v==null||v==='')?'':String(v);
+    const cs=v=>(v==null||v===0||v==='')?'':String(v);   // 컨테이너 수량(0/빈값은 공란)
+    // 특수화물 spec 복원
+    const spec={};
+    (r.special_types?String(r.special_types).split(/\s*,\s*/):[]).forEach(t=>{ if(SPEC_CHIPS.includes(t)) spec[t]=true; });
+    if(r.is_rf) spec['REEFER']=true; if(r.is_oog) spec['OOG']=true;
+    // 화물 치수 라인 복원
+    let items=Array.isArray(r.cargo_items)?r.cargo_items.map(it=>({l:s(it&&it.l),w:s(it&&it.w),h:s(it&&it.h),q:(it&&it.q!=null&&it.q!=='')?String(it.q):'1',kg:s(it&&it.kg)})):[];
+    if(!items.length) items=[{q:'1'}];
+    JOBW={
+      id:r.id, job_no:r.job_no,
+      ship_kind:s(r.ship_kind)||'해상', channel:s(r.channel), shipper:s(r.shipper), shipper_contact:s(r.shipper_contact),
+      owner:s(r.owner||r.assigned_to), stage:s(r.stage)||'접수',
+      cargo_type:s(r.cargo_type)||'FCL', direction:s(r.direction)||'EXPORT', incoterms:s(r.incoterms),
+      origin_port:s(r.origin_port), dest_port:s(r.dest_port), deadline:s(r.deadline),
+      pickup_addr:s(r.pickup_addr), delivery_addr:s(r.delivery_addr),
+      _door:!!(r.pickup_addr||r.delivery_addr),
+      commodity:s(r.commodity), hs_code:s(r.hs_code), weight:s(r.weight),
+      volume_cbm:s(r.volume_cbm), vol_pkg:s(r.vol_pkg), vol_ton:s(r.vol_ton), vol_cbm:s(r.vol_cbm), vol_unit:s(r.vol_unit), packing_list:s(r.packing_list),
+      cntr_20dv:cs(r.cntr_20dv), cntr_40hq:cs(r.cntr_40hq), cntr_20fr:cs(r.cntr_20fr), cntr_40fr:cs(r.cntr_40fr),
+      cntr_20rf:cs(r.cntr_20rf), cntr_40rf:cs(r.cntr_40rf), cntr_20ot:cs(r.cntr_20ot), cntr_40ot:cs(r.cntr_40ot),
+      cntr_wt_dry:s(r.cntr_wt_dry), cntr_wt_rf:s(r.cntr_wt_rf), cntr_wt_ot:s(r.cntr_wt_ot), cntr_wt_fr:s(r.cntr_wt_fr),
+      dg:!!r.dg, dg_un:s(r.dg_note), reefer_temp:s(r.reefer_temp), reefer_vent:s(r.reefer_vent),
+      spec, cargo_items:items, special_note:s(r.special_note), notes:s(r.notes)
+    };
+    RAWIN={text:'',html:'',image:null};
+    EDIT_LOAD=true; go('intake');
+    toast('✏ 수정 모드 — 값을 고치고 저장하세요');
+  }catch(e){ toast(e.message||e,true); }
+};
+/* ── JOB 삭제: 자식(견적라인·벤더견적) 정리 후 본체 삭제 ── */
+window.delReq=async function(id){
+  const r=(window.__req&&window.__req.id===id)?window.__req:null;
+  const label=r?`${r.job_no||''} ${r.shipper||''} (${r.origin_port||'?'}→${r.dest_port||'?'})`:id;
+  if(!confirm(`정말 삭제하시겠습니까?\n\n${label}\n\n견적라인·벤더견적까지 함께 삭제되며 되돌릴 수 없습니다.`)) return;
+  try{
+    try{ await SB.from('quote_lines').delete().eq('quote_request_id',id); }catch(e){}
+    try{ await SB.from('vendor_quotes').delete().eq('quote_request_id',id); }catch(e){}
+    const {error}=await SB.from('quote_requests').delete().eq('id',id);
+    if(error) throw error;
+    window.__req=null;
+    toast('🗑 삭제되었습니다');
+    go('pipeline');
+  }catch(e){ toast('삭제 실패: '+(e.message||e),true); }
 };
 function jobText(r){
   const cnt=cntSummary(r);
@@ -1125,6 +1177,7 @@ function parseInq(t){
   return o;
 }
 let JOBW={};
+let EDIT_LOAD=false;   // editReq→intake 진입 시 1회성 플래그(수정모드 유지용)
 const FMETA={
   ship_kind:['운송구분','seg',['해상','항공','벌크','콘솔','내륙운송','특송']],
   channel:['거래구분','seg',CH], owner:['HML 담당자','select',STAFF],
@@ -1377,9 +1430,14 @@ function renderJobForm(){
   </div>`;
 }
 VIEWS.intake=async function(){
+  // editReq로 진입한 경우가 아닌데 JOBW.id가 남아있으면(수정 이탈) 신규로 초기화
+  if(JOBW.id && !EDIT_LOAD) JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT',cargo_type:'FCL',spec:{},cargo_items:[{q:'1'}]};
+  EDIT_LOAD=false;
   if(!JOBW||!Object.keys(JOBW).length) JOBW={ship_kind:'해상',stage:'접수',direction:'EXPORT',cargo_type:'FCL',spec:{},cargo_items:[{q:'1'}]};
   await loadIntakeRefs();
-  $('#main').innerHTML=`<h2>인테이크 · Job 생성</h2><div class="sub">왼쪽에 이메일 붙여넣기 → 자동채움, 오른쪽 카드에서 확인·수정 → 저장 시 Job# 자동부여·팀 공유</div>
+  const EDIT=!!JOBW.id;
+  $('#main').innerHTML=`<h2>${EDIT?`✏ Job 수정 · <span style="color:var(--accent)">${esc(JOBW.job_no||'')}</span>`:'인테이크 · Job 생성'}</h2><div class="sub">${EDIT?'값을 고친 뒤 아래 <b>수정 저장</b>을 누르세요. Job#·검수상태는 그대로 유지됩니다.':'왼쪽에 이메일 붙여넣기 → 자동채움, 오른쪽 카드에서 확인·수정 → 저장 시 Job# 자동부여·팀 공유'}</div>
+   ${EDIT?`<div class="row" style="margin:0 0 10px"><button class="btn sm" onclick="var i=JOBW.id;resetJob();openReq(i)">← 수정 취소</button></div>`:''}
    <div class="intakeGrid">
      <div class="card mailcard">
        <h3>✉ 이메일 · 메시지</h3>
@@ -1397,7 +1455,7 @@ VIEWS.intake=async function(){
      <div class="card">
        <h3>📋 Job 입력 <span class="d" style="display:inline">— 필수: 채널·화주·담당자</span></h3>
        <div id="jobForm"></div>
-       <div class="saverow"><button class="btn win" onclick="saveJob()" style="padding:10px 18px;font-size:14px">＋ Job 생성 · 저장</button><span class="d" style="margin:0">견적 전이어도 저장 가능 · 저장 시 Job#가 자동 부여되고 팀 전체에 공유됩니다.</span></div>
+       <div class="saverow"><button class="btn win" onclick="saveJob()" style="padding:10px 18px;font-size:14px">${EDIT?'💾 수정 저장':'＋ Job 생성 · 저장'}</button><span class="d" style="margin:0">${EDIT?'변경 내용이 팀 전체에 즉시 반영됩니다.':'견적 전이어도 저장 가능 · 저장 시 Job#가 자동 부여되고 팀 전체에 공유됩니다.'}</span></div>
      </div>
    </div>
    <div class="card"><h3>📋 최근 Job 현황판 <span class="d" style="display:inline">— 누가 넣었든 팀이 함께 봅니다 (협업 개시)</span></h3><div id="jobBoard"><div class="d">불러오는 중…</div></div></div>`;
@@ -1519,6 +1577,14 @@ window.saveJob=async function(){
     is_rf:!!(o.spec&&o.spec['REEFER'])||((ci(o.cntr_20rf)||0)+(ci(o.cntr_40rf)||0)>0),
     special_types:specText(o.spec||{}),special_note:o.special_note,
     notes:o.notes,mail_type:'intake',status:'검수대기'};
+  // ── 수정 모드: 기존 레코드 갱신 (job_no·status·mail_type·생성정보는 보존) ──
+  if(o.id){
+    const upd={...row}; delete upd.status; delete upd.mail_type;
+    try{ const {error}=await SB.from('quote_requests').update(upd).eq('id',o.id); if(error)throw error;
+      const savedId=o.id; toast('✅ 수정 저장됨'); resetJob(); openReq(savedId);
+    }catch(e){ toast('수정 실패: '+(e.message||e),true); }
+    return;
+  }
   try{ const {data,error}=await SB.from('quote_requests').insert(row).select('job_no').single(); if(error)throw error;
     showModal(`<h3>✅ Job 생성 완료</h3><div style="font-size:24px;font-weight:750;margin:12px 0;color:var(--win)">${esc(data.job_no)}</div>
       <div class="d">${esc(o.shipper)} · ${esc(o.origin_port||'?')}→${esc(o.dest_port||'?')} · ${esc(o.channel)}<br>파이프라인/RFQ에서 이어서 관리하세요.</div>`);
