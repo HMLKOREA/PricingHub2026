@@ -35,6 +35,14 @@ h2{font-size:18px;margin:0 0 4px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
 .kpi .l{font-size:11px;color:var(--mut);margin-bottom:6px}.kpi .v{font-size:21px;font-weight:750}
 .kpi .n{font-size:11px;color:var(--mut2);margin-top:4px}
+.kpi.act{cursor:pointer;text-align:left;font:inherit;transition:border-color .12s,box-shadow .12s,transform .08s}
+.kpi.act:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(37,99,235,.10);transform:translateY(-1px)}
+.kpi.act.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+.kpi.act .n{color:var(--accent);font-weight:600}
+.fstrip{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:12px;background:var(--panel)}
+.fstrip>div{flex:1 1 130px;min-width:120px;padding:9px 14px;border-right:1px solid var(--line)}
+.fstrip .l{font-size:10.5px;color:var(--mut);margin-bottom:3px}
+.fstrip .v{font-size:15px;font-weight:700;line-height:1.25}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.05)}
 .card h3{margin:0 0 3px;font-size:14px}.card .d{color:var(--mut2);font-size:11.5px;margin-bottom:12px}
 .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:8px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
@@ -443,6 +451,14 @@ function toast(msg,err){ const t=document.createElement('div'); t.className='toa
   document.getElementById('toastHost').appendChild(t); setTimeout(()=>t.remove(),err?5000:2500); }
 function fmtW(v){ v=+v||0; if(Math.abs(v)>=1e8)return (v/1e8).toFixed(1)+'억'; if(Math.abs(v)>=1e4)return Math.round(v/1e4).toLocaleString()+'만'; return Math.round(v).toLocaleString(); }
 function pct(v){ return v==null?'–':(v*100).toFixed(1)+'%'; }
+/* ── 액션 요약 공통 헬퍼(마감/경과/오픈 판정) ── */
+function dlineDate(r){ const s=String(r&&r.deadline||'').trim(); const m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(!m)return null; const d=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(d)?null:d; }
+function dueDays(r){ const d=dlineDate(r); if(!d)return null; const n=new Date(); const t0=new Date(n.getFullYear(),n.getMonth(),n.getDate()); return Math.round((d-t0)/86400000); }
+function ageDays(r){ const t=new Date(r&&r.created_at); return isNaN(t)?0:Math.floor((Date.now()-t)/86400000); }
+function isOpenReq(r){ return OPEN.includes((r&&r.stage)||'접수'); }
+function actNew(r){ return ageDays(r)<=7; }                                  // 최근 7일 신규 유입
+function actDue(r){ return isOpenReq(r) && dueDays(r)!=null && dueDays(r)<=3; } // 마감 임박·초과(오픈)
+function actStale(r){ return isOpenReq(r) && ageDays(r)>=7; }                  // 오래 방치(오픈 7일↑)
 let FX={USD:1350,EUR:1450,CNY:190,KRW:1};
 const fxToKRW=(amt,cur)=>(+amt||0)*(FX[(cur||'KRW').toUpperCase()]||1);
 async function loadFX(){ try{ const rows=await q('app_settings'); rows.forEach(r=>{ if(r.key==='fx_usd')FX.USD=+r.value||FX.USD; if(r.key==='fx_eur')FX.EUR=+r.value||FX.EUR; if(r.key==='fx_cny')FX.CNY=+r.value||FX.CNY; }); }catch(e){} }
@@ -535,6 +551,25 @@ function renderDash(ms){
   const salesRows=Object.entries(bySales).filter(([s])=>!staffExcluded(s)).sort((a,b)=>staffRank(a[0])-staffRank(b[0])||b[1].rev-a[1].rev);
   const today=new Date(); const daysSince=d=>Math.floor((today-new Date(d))/86400000);
   const openReqs=reqs.filter(r=>OPEN.includes(r.stage||'접수')).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  /* ── 오늘의 할 일: 마감 임박·초과 → 오래 방치 순 ── */
+  const dueList=reqs.filter(actDue).sort((a,b)=>dueDays(a)-dueDays(b));
+  const staleList=reqs.filter(r=>actStale(r)&&!actDue(r)).sort((a,b)=>ageDays(b)-ageDays(a));
+  const newN=reqs.filter(actNew).length;
+  const staleAllN=reqs.filter(actStale).length;
+  const actionRows=[...dueList,...staleList].slice(0,10);
+  const byOwnerAct={}; [...dueList,...staleList].forEach(r=>{const o=r.owner||r.assigned_to||'(미지정)'; byOwnerAct[o]=(byOwnerAct[o]||0)+1;});
+  const ownerActChips=Object.entries(byOwnerAct).sort((a,b)=>b[1]-a[1]).map(([o,n])=>`<span class="pill" style="margin:0 4px 0 0">${esc(o)} <b style="color:var(--loss)">${n}</b></span>`).join('');
+  const urgBadge=r=>{ if(actDue(r)){ const dd=dueDays(r); return dd<0?`<span class="tag" style="background:rgba(220,38,38,.15);color:var(--loss)">마감 ${-dd}일 초과</span>`:(dd===0?`<span class="tag" style="background:rgba(220,38,38,.15);color:var(--loss)">오늘 마감</span>`:`<span class="tag" style="background:rgba(220,38,38,.10);color:var(--loss)">마감 D-${dd}</span>`); } return `<span class="tag" style="background:rgba(180,83,9,.12);color:var(--amber)">방치 ${ageDays(r)}일</span>`; };
+  const todoPanel=`<div class="card" style="border-color:${(dueList.length?'var(--loss)':(staleList.length?'var(--amber)':'var(--line)'))}">
+    <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">🎯 오늘의 할 일 <span class="d" style="display:inline">— 지금 손봐야 할 건</span></h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin:0"><span class="pill" style="background:rgba(220,38,38,.10);color:var(--loss);border-color:transparent">⏰ 마감 ${dueList.length}</span><span class="pill" style="background:rgba(180,83,9,.10);color:var(--amber);border-color:transparent">🐌 방치 ${staleAllN}</span><span class="pill" style="background:rgba(37,99,235,.08);color:var(--accent);border-color:transparent">🆕 신규 ${newN}</span></div>
+    </div>
+    ${ownerActChips?`<div class="row noprint" style="margin:8px 0 2px;flex-wrap:wrap">담당별 &nbsp;${ownerActChips}</div>`:''}
+    ${actionRows.length?`<div style="overflow:auto;max-height:300px;margin-top:8px"><table><thead><tr><th>우선</th><th>Job#</th><th>화주</th><th>레인</th><th>담당</th><th>단계</th><th class="num">견적</th></tr></thead><tbody>
+      ${actionRows.map(r=>`<tr style="cursor:pointer" onclick="openReq('${r.id}')"><td style="white-space:nowrap">${urgBadge(r)}</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.owner||r.assigned_to||'')}</td><td><span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span></td><td class="num mono">${r.sell_krw?fmtW(r.sell_krw):'–'}</td></tr>`).join('')}
+    </tbody></table></div>${(dueList.length+staleList.length)>actionRows.length?`<div class="d" style="margin-top:6px">외 ${(dueList.length+staleList.length)-actionRows.length}건 더 — 아래 '현행 인콰이어리'/파이프라인에서 확인</div>`:''}`:'<div class="d" style="margin-top:8px">✅ 마감 임박·초과, 오래 방치 건이 없습니다. 깔끔합니다 👍</div>'}
+  </div>`;
   const liveBk=bk.filter(b=>ym(b.bkg_date)>=M).sort((a,b)=>String(b.bkg_date).localeCompare(String(a.bkg_date))).slice(0,15);
   const monthOpts=ms.map(m=>`<option${m===M?' selected':''}>${m}</option>`).join('');
   const salesCard=`<div class="card"><h3>담당자별 실적 <span class="d" style="display:inline">— ${M}</span></h3>
@@ -558,6 +593,7 @@ function renderDash(ms){
      ${tile('인콰이어리 접수',cur.reqN+'건','이번 달 신규')}
      ${tile('수주 / 승률',cur.won+'건',`승률 ${pct(cur.hit)} (${cur.won}/${cur.won+cur.lost})`)}
    </div>
+   ${todoPanel}
    <div class="card"><h3>월별 추이 <span class="d" style="display:inline">— 최근 6개월 (${M} 기준)</span></h3>
      <div style="overflow:auto"><table><thead><tr><th>월</th><th class="num">부킹</th><th class="num">매출</th>${A?'<th class="num">마진</th><th class="num">마진율</th>':''}<th class="num">인콰이어리</th><th class="num">수주</th><th class="num">승률</th><th style="width:110px">매출</th></tr></thead><tbody>
        ${trend.map(t=>`<tr${t.k===M?' style="background:rgba(37,99,235,.06);font-weight:600"':''}><td class="mono">${t.k}</td><td class="num mono">${t.bkN}</td><td class="num mono">${fmtW(t.rev)}</td>${A?`<td class="num mono">${fmtW(t.mgn)}</td><td class="num mono">${t.mrate==null?'–':(t.mrate*100).toFixed(1)+'%'}</td>`:''}<td class="num mono">${t.reqN}</td><td class="num mono">${t.won}</td><td class="num mono">${pct(t.hit)}</td>
@@ -618,23 +654,34 @@ VIEWS.pipeline=async function(){
   catch(e){ $('#main').innerHTML=`<h2>파이프라인</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
 };
 window.setPipeStage=function(s){ PIPEF.stage=(PIPEF.stage===s?'':s); renderPipe(); };
+window.setPipeAction=function(a){ PIPEF.action=(PIPEF.action===a?'':a); renderPipe(); };
 function renderPipe(){
   const reqs=PIPE; const cnt=s=>reqs.filter(r=>(r.stage||'접수')===s).length;
   const today=new Date(); const days=d=>Math.floor((today-new Date(d))/86400000);
   const kw=($('#pq')?.value||'').trim().toLowerCase();
+  const nNew=reqs.filter(actNew).length, nDue=reqs.filter(actDue).length, nStale=reqs.filter(actStale).length;
+  const AF={'new':actNew,'due':actDue,'stale':actStale};
   let list=reqs.filter(r=>{ if(PIPEF.stage&&(r.stage||'접수')!==PIPEF.stage)return false;
+    if(PIPEF.action&&AF[PIPEF.action]&&!AF[PIPEF.action](r))return false;
     if(kw&&!((r.job_no||'')+(r.shipper||'')+(r.origin_port||'')+(r.dest_port||'')+(r.channel||'')+(r.owner||'')).toLowerCase().includes(kw))return false; return true; });
   const openN=reqs.filter(r=>OPEN.includes(r.stage||'접수')).length, won=cnt('수주'), lost=cnt('실주');
   const hit=(won+lost)?won/(won+lost):null;
   const pipeVal=reqs.filter(r=>OPEN.includes(r.stage||'접수')).reduce((a,r)=>a+((+r.sell_krw||0)*(WEIGHT[r.stage||'접수']||0)),0);
   const tile=(l,v,n,accent)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${accent?` style="color:${accent}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   const chip=s=>`<button class="pchip${PIPEF.stage===s?' on':''}" onclick="setPipeStage('${s}')"><span class="tag st-${s}" style="padding:1px 7px">${s}</span> <b>${cnt(s)}</b></button>`;
-  $('#main').innerHTML=`<h2>파이프라인</h2><div class="sub">상단 단계별 요약 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
+  const atile=(key,ic,l,n,color,sub)=>`<button class="kpi act${PIPEF.action===key?' on':''}" onclick="setPipeAction('${key}')"><div class="l">${ic} ${l}</div><div class="v" style="color:${n>0?color:'var(--mut2)'}">${n}건</div><div class="n">${PIPEF.action===key?'▲ 필터중 · 클릭 해제':(sub||'클릭해 필터')}</div></button>`;
+  $('#main').innerHTML=`<h2>파이프라인</h2><div class="sub">상단 요약·액션 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
       ${tile('진행중',openN+'건','오픈 인콰이어리')}
       ${tile('가중 파이프라인',fmtW(pipeVal)+'원','기대매출')}
       ${tile('수주 / 실주',won+' / '+lost,'승률 '+pct(hit))}
       ${tile('전체 Job',reqs.length+'건','누적')}
+    </div>
+    <div class="cap" style="margin-bottom:6px">⚡ 지금 챙길 것 (클릭 → 아래 표 자동 필터)</div>
+    <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+      ${atile('new','🆕','최근 7일 신규',nNew,'var(--accent)','새로 들어온 문의')}
+      ${atile('due','⏰','마감 임박·초과',nDue,'var(--loss)','오픈 · 마감 D-3 이내')}
+      ${atile('stale','🐌','오래 방치',nStale,'var(--amber)','오픈 · 접수 7일↑')}
     </div>
     <div class="card"><div class="cap" style="margin-bottom:8px">단계 필터 (클릭)</div><div class="row" style="gap:6px;flex-wrap:wrap">${STAGES.map(chip).join('')}${PIPEF.stage?`<button class="btn sm" onclick="setPipeStage('${PIPEF.stage}')">필터해제</button>`:''}</div></div>
     <div class="card"><div class="row" style="margin-bottom:10px"><input id="pq" placeholder="Job#·화주·레인·거래구분·담당 검색" style="flex:1;min-width:220px" oninput="renderPipe()"><span class="pill">${list.length}건</span></div>
@@ -662,6 +709,18 @@ window.openReq=async function(id){
     $('#main').innerHTML=`<h2>${r.job_no?`<span style="color:var(--accent)">${esc(r.job_no)}</span> · `:''}${esc(r.shipper||'(화주)')} <span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span>${(r.is_oog||r.is_fr||r.is_rf)?` <span style="font-size:12px;color:var(--amber)">[${[r.is_oog?'OOG':'',r.is_fr?'FR':'',r.is_rf?'RF':''].filter(Boolean).join('·')}]</span>`:''}</h2>
      <div class="sub">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')} · ${esc(r.channel||'')} · ${esc(r.ship_kind||'')}${r.commodity?' · '+esc(r.commodity):''}${r.special_note?' · '+esc(r.special_note):''}</div>
      <div class="row"><button class="btn sm" onclick="go('pipeline')">← 목록</button><button class="btn win sm" onclick="openBooking('${id}')">✅ 수주·부킹 전환</button><button class="btn primary sm" onclick="openVendorMail('${id}')">📧 협력사 메일</button><button class="btn sm" onclick="copyJobText()">📋 사비스/BL 복사</button><a class="btn sm" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener" style="text-decoration:none">💳 AP·결재 ↗</a><span style="flex:1"></span><button class="btn sm" onclick="editReq('${id}')">✏ 수정</button><button class="btn ghost-danger sm" onclick="delReq('${id}')">🗑 삭제</button></div>
+     ${(()=>{ const du=dueDays(r), dd=ageDays(r), op=isOpenReq(r);
+       const dueTxt=dlineDate(r)?`${esc(r.deadline)}${op&&du!=null?(du<0?` · ${-du}일 초과`:du===0?' · 오늘':` · D-${du}`):''}`:'-';
+       const dueCol=(op&&du!=null&&du<=3)?'var(--loss)':'var(--txt)';
+       const mgn=(r.margin_krw!=null&&r.margin_krw!=='')?r.margin_krw:((r.sell_krw!=null&&r.buy_krw!=null&&r.sell_krw!==''&&r.buy_krw!=='')?(+r.sell_krw-+r.buy_krw):null);
+       return `<div class="fstrip">
+        <div><div class="l">레인</div><div class="v">${esc(r.origin_port||'?')} → ${esc(r.dest_port||'?')}</div></div>
+        <div><div class="l">컨테이너 / 화물</div><div class="v">${esc(cnt||r.cargo_type||'-')}</div></div>
+        <div><div class="l">Sell (견적)</div><div class="v">${r.sell_krw?fmtW(r.sell_krw)+'원':'-'}</div></div>
+        <div><div class="l">마진</div><div class="v" style="color:${mgn!=null?'var(--b)':'var(--mut2)'}">${mgn!=null?fmtW(mgn)+'원':'-'}</div></div>
+        <div><div class="l">단계</div><div class="v"><span class="tag st-${r.stage||'접수'}">${r.stage||'접수'}</span></div></div>
+        <div><div class="l">마감 ${op?'· 경과':''}</div><div class="v" style="color:${dueCol};font-size:13.5px">${dueTxt}${op?` <span class="d" style="display:inline;font-weight:500">/ ${dd}일 경과</span>`:''}</div></div>
+       </div>`; })()}
      <div class="card" style="margin-top:12px;border-color:var(--accent)"><div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:12.5px">🧭 추천 파트너</b><span class="d" style="margin:0">${esc(r.origin_port||'?')} → ${esc(r.dest_port||'?')} · ${esc(_rc||r.cargo_type||'?')}</span></div><div style="margin-top:6px">${recoHTML(_pool,r.origin_port,r.dest_port,_rc)}</div></div>
      <div class="card" style="margin-top:12px"><h3>인콰이어리 상세</h3>
       ${(()=>{const kv=[['거래구분',r.channel],['HML 담당',r.owner||r.assigned_to],['운송구분',r.ship_kind],['방향',r.direction],['Trans/Mode',[r.cargo_type,r.mode].filter(Boolean).join(' / ')],['인코텀즈',r.incoterms],['화주',r.shipper],['화주 담당',r.shipper_contact],['POL',r.origin_port],['POD',r.dest_port],['Pick-up',r.pickup_addr],['Delivery',r.delivery_addr],['품목',r.commodity],['컨테이너',cnt],['중량',r.weight?r.weight+' kg':''],['Volume',r.volume_cbm?r.volume_cbm+' CBM':''],['화물치수(L×W×H)',r.dimensions],['특수화물',r.special_types||[r.is_oog&&'OOG',r.is_fr&&'FLAT RACK',r.is_rf&&'REEFER'].filter(Boolean).join(', ')],['마감',r.deadline],['BKG#',r.bkg_no],['선정선사',r.selected_carrier],['수주일',r.won_at?String(r.won_at).slice(0,10):''],['실주사유',r.win_loss_reason]];
