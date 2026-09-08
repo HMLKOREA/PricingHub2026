@@ -239,6 +239,14 @@ tr.stale td{background:rgba(180,83,9,.08)}
 #loginGate .lgfoot{margin-top:22px;font-size:10.5px;color:#aab4c2;text-align:center;line-height:1.6}
 @media(max-width:720px){#loginGate .lgbox{height:auto;max-width:400px}#loginGate .lgphoto{display:none}#loginGate .lgpanel{flex:1;padding:40px 30px}}
 /* 사이드바 사용자/로그아웃 */
+.scopesw{padding:8px 14px 0}
+.scopebtns{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+.scopebtns button{flex:1;border:none;background:transparent;color:var(--mut);cursor:pointer;padding:6px 4px;font-size:11px;font-weight:700;line-height:1.15;display:flex;flex-direction:column;align-items:center;gap:1px;font-family:inherit}
+.scopebtns button span{font-size:9px;font-weight:500;color:var(--mut2)}
+.scopebtns button.on{background:var(--accent);color:#fff}
+.scopebtns button.on span{color:rgba(255,255,255,.85)}
+.scopebtns button:first-child{border-right:1px solid var(--line)}
+.scopedemo{background:rgba(180,83,9,.10);border:1px solid #fed7aa;color:var(--amber);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;margin-bottom:12px}
 .side .userbar{padding:10px 14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;font-size:12px}
 .side .userbar .av{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
 .side .userbar .un{font-weight:700;color:var(--txt);line-height:1.1}
@@ -398,6 +406,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
         </div>
       </div>
     </div>
+    <div id="scopeSw" class="scopesw"></div>
     <div class="userbar" id="userbar" style="display:none">
       <div class="av" id="ubAv">·</div>
       <div><div class="un" id="ubName">·</div><div class="ut" id="ubTitle">·</div></div>
@@ -459,6 +468,21 @@ function isOpenReq(r){ return OPEN.includes((r&&r.stage)||'접수'); }
 function actNew(r){ return ageDays(r)<=7; }                                  // 최근 7일 신규 유입
 function actDue(r){ return isOpenReq(r) && dueDays(r)!=null && dueDays(r)<=3; } // 마감 임박·초과(오픈)
 function actStale(r){ return isOpenReq(r) && ageDays(r)>=7; }                  // 오래 방치(오픈 7일↑)
+/* ── 데이터 스코프: 2026-10-01 클린 스타트 (그 이전 = Demo/Test) ── */
+const PROD_START='2026-10-01';
+function defaultScope(){ try{ return (new Date().toISOString().slice(0,10) >= PROD_START) ? 'real':'all'; }catch(e){ return 'all'; } }
+let SCOPE=(function(){ try{ return localStorage.getItem('hml_scope')||defaultScope(); }catch(e){ return defaultScope(); } })();
+function inProd(dateStr){ const s=String(dateStr||'').slice(0,10); return !!s && s>=PROD_START; }
+function scopeRows(rows,field){ if(SCOPE==='all') return rows||[]; return (rows||[]).filter(r=>inProd(r&&r[field])); }
+window.setScope=function(s){ SCOPE=s; try{localStorage.setItem('hml_scope',s);}catch(e){} renderScopeSwitch(); if(typeof CURRENT!=='undefined'&&CURRENT) go(CURRENT); };
+function renderScopeSwitch(){ const el=document.getElementById('scopeSw'); if(!el)return;
+  const real=SCOPE==='real';
+  el.innerHTML=`<div class="scopebtns"><button class="${real?'on':''}" onclick="setScope('real')">실데이터<span>10/1~</span></button><button class="${!real?'on':''}" onclick="setScope('all')">전체<span>데모포함</span></button></div>`;
+}
+function scopeBanner(){ let today=''; try{ today=new Date().toISOString().slice(0,10); }catch(e){}
+  if(SCOPE==='all') return `<div class="scopedemo">🧪 전체 보기 — 2026-10-01 이전 <b>Demo/Test</b> 데이터 포함. 실운영 집계는 사이드바에서 '실데이터'로 전환하세요.</div>`;
+  if(today && today<PROD_START) return `<div class="scopedemo">🧪 실데이터 모드 — <b>2026-10-01</b>부터 집계됩니다(클린 스타트). 지금은 데모 기간이라 비어 보일 수 있어요 · 현재 데이터는 '전체'로 전환.</div>`;
+  return ''; }
 let FX={USD:1350,EUR:1450,CNY:190,KRW:1};
 const fxToKRW=(amt,cur)=>(+amt||0)*(FX[(cur||'KRW').toUpperCase()]||1);
 async function loadFX(){ try{ const rows=await q('app_settings'); rows.forEach(r=>{ if(r.key==='fx_usd')FX.USD=+r.value||FX.USD; if(r.key==='fx_eur')FX.EUR=+r.value||FX.EUR; if(r.key==='fx_cny')FX.CNY=+r.value||FX.CNY; }); }catch(e){} }
@@ -479,7 +503,7 @@ async function checkConn(){
 /* ================= 라우터 ================= */
 const VIEWS={};
 let CURRENT='dashboard';
-const ADMIN_VIEWS=['archive','import','logs'];
+const ADMIN_VIEWS=['perms','archive','import','logs'];
 /* ===== 담당자 조직 순서(직급) · 공용 정렬/제외 — 모든 담당자별 현황에서 동일 로직 ===== */
 const STAFF_ORDER=[
   {u:'ceo',n:'안진오'},{u:'luna',n:'권영재'},{u:'emily',n:'김도현'},
@@ -497,17 +521,25 @@ const DOMAINS=[
  {k:'hd',   ic:'🏗', t:'HD 섹터', views:[['hd','🏗 FR·COA 섹터']]},
  {k:'ref',  ic:'📚', t:'기준정보', views:[['rates','💱 요율'],['charges','🏭 국내 부대비용'],['ports','🌐 포트코드']]},
  {k:'ptn',  ic:'🤝', t:'파트너', views:[['partners','🌏 파트너'],['contacts','👥 연락처·선사']]},
- {k:'admin',ic:'⚙', t:'관리', admin:true, views:[['archive','🗄 아카이브'],['import','⬆ 가져오기'],['logs','🔐 접속·입력 로그']]},
+ {k:'admin',ic:'⚙', t:'관리', admin:true, views:[['perms','🔑 권한·직무'],['archive','🗄 아카이브'],['import','⬆ 가져오기'],['logs','🔐 접속·입력 로그']]},
 ];
 const VIEW_DOMAIN={}; DOMAINS.forEach(d=>d.views.forEach(v=>{ VIEW_DOMAIN[v[0]]=d; }));
 function isAdmin(){ try{ return !!(ME&&ME.role==='admin'); }catch(e){ return false; } }
+/* ===== 역할별 메뉴 권한 ===== */
+const PERM_COLS=['chat','sales','hd','ref','ptn'];            // 토글 가능한 도메인 (home=항상, admin=관리자전용)
+const DUTY_LABEL={admin:'관리자',sales:'영업',operator:'오퍼레이터'};
+let MENUPERM={duties:{},matrix:{}};
+async function loadMenuPerms(){ try{ const st=await q('app_settings',b=>b.eq('key','menu_perms')); if(st&&st[0]&&st[0].value){ const j=JSON.parse(st[0].value)||{}; MENUPERM={duties:j.duties||{}, matrix:j.matrix||{}}; } }catch(e){} }
+function myDuty(){ if(isAdmin())return 'admin'; const u=((ME&&ME.u)||'').toLowerCase(); const d=MENUPERM.duties&&MENUPERM.duties[u]; return (d==='operator'||d==='sales')?d:'sales'; }
+function canDomain(dk){ const duty=myDuty(); if(duty==='admin')return true; if(dk==='home')return true; if(dk==='admin')return false; const row=(MENUPERM.matrix&&MENUPERM.matrix[duty])||{}; return row[dk]!==0&&row[dk]!==false; } // 미설정=허용(관대)
 window.renderSideNav=function(){ const nav=document.getElementById('nav'); if(!nav)return; const cur=VIEW_DOMAIN[CURRENT];
-  nav.innerHTML=DOMAINS.filter(d=>!d.admin||isAdmin()).map(d=>`<a data-dk="${d.k}" class="${cur&&cur.k===d.k?'active':''}" onclick="goDomain('${d.k}')"><span>${d.ic}</span><span>${esc(d.t)}</span>${d.badge?`<span class="navbadge">${d.badge}</span>`:''}</a>`).join(''); };
+  nav.innerHTML=DOMAINS.filter(d=>canDomain(d.k)).map(d=>`<a data-dk="${d.k}" class="${cur&&cur.k===d.k?'active':''}" onclick="goDomain('${d.k}')"><span>${d.ic}</span><span>${esc(d.t)}</span>${d.badge?`<span class="navbadge">${d.badge}</span>`:''}</a>`).join(''); };
 window.goDomain=function(dk){ const d=DOMAINS.find(x=>x.k===dk); if(!d)return; go(d.views[0][0]); };
 function renderTabs(){ const tb=document.getElementById('wstabs'); if(!tb)return; const d=VIEW_DOMAIN[CURRENT];
   if(!d||d.views.length<2){ tb.className='wstabs hide'; tb.innerHTML=''; return; }
   tb.className='wstabs'; tb.innerHTML=d.views.map(v=>`<button class="${v[0]===CURRENT?'on':''}" onclick="go('${v[0]}')">${esc(v[1])}</button>`).join(''); }
 function go(v){ if(ADMIN_VIEWS.includes(v)&&!isAdmin()){ toast('관리자 전용 메뉴입니다',true); return; }
+  const _dm=VIEW_DOMAIN[v]; if(_dm&&!canDomain(_dm.k)){ toast('접근 권한이 없는 메뉴입니다',true); return; }
   CURRENT=v; renderSideNav(); renderTabs();
   const side=document.querySelector('.side'); if(side)side.classList.remove('open');
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
@@ -520,7 +552,7 @@ function deltaHTML(cur,prev){ if(prev==null||prev===0||cur==null)return ''; cons
 VIEWS.dashboard=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
   try{
-    DASH.bk=await q('bookings'); DASH.reqs=await q('quote_requests');
+    DASH.bk=scopeRows(await q('bookings'),'bkg_date'); DASH.reqs=scopeRows(await q('quote_requests'),'created_at');
     try{ DASH.notes=await q('board_notes',b=>b.order('created_at',{ascending:false}).limit(100)); }catch(e){ DASH.notes=[]; }
     try{ const st=await q('app_settings'); const t=st.find(r=>r.key==='rev_target'); DASH.target=t?(+t.value||0):(DASH.target||0); }catch(e){ DASH.target=DASH.target||0; }
     const ms=[...new Set([...DASH.bk.map(b=>ym(b.bkg_date)),...DASH.reqs.map(r=>ym(r.created_at))].filter(Boolean))].sort();
@@ -579,7 +611,7 @@ function renderDash(ms){
   const stageCard=`<div class="card"><h3>단계별 진행 인콰이어리 <span class="d" style="display:inline">— 현재</span></h3>
     ${OPEN.concat(['수주','실주']).map(s=>{const n=reqs.filter(r=>(r.stage||'접수')===s).length;return `<div class="row" style="margin:6px 0"><div style="width:56px;color:var(--mut)">${s}</div><div style="flex:1;background:var(--panel2);border-radius:6px;height:18px"><div style="height:100%;border-radius:6px;background:${s==='수주'?'var(--win)':s==='실주'?'var(--loss)':'var(--accent)'};width:${Math.min(n*20,100)}%"></div></div><div style="width:34px;text-align:right" class="mono">${n}</div></div>`;}).join('')}</div>`;
   const midBlock=A?`<div class="mgrid">${salesCard}${stageCard}</div>`:stageCard;
-  $('#main').innerHTML=`
+  $('#main').innerHTML=`${scopeBanner()}
    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
      <div><h2 style="margin:0">월간 현황 장표</h2><div class="sub" style="margin:2px 0 0">${A?'경영 전체 지표 · 관리자 전용 상세':'부킹·견적 현황 중심 · 전 직원 공유'} · 실시간</div></div>
      <div class="row noprint">${A?`<span class="d" style="margin:0">월매출목표</span><input id="revTgt" inputmode="numeric" value="${target||''}" placeholder="원(예: 100000000)" style="width:150px;text-align:right"><button class="btn sm" onclick="saveRevTarget()">저장</button>`:''}<span class="d" style="margin:0 0 0 8px">기준월</span><select onchange="setDashMonth(this.value)">${monthOpts}</select><button class="btn" onclick="window.print()">🖨 인쇄</button></div>
@@ -650,7 +682,7 @@ window.delNote=async function(id){ try{ const {error}=await SB.from('board_notes
 let PIPE=[], PIPEF={stage:''};
 VIEWS.pipeline=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
-  try{ PIPE=await q('quote_requests',r=>r.order('created_at',{ascending:false})); renderPipe(); }
+  try{ PIPE=scopeRows(await q('quote_requests',r=>r.order('created_at',{ascending:false})),'created_at'); renderPipe(); }
   catch(e){ $('#main').innerHTML=`<h2>파이프라인</h2><div class="card"><div class="empty">${esc(e.message||e)}</div></div>`; }
 };
 window.setPipeStage=function(s){ PIPEF.stage=(PIPEF.stage===s?'':s); renderPipe(); };
@@ -670,7 +702,7 @@ function renderPipe(){
   const tile=(l,v,n,accent)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${accent?` style="color:${accent}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
   const chip=s=>`<button class="pchip${PIPEF.stage===s?' on':''}" onclick="setPipeStage('${s}')"><span class="tag st-${s}" style="padding:1px 7px">${s}</span> <b>${cnt(s)}</b></button>`;
   const atile=(key,ic,l,n,color,sub)=>`<button class="kpi act${PIPEF.action===key?' on':''}" onclick="setPipeAction('${key}')"><div class="l">${ic} ${l}</div><div class="v" style="color:${n>0?color:'var(--mut2)'}">${n}건</div><div class="n">${PIPEF.action===key?'▲ 필터중 · 클릭 해제':(sub||'클릭해 필터')}</div></button>`;
-  $('#main').innerHTML=`<h2>파이프라인</h2><div class="sub">상단 요약·액션 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
+  $('#main').innerHTML=`${scopeBanner()}<h2>파이프라인</h2><div class="sub">상단 요약·액션 → 아래 상세 표 · 행 클릭 시 Job 상세</div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
       ${tile('진행중',openN+'건','오픈 인콰이어리')}
       ${tile('가중 파이프라인',fmtW(pipeVal)+'원','기대매출')}
@@ -1522,7 +1554,7 @@ VIEWS.intake=async function(){
 };
 async function loadJobBoard(){
   const el=$('#jobBoard'); if(!el) return;
-  try{ const rows=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(30));
+  try{ const rows=scopeRows(await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(30)),'created_at');
     if(!rows.length){ el.innerHTML='<div class="d">아직 등록된 Job이 없습니다. 위에서 첫 Job을 생성하세요.</div>'; return; }
     el.innerHTML=`<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th></tr></thead><tbody>
       ${rows.map(r=>{const d=String(r.created_at||'').replace('T',' ').slice(0,16); const st=r.stage||'접수';
@@ -1658,7 +1690,7 @@ window.setDailyD=function(d){ DAILY.d=d; VIEWS.daily(); };
 VIEWS.daily=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
   try{
-    const reqs=await q('quote_requests'); let bk=[]; try{ bk=await q('bookings'); }catch(e){}
+    const reqs=scopeRows(await q('quote_requests'),'created_at'); let bk=[]; try{ bk=scopeRows(await q('bookings'),'bkg_date'); }catch(e){}
     const D=DAILY.d||new Date().toISOString().slice(0,10);
     const dOf=s=>String(s||'').slice(0,10);
     const endT=new Date(D+'T23:59:59'); const daysAgo=s=>Math.floor((endT-new Date(s))/86400000);
@@ -1678,7 +1710,7 @@ VIEWS.daily=async function(){
     const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
     const stg=s=>`<span class="tag st-${s||'접수'}">${s||'접수'}</span>`;
     const rowLink=r=>`onclick="openReq('${r.id}')" style="cursor:pointer"`;
-    $('#main').innerHTML=`
+    $('#main').innerHTML=`${scopeBanner()}
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
         <div><h2 style="margin:0">🗓 데일리 리포트</h2><div class="sub" style="margin:2px 0 0">오늘의 인테이크 · 담당자별 팔로업 · 파이프라인 (${D})</div></div>
         <div class="row noprint"><span class="d" style="margin:0">기준일</span><input type="date" value="${D}" onchange="setDailyD(this.value)"><button class="btn" onclick="copyDaily()">📋 리포트 복사</button><button class="btn" onclick="window.print()">🖨 인쇄</button></div>
@@ -1720,7 +1752,7 @@ window.copyDaily=function(){ const c=DAILY._ctx; if(!c){toast('먼저 리포트�
 let RFQ={inq:null,vendors:[],cmp:[]};
 VIEWS.rfq=async function(){
   try{
-    const reqs=await q('quote_requests',r=>r.in('stage',OPEN).order('created_at',{ascending:false}));
+    const reqs=scopeRows(await q('quote_requests',r=>r.in('stage',OPEN).order('created_at',{ascending:false})),'created_at');
     $('#main').innerHTML=`<h2>RFQ · 견적비교</h2><div class="sub">인콰이어리 선택 → 선사 RFQ 초안 → 벤더견적 수집·비교 → 반영</div>
      <div class="card"><h3>① 대상 인콰이어리</h3>
        <select id="rfqPick" onchange="rfqPick()"><option value="">— 진행중 인콰이어리 선택 —</option>
@@ -1890,10 +1922,10 @@ window.histSearch=async function(){
   try{
     let hb=b=>b.order('apply_date',{ascending:false}).limit(300);
     if(kw) hb=b=>b.or(`shipper.ilike.%${kw}%,pod.ilike.%${kw}%,region.ilike.%${kw}%,carrier.ilike.%${kw}%`).order('apply_date',{ascending:false}).limit(300);
-    const hist=await q('quote_history',hb);
+    const hist=scopeRows(await q('quote_history',hb),'apply_date');
     let bb=b=>b.order('bkg_date',{ascending:false}).limit(500);
     if(kw) bb=b=>b.or(`shipper.ilike.%${kw}%,pol.ilike.%${kw}%,pod.ilike.%${kw}%`).order('bkg_date',{ascending:false}).limit(500);
-    let bk=await q('bookings',bb);
+    let bk=scopeRows(await q('bookings',bb),'bkg_date');
     if(HMODE) bk=bk.filter(b=>(b.mode||'SEA')===HMODE);
     $('#histOut').innerHTML=`
      <div class="card"><h3>견적 원장 <span class="pill">${hist.length}</span></h3>${hist.length?`<div style="overflow:auto"><table><thead><tr><th>적용일</th><th>화주</th><th>지역</th><th>POD</th><th>선사</th><th class="num">공표가</th><th class="num">실제가</th><th>결과</th><th>실주사유</th></tr></thead><tbody>
@@ -2130,6 +2162,49 @@ const ARCH_COLS=[['Job#','job_no'],['생성일',r=>String(r.created_at||'').slic
   ['특수화물','special_types'],['특수메모','special_note'],
   ['Sell합계','sell_krw'],['Buy합계','buy_krw'],['마진',r=>(r.sell_krw!=null&&r.buy_krw!=null)?(r.sell_krw-r.buy_krw):''],['BKG#','bkg_no'],['수주일',r=>String(r.won_at||'').slice(0,10)],['선정선사','selected_carrier'],['실주사유','win_loss_reason']];
 const cellVal=(r,c)=>{const v=typeof c[1]==='function'?c[1](r):r[c[1]];return v==null?'':v;};
+/* ================= 권한 · 직무 관리 (관리자 전용) ================= */
+let PERMW=null; // 편집 중 임시 상태 {duties, matrix}
+VIEWS.perms=async function(){
+  if(!isAdmin()){ $('#main').innerHTML='<div class="card"><div class="empty">관리자 전용 화면입니다.</div></div>'; return; }
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  let users=[]; try{ users=await q('app_users',b=>b.order('role').order('username')); }catch(e){}
+  await loadMenuPerms();
+  PERMW={ duties:Object.assign({}, MENUPERM.duties), matrix:JSON.parse(JSON.stringify(MENUPERM.matrix||{})) };
+  const domMap={}; DOMAINS.forEach(d=>domMap[d.k]=d);
+  const staff=users.filter(u=>u.role!=='admin');
+  const admins=users.filter(u=>u.role==='admin');
+  const dutyOf=u=>PERMW.duties[(u.username||'').toLowerCase()]||'sales';
+  const cell=(duty,dk)=>{ const row=PERMW.matrix[duty]||{}; const on=row[dk]!==0&&row[dk]!==false; return `<td style="text-align:center"><input type="checkbox" ${on?'checked':''} onchange="permToggle('${duty}','${dk}',this.checked)"></td>`; };
+  $('#main').innerHTML=`<h2>🔑 권한 · 직무</h2><div class="sub">직원별 직무를 지정하고, 직무(영업/오퍼레이터)별로 볼 수 있는 메뉴를 제어합니다. 관리자는 항상 전체 접근.</div>
+   <div class="card"><h3>① 직원 직무 지정</h3>
+     <div class="d" style="margin-bottom:8px">홈·데이터챗봇은 전원 공통. '관리' 메뉴는 관리자 전용입니다. 직무 변경은 해당 직원이 <b>다시 로그인</b>하면 적용됩니다.</div>
+     <div style="overflow:auto"><table><thead><tr><th>이름</th><th>아이디</th><th>직급</th><th>권한등급</th><th>직무(메뉴 그룹)</th></tr></thead><tbody>
+      ${admins.map(u=>`<tr><td><b>${esc(u.name||'')}</b></td><td class="mono">${esc(u.username||'')}</td><td>${esc(u.title||'')}</td><td><span class="tag" style="background:rgba(37,99,235,.12);color:var(--accent)">관리자</span></td><td class="d">관리자 — 전체 접근(고정)</td></tr>`).join('')}
+      ${staff.map(u=>{const dv=dutyOf(u); const un=esc((u.username||'').toLowerCase()); return `<tr><td><b>${esc(u.name||'')}</b></td><td class="mono">${esc(u.username||'')}</td><td>${esc(u.title||'')}</td><td><span class="tag">직원</span></td><td><select onchange="permDuty('${un}',this.value)"><option value="sales"${dv==='sales'?' selected':''}>영업</option><option value="operator"${dv==='operator'?' selected':''}>오퍼레이터</option></select></td></tr>`;}).join('')||'<tr><td colspan="5" class="d">직원이 없습니다.</td></tr>'}
+     </tbody></table></div>
+   </div>
+   <div class="card"><h3>② 직무별 메뉴 접근 권한</h3>
+     <div class="d" style="margin-bottom:8px">체크=접근 허용. 홈·데이터챗봇은 공통(항상 허용), 관리는 관리자 전용이라 표에서 제외했습니다.</div>
+     <div style="overflow:auto"><table><thead><tr><th>직무</th>${PERM_COLS.map(k=>`<th style="text-align:center">${esc(domMap[k]?domMap[k].t:k)}</th>`).join('')}</tr></thead><tbody>
+       ${['sales','operator'].map(duty=>`<tr><td><b>${DUTY_LABEL[duty]}</b></td>${PERM_COLS.map(k=>cell(duty,k)).join('')}</tr>`).join('')}
+     </tbody></table></div>
+     <div class="saverow" style="margin-top:12px"><button class="btn win" onclick="permSave()" style="padding:9px 18px">💾 권한 저장</button><span class="d" style="margin:0">저장 즉시 반영됩니다(각 직원은 다음 로그인 시 최신 직무 적용).</span></div>
+   </div>`;
+};
+window.permDuty=function(u,v){ if(!PERMW)return; PERMW.duties[u]=v; };
+window.permToggle=function(duty,dk,on){ if(!PERMW)return; PERMW.matrix[duty]=PERMW.matrix[duty]||{}; PERMW.matrix[duty][dk]=on?1:0; };
+window.permSave=async function(){ if(!PERMW)return;
+  // 미설정 컬럼을 명시적으로 채워 저장(관대 기본값 유지)
+  ['sales','operator'].forEach(duty=>{ PERMW.matrix[duty]=PERMW.matrix[duty]||{}; PERM_COLS.forEach(k=>{ if(PERMW.matrix[duty][k]===undefined) PERMW.matrix[duty][k]=1; }); });
+  const val=JSON.stringify({duties:PERMW.duties, matrix:PERMW.matrix});
+  try{
+    const ex=await q('app_settings',b=>b.eq('key','menu_perms'));
+    if(ex.length){ const {error}=await SB.from('app_settings').update({value:val}).eq('key','menu_perms'); if(error)throw error; }
+    else{ const {error}=await SB.from('app_settings').insert({key:'menu_perms',value:val}); if(error)throw error; }
+    MENUPERM={duties:Object.assign({},PERMW.duties), matrix:JSON.parse(JSON.stringify(PERMW.matrix))};
+    renderSideNav(); toast('✅ 권한 저장됨 — 사이드바에 반영');
+  }catch(e){ toast('저장 실패: '+(e.message||e),true); }
+};
 VIEWS.archive=async function(){
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
   try{
@@ -2488,7 +2563,7 @@ window.rfqfCopy=function(){ rfqfFlush(); const b=rfqBuild(); copyRich(b.html,b.t
 window.rfqAddVendor=function(){ rfqfFlush(); RFQF.vendors.push({v:'',d:''}); VIEWS.rfqform(); };
 window.rfqDelVendor=function(i){ rfqfFlush(); RFQF.vendors.splice(i,1); VIEWS.rfqform(); };
 VIEWS.rfqform=async function(){
-  if(!RFQF._reqs){ try{ RFQF._reqs=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(60)); }catch(e){ RFQF._reqs=[]; } }
+  if(!RFQF._reqs){ try{ RFQF._reqs=scopeRows(await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(60)),'created_at'); }catch(e){ RFQF._reqs=[]; } }
   const t=RFQF.type;
   const reqOpts=`<option value="">＋ 인콰이어리에서 불러오기…</option>`+(RFQF._reqs||[]).map(r=>`<option value="${esc(r.id)}">${esc(r.job_no||'')} · ${esc(r.shipper||'무명')} · ${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</option>`).join('');
   const loader=`<div class="row" style="margin-bottom:10px;gap:6px;align-items:center"><span class="d" style="margin:0">자동 채우기</span><select onchange="rfqLoadReq(this.value)" style="flex:1;min-width:0">${reqOpts}</select></div>`;
@@ -2610,7 +2685,7 @@ window.hdWeeklyExcel=async function(btn){
   finally{ if(btn){ btn.disabled=false; btn.textContent=btn._t||'📊 주간 부킹 리포트'; } }
 };
 async function loadHD(){ try{ HD.coa=await q('hd_coa',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.coa=[]; }
-  try{ HD.ship=await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})); }catch(e){ HD.ship=[]; }
+  try{ HD.ship=scopeRows(await qAll('hd_shipment',b=>b.order('created_at',{ascending:false})),'created_at'); }catch(e){ HD.ship=[]; }
   try{ HD.partners=await q('contacts',b=>b.eq('automation_linked',true).limit(2000)); }catch(e){ HD.partners=[]; } }
 VIEWS.hd=async function(){ $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; await loadHD(); renderHD(); };
 function hdBar(pct,col){ const p=Math.max(0,Math.min(100,pct||0)); return `<div style="background:var(--panel2);border-radius:6px;height:16px;min-width:80px;position:relative"><div style="height:100%;border-radius:6px;background:${col};width:${p}%"></div><span style="position:absolute;left:6px;top:0;font-size:10px;line-height:16px;color:var(--txt)">${p}%</span></div>`; }
@@ -2728,7 +2803,7 @@ function renderHD(){
   if(HD.cKw){ const k=HD.cKw.toLowerCase(); coaF=coaF.filter(c=>(String(c.customer||'')+(c.pod_country||'')+(c.pod_port||'')+(c.carrier||'')+(c.remark||'')).toLowerCase().includes(k)); }
   const stBadge=s=>{ const c={'문의':'#6366f1','예약':'#8592a4','부킹확정':'#2563eb','SI제출':'#7c3aed','마감':'#b45309','선적완료':'#0891b2','출항':'#16a34a','도착':'#059669','취소':'#dc2626'}[s]||'#54637a'; return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${c}">${esc(s||'-')}</span>`; };
   const coaOf=id=>HD.coa.find(c=>c.id===id);
-  $('#main').innerHTML=`
+  $('#main').innerHTML=`${scopeBanner()}
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
       <div><h2 style="margin:0">🏗 HD SITESOLUTION <span class="d" style="font-weight:400">· 중국발 FR·COA 섹터</span></h2>
       <div class="sub" style="margin:2px 0 0">상해·닝보·청도 발 FR/COA 계약·선적 통합 관리 · 약정물량 대비 소진율 추적</div></div>
@@ -3401,6 +3476,7 @@ function applyUserbar(){ if(!ME)return; const ub=$('#userbar'); if(!ub)return; u
   $('#ubName').textContent=((ME.name||ME.u)+' '+(ME.title||'')).trim();
   $('#ubTitle').textContent=(ME.role==='admin'?'관리자':'직원')+' · '+(ME.u||'').toUpperCase();
   $('#ubAv').textContent=(ME.name||ME.u||'·').slice(0,1);
+  renderScopeSwitch();
   if(typeof renderSideNav==='function') renderSideNav(); }
 function showGate(){ const g=$('#loginGate'); if(!g)return; g.style.display='flex';
   const bg=$('#lgBg'); if(bg)bg.style.backgroundImage="url('"+SHIP_URI+"')"; const lg=$('#lgLogo'); if(lg)lg.src=LOGO_URI;
@@ -3409,7 +3485,7 @@ function hideGate(){ const g=$('#loginGate'); if(g)g.style.display='none'; }
 
 /* ================= 시작 ================= */
 let APP_BOOTED=false;
-async function bootApp(){ if(APP_BOOTED)return; APP_BOOTED=true; const ok=SB?await checkConn():false; if(SB)await loadFX(); go('dashboard'); }
+async function bootApp(){ if(APP_BOOTED)return; APP_BOOTED=true; const ok=SB?await checkConn():false; if(SB){ await loadFX(); await loadMenuPerms(); } renderSideNav(); go('dashboard'); }
 (function(){ const bl=$('#brandLogo'); if(bl)bl.src=LOGO_URI; const s=getSession(); if(s){ ME=s; hideGate(); applyUserbar(); bootApp(); } else { showGate(); } })();
 </script>
 </body>
