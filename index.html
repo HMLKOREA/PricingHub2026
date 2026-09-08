@@ -483,7 +483,7 @@ const DOMAINS=[
  {k:'admin',ic:'⚙', t:'관리', admin:true, views:[['archive','🗄 아카이브'],['import','⬆ 가져오기'],['logs','🔐 접속·입력 로그']]},
 ];
 const VIEW_DOMAIN={}; DOMAINS.forEach(d=>d.views.forEach(v=>{ VIEW_DOMAIN[v[0]]=d; }));
-function isAdmin(){ return typeof ME!=='undefined'&&ME&&ME.role==='admin'; }
+function isAdmin(){ try{ return !!(ME&&ME.role==='admin'); }catch(e){ return false; } }
 window.renderSideNav=function(){ const nav=document.getElementById('nav'); if(!nav)return; const cur=VIEW_DOMAIN[CURRENT];
   nav.innerHTML=DOMAINS.filter(d=>!d.admin||isAdmin()).map(d=>`<a data-dk="${d.k}" class="${cur&&cur.k===d.k?'active':''}" onclick="goDomain('${d.k}')"><span>${d.ic}</span><span>${esc(d.t)}</span>${d.badge?`<span class="navbadge">${d.badge}</span>`:''}</a>`).join(''); };
 window.goDomain=function(dk){ const d=DOMAINS.find(x=>x.k===dk); if(!d)return; go(d.views[0][0]); };
@@ -494,7 +494,6 @@ function go(v){ if(ADMIN_VIEWS.includes(v)&&!isAdmin()){ toast('관리자 전용
   CURRENT=v; renderSideNav(); renderTabs();
   const side=document.querySelector('.side'); if(side)side.classList.remove('open');
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
-renderSideNav();
 
 /* ================= 대시보드 (월간 실적 장표) ================= */
 let DASH={m:null};
