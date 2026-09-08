@@ -320,7 +320,19 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 .dc-bot{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-bottom-left-radius:4px}
 .dc-dots{animation:dcbl 1s infinite}
 @keyframes dcbl{50%{opacity:.3}}
-.navbadge{font-size:9px;font-weight:800;background:var(--accent,#2563eb);color:#fff;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle}
+.navbadge{font-size:9px;font-weight:800;background:var(--accent,#2563eb);color:#fff;border-radius:5px;padding:1px 5px;margin-left:auto;vertical-align:middle}
+/* ===== 셸 재구성: 워크스페이스 탭 + 도구 트레이 ===== */
+.maincol{flex:1;min-width:0;display:flex;flex-direction:column}
+.wstabs{position:sticky;top:0;z-index:25;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 20px;overflow-x:auto}
+.wstabs.hide{display:none}
+.wstabs button{border:0;background:transparent;color:var(--mut);font-size:13px;font-weight:600;padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.wstabs button:hover{color:var(--txt)}
+.wstabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:800}
+.maincol .main{height:auto}
+.tray{border-top:1px solid var(--line);padding:8px 10px}
+.tray-h{font-size:11px;color:var(--mut2);font-weight:700;padding:4px;cursor:pointer;user-select:none}
+.tray-body.hide{display:none}
+.tray-sec{font-size:10px;color:var(--mut2);font-weight:700;margin:8px 2px 5px}
 </style>
 </head>
 <body>
@@ -355,51 +367,26 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 <div class="app">
   <aside class="side">
     <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA" title="대시보드로 이동" onclick="go('dashboard')"><div class="brandsub">견적 · 부킹 허브</div></div>
-    <nav id="nav">
-      <div class="navsec">🏠 홈 · AI</div>
-      <a data-v="dashboard" class="active">📊 대시보드</a>
-      <a data-v="daily">🗓 데일리 리포트</a>
-      <a data-v="datachat">💬 데이터 챗봇 <span class="navbadge">AI</span></a>
-      <div class="navsec">📋 견적 · 영업</div>
-      <a data-v="intake">📥 인테이크(AI)</a>
-      <a data-v="pipeline">🗂 파이프라인</a>
-      <a data-v="rfq">🚚 RFQ·견적비교</a>
-      <a data-v="rfqform">✍ RFQ 양식</a>
-      <a data-v="history">📜 히스토리 검색</a>
-      <div class="navsec">🏗 HD 사이트솔루션</div>
-      <a data-v="hd">🏗 FR·COA 섹터</a>
-      <div class="navsec">📚 기준정보</div>
-      <a data-v="rates">💱 요율</a>
-      <a data-v="charges">🏭 국내 부대비용</a>
-      <a data-v="ports">🌐 포트코드</a>
-      <div class="navsec">🤝 파트너 · 연락처</div>
-      <a data-v="partners">🌏 파트너</a>
-      <a data-v="contacts">👥 연락처·선사</a>
-      <div id="adminNav" style="display:none">
-        <div class="navsec">⚙ 설정 · 관리자</div>
-        <a data-v="archive">🗄 아카이브</a>
-        <a data-v="import">⬆ 가져오기</a>
-        <a data-v="logs">🔐 접속·입력 로그</a>
-      </div>
-    </nav>
-    <div class="tools" style="padding-bottom:2px">
-      <div class="tools-h">🔗 회사 시스템</div>
-      <a class="syslink hamel" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 <span style="opacity:.7">↗</span></a>
-      <a class="syslink moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span class="qm">Q</span>V.KR <span style="color:#f2911e">↗</span></a>
-    </div>
-    <div class="tools">
-      <div class="tools-h">🧰 물류도구</div>
-      <div class="tools-grid">
-        <a onclick="openCBM()">📦 CBM계산</a>
-        <a onclick="openIncoterms()">📄 인코텀즈</a>
-        <a href="https://www.forwarder.kr/curr/cargo_tracing.php" target="_blank" rel="noopener">🚚 화물추적</a>
-        <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
-        <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
-        <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
-        <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
-        <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
-        <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
-        <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
+    <nav id="nav"></nav>
+    <div style="flex:1"></div>
+    <div class="tray">
+      <div class="tray-h" onclick="this.parentNode.querySelector('.tray-body').classList.toggle('hide')">🔧 도구 · 시스템 ▾</div>
+      <div class="tray-body hide">
+        <a class="syslink hamel" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 <span style="opacity:.7">↗</span></a>
+        <a class="syslink moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span class="qm">Q</span>V.KR <span style="color:#f2911e">↗</span></a>
+        <div class="tray-sec">🧰 물류도구</div>
+        <div class="tools-grid">
+          <a onclick="openCBM()">📦 CBM계산</a>
+          <a onclick="openIncoterms()">📄 인코텀즈</a>
+          <a href="https://www.forwarder.kr/curr/cargo_tracing.php" target="_blank" rel="noopener">🚚 화물추적</a>
+          <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
+          <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
+          <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
+          <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
+          <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
+          <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
+          <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
+        </div>
       </div>
     </div>
     <div class="userbar" id="userbar" style="display:none">
@@ -409,7 +396,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
     </div>
     <div class="conn"><span id="dot" class="dot"></span><span id="connTxt">연결 확인 중…</span></div>
   </aside>
-  <main class="main" id="main"><div class="empty">로딩 중…</div></main>
+  <div class="maincol"><div id="wstabs" class="wstabs hide"></div><main class="main" id="main"><div class="empty">로딩 중…</div></main></div>
 </div>
 <div id="toastHost"></div>
 <div id="modal"></div>
@@ -485,10 +472,29 @@ const STAFF_EXCLUDE=['grace','황선화']; // 황선화: 입사전 → 담당자
 function staffRank(v){ const s=String(v||'').toLowerCase().trim();
   for(let i=0;i<STAFF_ORDER.length;i++){ const o=STAFF_ORDER[i]; if(s===o.u||s===o.n.toLowerCase())return i; } return 500; }
 function staffExcluded(v){ const s=String(v||'').toLowerCase().trim(); return STAFF_EXCLUDE.some(x=>s===x.toLowerCase()); }
-function go(v){ if(ADMIN_VIEWS.includes(v)&&!(typeof ME!=='undefined'&&ME&&ME.role==='admin')){ toast('관리자 전용 메뉴입니다',true); return; }
-  CURRENT=v; document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+/* ===== 셸: 도메인(슬림 사이드바) + 화면내 탭 ===== */
+const DOMAINS=[
+ {k:'home', ic:'🏠', t:'홈', views:[['dashboard','📊 대시보드'],['daily','🗓 데일리 리포트']]},
+ {k:'chat', ic:'💬', t:'데이터 챗봇', badge:'AI', views:[['datachat','💬 데이터 챗봇']]},
+ {k:'sales',ic:'📋', t:'견적 · 영업', views:[['intake','📥 인테이크(AI)'],['pipeline','🗂 파이프라인'],['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['history','📜 히스토리 검색']]},
+ {k:'hd',   ic:'🏗', t:'HD 섹터', views:[['hd','🏗 FR·COA 섹터']]},
+ {k:'ref',  ic:'📚', t:'기준정보', views:[['rates','💱 요율'],['charges','🏭 국내 부대비용'],['ports','🌐 포트코드']]},
+ {k:'ptn',  ic:'🤝', t:'파트너', views:[['partners','🌏 파트너'],['contacts','👥 연락처·선사']]},
+ {k:'admin',ic:'⚙', t:'관리', admin:true, views:[['archive','🗄 아카이브'],['import','⬆ 가져오기'],['logs','🔐 접속·입력 로그']]},
+];
+const VIEW_DOMAIN={}; DOMAINS.forEach(d=>d.views.forEach(v=>{ VIEW_DOMAIN[v[0]]=d; }));
+function isAdmin(){ return typeof ME!=='undefined'&&ME&&ME.role==='admin'; }
+window.renderSideNav=function(){ const nav=document.getElementById('nav'); if(!nav)return; const cur=VIEW_DOMAIN[CURRENT];
+  nav.innerHTML=DOMAINS.filter(d=>!d.admin||isAdmin()).map(d=>`<a data-dk="${d.k}" class="${cur&&cur.k===d.k?'active':''}" onclick="goDomain('${d.k}')"><span>${d.ic}</span><span>${esc(d.t)}</span>${d.badge?`<span class="navbadge">${d.badge}</span>`:''}</a>`).join(''); };
+window.goDomain=function(dk){ const d=DOMAINS.find(x=>x.k===dk); if(!d)return; go(d.views[0][0]); };
+function renderTabs(){ const tb=document.getElementById('wstabs'); if(!tb)return; const d=VIEW_DOMAIN[CURRENT];
+  if(!d||d.views.length<2){ tb.className='wstabs hide'; tb.innerHTML=''; return; }
+  tb.className='wstabs'; tb.innerHTML=d.views.map(v=>`<button class="${v[0]===CURRENT?'on':''}" onclick="go('${v[0]}')">${esc(v[1])}</button>`).join(''); }
+function go(v){ if(ADMIN_VIEWS.includes(v)&&!isAdmin()){ toast('관리자 전용 메뉴입니다',true); return; }
+  CURRENT=v; renderSideNav(); renderTabs();
+  const side=document.querySelector('.side'); if(side)side.classList.remove('open');
   $('#main').innerHTML='<div class="empty">불러오는 중…</div>'; (VIEWS[v]||(()=>{}))(); }
-document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>{ go(a.dataset.v); document.querySelector('.side').classList.remove('open'); }));
+renderSideNav();
 
 /* ================= 대시보드 (월간 실적 장표) ================= */
 let DASH={m:null};
@@ -3271,7 +3277,7 @@ function applyUserbar(){ if(!ME)return; const ub=$('#userbar'); if(!ub)return; u
   $('#ubName').textContent=((ME.name||ME.u)+' '+(ME.title||'')).trim();
   $('#ubTitle').textContent=(ME.role==='admin'?'관리자':'직원')+' · '+(ME.u||'').toUpperCase();
   $('#ubAv').textContent=(ME.name||ME.u||'·').slice(0,1);
-  const an=$('#adminNav'); if(an)an.style.display=(ME.role==='admin')?'block':'none'; }
+  if(typeof renderSideNav==='function') renderSideNav(); }
 function showGate(){ const g=$('#loginGate'); if(!g)return; g.style.display='flex';
   const bg=$('#lgBg'); if(bg)bg.style.backgroundImage="url('"+SHIP_URI+"')"; const lg=$('#lgLogo'); if(lg)lg.src=LOGO_URI;
   setTimeout(()=>{const x=$('#lgUser'); if(x)x.focus();},120); }
