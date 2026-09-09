@@ -2604,6 +2604,8 @@ VIEWS.pcharges=VIEWS.charges;   // PRICING 도메인의 부대비용 탭(같은 
 let PM={pol:'',pod:'',kw:'',_rc:null,_bk:null};
 const PM_CT=['20DV','40DV','40HC','40FR','40RF'];
 const pmNum=v=>{ const n=parseFloat(String(v==null?'':v).replace(/[,\s$]/g,'')); return isNaN(n)?null:n; };
+const bkBoxes=b=>((+b.cntr_20dv||0)+(+b.cntr_40hq||0)+(+b.cntr_20fr||0)+(+b.cntr_40fr||0));
+const bkCntr=b=>[['20DV',b.cntr_20dv],['40HQ',b.cntr_40hq],['20FR',b.cntr_20fr],['40FR',b.cntr_40fr]].filter(x=>+x[1]>0).map(x=>x[0]+'×'+(+x[1])).join(', ')||'-';
 window.setPM=function(k,v){ PM[k]=v; if(k==='pol')PM.pod=''; VIEWS.pricematrix(); };
 window.pmPickPod=function(p){ PM.pod=p; VIEWS.pricematrix(); };
 window.pmFilterPods=function(){ const kw=(document.getElementById('pmkw')?.value||'').trim().toUpperCase(); PM.kw=kw;
@@ -2666,10 +2668,10 @@ VIEWS.pricematrix=async function(){
     <div class="card" style="border-color:var(--accent)"><div class="cap" style="margin-bottom:6px">최저 운임 요약 — ${esc(PM.pol)} → ${esc(PM.pod)}</div><div style="font-size:14px;font-weight:700;color:var(--win)">${bestLine||'-'}</div></div>
     <div class="card"><div class="lcwrap" style="max-height:56vh"><table class="lctbl" id="pmLane" style="min-width:auto"><thead>${headRow}</thead><tbody>${bodyRows}</tbody></table></div>
       <div class="d" style="margin-top:8px">▼ = 타입별 최저가 · USD/컨테이너 · 유효기간 지난 건은 빨강. 부대비용은 별도(상단 부대비용 탭).</div></div>
-    <div class="card"><h3>📜 이 레인 과거 실적 <span class="pill">${bk.length}</span> <span class="d" style="display:inline">— bookings 기준 · 람세스/히스토리 믹스는 파일 수령 후 보강</span></h3>
-      ${bk.length?`<div style="overflow:auto"><table><thead><tr><th>BKG#</th><th>일자</th><th>화주</th><th>레인</th><th class="num">매출</th></tr></thead><tbody>
-        ${bk.map(b=>`<tr><td>${esc(b.bkg_no||'')}</td><td class="mono">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(b.pol||'?')}→${esc(b.pod||'?')}</td><td class="num mono">${b.revenue?fmtW(b.revenue):'-'}</td></tr>`).join('')}
-      </tbody></table></div>`:'<div class="d">이 목적항 과거 부킹 기록이 없습니다.</div>'}</div>`;
+    <div class="card"><h3>📜 이 레인 과거 실적 <span class="pill">${bk.length}</span> <span class="d" style="display:inline">— 우리가 운임을 얼마에 입수했나(매입/Buy) · bookings 기준 · 람세스/히스토리 믹스는 파일 수령 후 보강</span></h3>
+      ${bk.length?`<div style="overflow:auto"><table><thead><tr><th>BKG#</th><th>일자</th><th>화주</th><th>컨테이너</th><th class="num">매입(Buy)</th><th class="num">≈ 대당</th></tr></thead><tbody>
+        ${bk.map(b=>{const bx=bkBoxes(b);const buy=pmNum(b.purchase);return `<tr><td class="mono" style="white-space:nowrap">${esc(b.bkg_no||'')}</td><td class="mono">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(bkCntr(b))}</td><td class="num mono" style="font-weight:700">${buy!=null?fmtW(buy)+'원':'<span style=\"color:var(--mut2)\">미기재</span>'}</td><td class="num mono" style="color:var(--mut)">${(buy!=null&&bx>0)?fmtW(buy/bx)+'원':'-'}</td></tr>`;}).join('')}
+      </tbody></table></div><div class="d" style="margin-top:8px">※ 매입=우리가 지불한 총 매입가(부대비용 포함 가능) · ≈대당=매입÷컨테이너수 (근사). 순수 O/F 단가는 상단 요율표 기준.</div>`:'<div class="d">이 목적항 과거 부킹 기록이 없습니다.</div>'}</div>`;
 };
 window.pmCopyLane=function(){
   const rc=PM._rc||[]; const lane=rc.filter(r=>r.pol===PM.pol&&r.pod===PM.pod&&r.status==='ACTIVE');
