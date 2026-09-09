@@ -2424,19 +2424,96 @@ window.copyLCTable=function(){
   const m=lcModel(LCVIEW.lane,LCVIEW.port,LCVIEW.carrier,lang);
   const title=lang==='en'?`HAMEL KOREA · Domestic Local Charges · ${laneEN}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG@${portN}`:`하멜코리아 국내 부대비용 · ${LCVIEW.lane}${LCVIEW.carrier?' · '+LCVIEW.carrier:''} · WFG기준 ${portN}`;
   copyRich(lcEmailHTML(m,title),lcPlain(m,title)); };
-function lcBulkHTML(bedit){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
+/* ── 벌크·로로 공통 KO↔EN 용어사전(양방향) ── 긴 항목 우선 ── */
+const LC_TR_PAIRS=[
+  ['선측 하역료','Shipside Stevedoring'],['하역료','Stevedoring'],['MAFI 래싱비','MAFI Lashing'],['래싱비','Lashing'],['고박료','Lashing/Securing'],
+  ['크레인 사용료','Crane Hire'],['크레인','Crane'],['지게차','Forklift'],['보관료','Storage'],['부두사용료','Wharfage'],
+  ['항만 청소료','Port Cleaning'],['청소료','Cleaning'],['항만보안료','Port Security'],['보안료','Security'],
+  ['부가가치세','VAT'],['검량료','Survey Charge'],['검수료','Survey'],['서베이','Survey'],['반출입료','Gate In/Out'],
+  ['톤당','per ton'],['일수','days'],['건당','per unit'],['왕복','round trip'],['별도','Excluded'],
+  ['발생 시 부과','If applicable'],['발생시 부과','If applicable'],['송장금액 기준 산정','Based on invoice value'],['Dunnage 비용 제외','Dunnage excluded'],['VAT 10% 제외','VAT 10% excluded']
+];
+function lcTrans(s,lang){ if(s==null)return ''; s=String(s); if(lang!=='en'&&lang!=='ko')return s;
+  const t=s.trim();
+  for(const [ko,en] of LC_TR_PAIRS){ if(lang==='en'&&t===ko)return en; if(lang==='ko'&&t.toLowerCase()===en.toLowerCase())return ko; }
+  let out=s;
+  for(const [ko,en] of LC_TR_PAIRS){ const from=lang==='en'?ko:en, to=lang==='en'?en:ko; if(from&&out.toLowerCase().includes(from.toLowerCase())){ out=out.replace(new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),to); } }
+  return out;
+}
+/* ── 붙여넣기 요율에 마진% 적용 (통화 뒤 첫 숫자에만, VAT/퍼센트 라인 제외) ── */
+function lcApplyMargin(text,m){ if(!text||!m)return text||'';
+  if(/vat/i.test(text)&&/%/.test(text)&&!/(usd|krw|\$|₩)/i.test(text))return text;
+  return String(text).replace(/((?:USD|KRW|US\$|\$|₩)\s*)(\d[\d,]*\.?\d*)/i,(mm,cur,num)=>{
+    const val=parseFloat(num.replace(/,/g,'')); if(isNaN(val))return mm;
+    const up=val*(1+(+m)/100);
+    const out= up>=100? Math.round(up).toLocaleString() : (Math.round(up*1000)/1000).toString();
+    return cur+out; });
+}
+/* ── 벌크/로로 표 붙여넣기 임포터 (수정모드) ── */
+function bulkPasteBox(){ const lane=LCVIEW.lane; const terms=[...new Set((LCM||[]).filter(x=>x.lane===lane).map(x=>x.terminal))];
+  return `<div class="card" style="margin-bottom:16px;border-color:var(--accent)">
+    <h3 style="margin:0 0 6px">📥 표 붙여넣기 → 행 일괄 생성 <span class="d" style="display:inline">— 영어/한글 표 모두 · USD/KRW</span></h3>
+    <div class="d" style="margin-bottom:8px">엑셀·메일의 표를 복사해 붙여넣으세요. 열 순서 <b>항목 · 요율 · 비고</b> (탭/파이프/여러 칸 구분). 첫 줄 머리글·번호(1.)는 자동 정리. 마진%는 <b>통화 뒤 숫자에만</b> 적용(VAT·% 라인 제외).</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <span class="d" style="margin:0">터미널</span>
+      <input id="bp_term" list="bp_terms" placeholder="터미널/기준명 (기존 선택 또는 새 입력)" style="min-width:240px">
+      <datalist id="bp_terms">${terms.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>
+      <span class="d" style="margin:0 0 0 6px">마진 %</span>
+      <input id="bp_margin" inputmode="decimal" value="10" style="width:70px;text-align:right">
+    </div>
+    <textarea id="bp_raw" placeholder="예)
+STEVEDORING	USD 4 / WM	Per W/M
+FORKLIFT	USD 650 / PRPD / UNIT
+PORT CLEANING	USD 0.025 / WM
+VAT	10%	Subject to VAT" style="width:100%;min-height:96px;font-family:monospace;font-size:12px"></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn win sm" onclick="bulkPasteRun()">＋ 붙여넣기 행 추가 (마진 적용)</button><span id="bp_status" class="d" style="margin:0"></span></div>
+  </div>`;
+}
+window.bulkPasteRun=async function(){
+  const lane=LCVIEW.lane;
+  const term=(document.getElementById('bp_term')?.value||'').trim();
+  const raw=(document.getElementById('bp_raw')?.value||'').trim();
+  const m=parseFloat(document.getElementById('bp_margin')?.value||'0')||0;
+  if(!term){ toast('터미널/기준명을 입력하세요',true); return; }
+  if(!raw){ toast('붙여넣을 표 내용을 입력하세요',true); return; }
+  const lines=raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const rows=[];
+  for(let ln of lines){
+    ln=ln.replace(/^\s*\d+[.)]\s*/,'');                 // 앞 번호(1. 2)) 제거
+    let cells = ln.includes('\t')?ln.split('\t') : (ln.includes('|')?ln.split('|') : ln.split(/\s{2,}/));
+    // 구분자 없이 "항목 : 요율" 형태면 콜론으로 1차 분리
+    if(cells.length===1 && ln.includes(':')){ const i=ln.indexOf(':'); cells=[ln.slice(0,i), ln.slice(i+1)]; }
+    cells=cells.map(c=>c.trim()).filter((c,i)=>!(i>0&&c===''));
+    const code=(cells[0]||'').trim(); if(!code) continue;
+    const c0=code.toLowerCase();
+    if(/^(item|항목|charge|description|no\.?|구분)$/.test(c0)) continue;   // 머리글 스킵
+    const rate=lcApplyMargin((cells[1]||'').trim(), m);
+    const note=(cells.slice(2).join(' ')||'').trim();
+    rows.push({ lane, terminal:term, charge_code:code, amount_text:rate, note });
+  }
+  if(!rows.length){ toast('인식된 행이 없습니다 — 탭 구분/열 순서를 확인하세요',true); return; }
+  await flushBulkEdits();
+  try{ const {error}=await SB.from('local_charge_master').insert(rows); if(error)throw error; }
+  catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
+  try{ logAct('입력','local_charge',`${lane} 붙여넣기 ${rows.length}행 (${term}, 마진 ${m}%)`); }catch(e){}
+  await reloadLCM(); toast(`✅ ${rows.length}개 행 추가 (${term} · 마진 ${m}%)`); VIEWS.charges();
+};
+function lcBulkHTML(bedit){ const lane=LCVIEW.lane; const EN=LCVIEW.lang==='en'; const rows=(LCM||[]).filter(x=>x.lane===lane); const terms={}; rows.forEach(x=>{ (terms[x.terminal]=terms[x.terminal]||[]).push(x); });
   const tkeys=Object.keys(terms);
-  if(!tkeys.length && !bedit)return '<div class="d">벌크 부대비용 데이터가 없습니다.</div>';
+  const emptyMsg=EN?`No ${lane==='로로'?'RO-RO':'bulk'} local-charge data.`:`${lane} 부대비용 데이터가 없습니다.`;
+  if(!tkeys.length && !bedit)return `<div class="d">${emptyMsg}</div>`;
   const ev=s=>esc(s==null?'':String(s));
+  const H=EN?['Item','Rate','Note']:['항목','요율','비고'];
   let out=tkeys.map(t=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 8px">⚓ ${esc(t)}</h3>
-    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">항목</th><th>요율</th><th>비고</th>${bedit?'<th style="width:40px"></th>':''}</tr></thead><tbody>
+    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">${H[0]}</th><th>${H[1]}</th><th>${H[2]}</th>${bedit?'<th style="width:40px"></th>':''}</tr></thead><tbody>
     ${terms[t].map(x=>bedit
       ? `<tr data-bid="${x.id}"><td class="car" style="position:static"><input value="${ev(x.charge_code)}" data-bf="charge_code" style="width:100%;min-width:150px;font-weight:600"></td><td><input value="${ev(x.amount_text)}" data-bf="amount_text" style="width:100%;min-width:150px"></td><td><input value="${ev(x.note)}" data-bf="note" style="width:100%;min-width:120px"></td><td style="text-align:center"><button class="btn sm" onclick="delBulkRow('${x.id}')" title="행 삭제">✕</button></td></tr>`
-      : `<tr><td class="car" style="position:static"><b>${esc(x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'))}</td><td style="color:var(--mut)">${esc(x.note||'')}</td></tr>`
+      : `<tr><td class="car" style="position:static"><b>${esc(EN?lcTrans(x.charge_code,'en'):x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(EN?lcTrans(x.amount_text,'en'):(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-')))}</td><td style="color:var(--mut)">${esc(EN?lcTrans(x.note,'en'):(x.note||''))}</td></tr>`
     ).join('')}
     </tbody></table></div>
     ${bedit?`<button class="btn sm" style="margin-top:6px" onclick="addBulkRow('${encodeURIComponent(t)}')">＋ 행 추가</button>`:''}</div>`).join('');
   if(bedit)out+=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"><input id="be_newterm" placeholder="새 터미널명 (예: KCTC/○○부두)" style="width:280px"> <button class="btn sm" onclick="addBulkTerminal()">＋ 터미널 추가</button></div>`;
+  if(bedit)out=bulkPasteBox()+out;
   return out;
 }
 async function reloadLCM(){ try{ LCM=await q('local_charge_master',b=>b.limit(2000)); }catch(e){} }
@@ -2446,24 +2523,27 @@ async function flushBulkEdits(){ const trs=document.querySelectorAll('#main tr[d
     if(Object.keys(patch).length)ups.push({id,patch}); });
   for(const u of ups){ try{ await SB.from('local_charge_master').update(u.patch).eq('id',u.id); const c=(LCM||[]).find(x=>x.id===u.id); if(c)Object.assign(c,u.patch); }catch(e){ toast('저장 실패: '+(e.message||e),true); } }
   return ups.length; }
-window.copyBulkLC=function(){ const rows=(LCM||[]).filter(x=>x.lane==='벌크'); if(!rows.length){toast('복사할 데이터가 없습니다',true);return;}
+window.copyBulkLC=function(){ const lane=LCVIEW.lane; const EN=LCVIEW.lang==='en'; const rows=(LCM||[]).filter(x=>x.lane===lane); if(!rows.length){toast(EN?'No data to copy':'복사할 데이터가 없습니다',true);return;}
   const terms={}; rows.forEach(x=>{(terms[x.terminal]=terms[x.terminal]||[]).push(x);});
-  const title='하멜코리아 국내 부대비용 · 벌크(중량물) 하역·부대 요율';
+  const laneNm=lane==='로로'?(EN?'RO-RO':'RO-RO(로로)'):(EN?'Bulk (Heavy Cargo)':'벌크(중량물)');
+  const title=EN?`HAMEL KOREA · Domestic Local Charges · ${laneNm} Stevedoring & Local Charges`:`하멜코리아 국내 부대비용 · ${laneNm} 하역·부대 요율`;
+  const H=EN?['Item','Rate','Note']:['항목','요율','비고'];
+  const tr=v=>EN?lcTrans(v,'en'):(v||'');
   let html=`<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b"><div style="font-weight:700;font-size:15px;margin-bottom:8px">${esc(title)}</div>`;
   const plain=[title];
-  Object.keys(terms).forEach(t=>{ html+=`<div style="font-weight:700;margin:12px 0 4px">⚓ ${esc(t)}</div><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr style="background:#f2f5f9"><th align="left">항목</th><th align="left">요율</th><th align="left">비고</th></tr>`;
+  Object.keys(terms).forEach(t=>{ html+=`<div style="font-weight:700;margin:12px 0 4px">⚓ ${esc(t)}</div><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr style="background:#f2f5f9"><th align="left">${H[0]}</th><th align="left">${H[1]}</th><th align="left">${H[2]}</th></tr>`;
     plain.push('',`■ ${t}`);
-    terms[t].forEach(x=>{ const rate=x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'); html+=`<tr><td>${esc(x.charge_code||'')}</td><td>${esc(rate)}</td><td>${esc(x.note||'')}</td></tr>`; plain.push(`- ${x.charge_code||''}: ${rate}${x.note?'  ('+x.note+')':''}`); });
+    terms[t].forEach(x=>{ const rate=tr(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-')); const code=tr(x.charge_code||''); const note=tr(x.note||''); html+=`<tr><td>${esc(code)}</td><td>${esc(rate)}</td><td>${esc(note)}</td></tr>`; plain.push(`- ${code}: ${rate}${note?'  ('+note+')':''}`); });
     html+=`</table>`; });
-  html+=`<div style="color:#54637a;font-size:11px;margin-top:8px">※ 톤(F.TON) 기준 · VAT 별도 · 실제 물동량/조건에 따라 변동</div></div>`;
+  html+=`<div style="color:#54637a;font-size:11px;margin-top:8px">${EN?'※ Per F.TON/W.M basis · VAT excluded · subject to actual volume/conditions':'※ 톤(F.TON)/WM 기준 · VAT 별도 · 실제 물동량/조건에 따라 변동'}</div></div>`;
   copyRich(html, plain.join('\n')); };
 window.saveBulkLC=async function(){ const n=await flushBulkEdits(); toast(n?`${n}개 항목 저장됨 — 기준표(DB) 반영`:'변경사항 없음'); LCVIEW.bedit=false; VIEWS.charges(); };
 window.addBulkRow=async function(tenc){ await flushBulkEdits(); const terminal=decodeURIComponent(tenc);
-  try{ await SB.from('local_charge_master').insert({lane:'벌크',terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
+  try{ await SB.from('local_charge_master').insert({lane:LCVIEW.lane,terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
   await reloadLCM(); VIEWS.charges(); };
 window.addBulkTerminal=async function(){ const el=document.getElementById('be_newterm'); const terminal=((el&&el.value)||'').trim(); if(!terminal){toast('터미널명을 입력하세요',true);return;}
   await flushBulkEdits();
-  try{ await SB.from('local_charge_master').insert({lane:'벌크',terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
+  try{ await SB.from('local_charge_master').insert({lane:LCVIEW.lane,terminal,charge_code:'신규 항목',amount_text:'',note:''}); }catch(e){ toast('추가 실패: '+(e.message||e),true); return; }
   await reloadLCM(); VIEWS.charges(); };
 window.delBulkRow=async function(id){ await flushBulkEdits();
   try{ await SB.from('local_charge_master').delete().eq('id',id); }catch(e){ toast('삭제 실패: '+(e.message||e),true); return; }
@@ -2473,12 +2553,14 @@ VIEWS.charges=async function(){
   try{
     await loadLCM(); const lane=LCVIEW.lane;
     const seg=(v,l)=>`<button class="segb${lane===v?' on':''}" style="flex:0 0 auto" onclick="setLCV('lane','${v}')">${l}</button>`;
-    let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')}`;
+    let controls=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${seg('원양','🚢 원양')} ${seg('근해','⚓ 근해')} ${seg('벌크','📦 벌크')} ${seg('로로','🚗 RORO')}`;
     let table='',note='';
-    if(lane==='벌크'){ const bedit=!!LCVIEW.bedit;
-      controls+=`<button class="btn primary sm" style="flex:0 0 auto" onclick="copyBulkLC()">📋 메일용 표 복사</button>${bedit?`<button class="btn sm" style="flex:0 0 auto" onclick="saveBulkLC()">💾 저장</button><button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',false)">취소</button>`:`<button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',true)">✏ 수정</button>`}`;
+    if(lane==='벌크'||lane==='로로'){ const bedit=!!LCVIEW.bedit;
+      const langTogB=`<span class="d" style="margin:0 0 0 10px">언어</span><button class="segb${LCVIEW.lang!=='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','ko')">KO</button><button class="segb${LCVIEW.lang==='en'?' on':''}" style="flex:0 0 auto" onclick="setLCV('lang','en')">EN</button>`;
+      controls+=`${langTogB}<button class="btn primary sm" style="flex:0 0 auto" onclick="copyBulkLC()">📋 ${LCVIEW.lang==='en'?'Copy table':'메일용 표 복사'}</button>${bedit?`<button class="btn sm" style="flex:0 0 auto" onclick="saveBulkLC()">💾 저장</button><button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',false)">취소</button>`:`<button class="btn sm" style="flex:0 0 auto" onclick="setLCV('bedit',true)">✏ 수정</button>`}`;
       table=lcBulkHTML(bedit);
-      note=bedit?'※ 수정 모드 — 항목·요율·비고 변경 후 「💾 저장」. 행/터미널 추가·삭제 시 직전 입력은 자동 저장됩니다. 모든 변경은 입력로그에 기록.':'※ 벌크(중량물) 하역·부대 요율 · 톤(F.TON) 기준 · VAT 별도. 「📋 메일용 표 복사」로 메일 붙여넣기, 변동 시 「✏ 수정」으로 갱신.'; }
+      const laneLbl=lane==='로로'?'RO-RO':'벌크(중량물)';
+      note=bedit?'※ 수정 모드 — 상단 「📥 표 붙여넣기」로 영어/한글 표를 한 번에 가져오거나(마진% 자동 적용), 항목·요율·비고 직접 변경 후 「💾 저장」. 행/터미널 추가·삭제 시 직전 입력은 자동 저장. 모든 변경은 입력로그에 기록.':`※ ${laneLbl} 하역·부대 요율 · F.TON/WM 기준 · VAT 별도. 언어(KO/EN) 선택 후 「📋 표 복사」로 메일 붙여넣기, 변동 시 「✏ 수정」으로 갱신.`; }
     else {
       const ports=[...new Set((LCM||[]).filter(x=>x.lane===lane&&x.charge_code==='WFG'&&x.spec).map(x=>String(x.spec).split(' ')[0]))];
       if(!ports.includes(LCVIEW.port))LCVIEW.port=ports[0]||'BUSAN';
