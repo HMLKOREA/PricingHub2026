@@ -12,13 +12,13 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",Arial,sans-serif;font-size:13.5px}
 .app{display:flex;min-height:100vh}
-.side{width:210px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.side{width:252px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto}
 .side .logo{padding:15px 18px 13px;border-bottom:1px solid var(--line)}
 .side .logo b{font-size:15px}
 .side .logo .brandlogo{height:39px;width:auto;display:block;cursor:pointer}
 .side .logo .brandsub{font-size:11px;color:var(--mut2);margin-top:6px;font-weight:600;letter-spacing:.01em}
 .side .logo div{font-size:11px;color:var(--mut2);margin-top:2px}
-.side nav{padding:8px;flex:1;overflow:auto}
+.side nav{padding:8px;flex:0 0 auto;overflow:visible}
 .side nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:500;text-decoration:none;margin:2px 0}
 .side nav a:hover{background:var(--panel2)}
 .side nav a.active{background:var(--accent);color:#fff;font-weight:600}
@@ -384,15 +384,14 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 <button id="navToggle" class="navToggle" onclick="document.querySelector('.side').classList.toggle('open')">☰</button>
 <div class="app">
   <aside class="side">
-    <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA" title="대시보드로 이동" onclick="go('dashboard')"><div class="brandsub">견적 · 부킹 허브</div></div>
+    <div class="logo"><img id="brandLogo" class="brandlogo" alt="HAMEL KOREA" title="홈으로 이동" onclick="goDomain('home')"><div class="brandsub">견적 · 부킹 허브</div></div>
     <nav id="nav"></nav>
     <div style="flex:1"></div>
     <div class="tray">
-      <div class="tray-h" onclick="this.parentNode.querySelector('.tray-body').classList.toggle('hide')">🔧 도구 · 시스템 ▾</div>
+      <a class="syslink hamel" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 <span style="opacity:.7">↗</span></a>
+      <a class="syslink moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span class="qm">Q</span>V.KR <span style="color:#f2911e">↗</span></a>
+      <div class="tray-h" onclick="this.parentNode.querySelector('.tray-body').classList.toggle('hide')">🧰 물류도구 ▾</div>
       <div class="tray-body hide">
-        <a class="syslink hamel" href="https://hamel-ap.vercel.app/login?next=%2F" target="_blank" rel="noopener">💳 하멜 AP·결재 <span style="opacity:.7">↗</span></a>
-        <a class="syslink moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span class="qm">Q</span>V.KR <span style="color:#f2911e">↗</span></a>
-        <div class="tray-sec">🧰 물류도구</div>
         <div class="tools-grid">
           <a onclick="openCBM()">📦 CBM계산</a>
           <a onclick="openIncoterms()">📄 인코텀즈</a>
@@ -504,7 +503,7 @@ async function checkConn(){
 /* ================= 라우터 ================= */
 const VIEWS={};
 let CURRENT='dashboard';
-const ADMIN_VIEWS=['perms','archive','import','logs'];
+const ADMIN_VIEWS=['dashboard','perms','archive','import','logs'];
 /* ===== 담당자 조직 순서(직급) · 공용 정렬/제외 — 모든 담당자별 현황에서 동일 로직 ===== */
 const STAFF_ORDER=[
   {u:'ceo',n:'안진오'},{u:'luna',n:'권영재'},{u:'emily',n:'김도현'},
@@ -536,12 +535,14 @@ let MENUPERM={duties:{},matrix:{}};
 async function loadMenuPerms(){ try{ const st=await q('app_settings',b=>b.eq('key','menu_perms')); if(st&&st[0]&&st[0].value){ const j=JSON.parse(st[0].value)||{}; MENUPERM={duties:j.duties||{}, matrix:j.matrix||{}}; } }catch(e){} }
 function myDuty(){ if(isAdmin())return 'admin'; const u=((ME&&ME.u)||'').toLowerCase(); const d=MENUPERM.duties&&MENUPERM.duties[u]; return (d==='operator'||d==='sales')?d:'sales'; }
 function canDomain(dk){ const duty=myDuty(); if(duty==='admin')return true; if(dk==='home')return true; if(dk==='admin')return false; const row=(MENUPERM.matrix&&MENUPERM.matrix[duty])||{}; return row[dk]!==0&&row[dk]!==false; } // 미설정=허용(관대)
+function canView(v){ if(ADMIN_VIEWS.includes(v)&&!isAdmin())return false; const d=VIEW_DOMAIN[v]; return !d||canDomain(d.k); }
 window.renderSideNav=function(){ const nav=document.getElementById('nav'); if(!nav)return; const cur=VIEW_DOMAIN[CURRENT];
   nav.innerHTML=DOMAINS.filter(d=>canDomain(d.k)).map(d=>`<a data-dk="${d.k}" class="${cur&&cur.k===d.k?'active':''}" onclick="goDomain('${d.k}')"><span>${d.ic}</span><span>${esc(d.t)}</span>${d.badge?`<span class="navbadge">${d.badge}</span>`:''}</a>`).join(''); };
-window.goDomain=function(dk){ const d=DOMAINS.find(x=>x.k===dk); if(!d)return; go(d.views[0][0]); };
+window.goDomain=function(dk){ const d=DOMAINS.find(x=>x.k===dk); if(!d)return; const v=d.views.find(x=>canView(x[0]))||d.views[0]; go(v[0]); };
 function renderTabs(){ const tb=document.getElementById('wstabs'); if(!tb)return; const d=VIEW_DOMAIN[CURRENT];
-  if(!d||d.views.length<2){ tb.className='wstabs hide'; tb.innerHTML=''; return; }
-  tb.className='wstabs'; tb.innerHTML=d.views.map(v=>`<button class="${v[0]===CURRENT?'on':''}" onclick="go('${v[0]}')">${esc(v[1])}</button>`).join(''); }
+  const vs=d?d.views.filter(v=>canView(v[0])):[];
+  if(!d||vs.length<2){ tb.className='wstabs hide'; tb.innerHTML=''; return; }
+  tb.className='wstabs'; tb.innerHTML=vs.map(v=>`<button class="${v[0]===CURRENT?'on':''}" onclick="go('${v[0]}')">${esc(v[1])}</button>`).join(''); }
 function go(v){ if(ADMIN_VIEWS.includes(v)&&!isAdmin()){ toast('관리자 전용 메뉴입니다',true); return; }
   const _dm=VIEW_DOMAIN[v]; if(_dm&&!canDomain(_dm.k)){ toast('접근 권한이 없는 메뉴입니다',true); return; }
   CURRENT=v; renderSideNav(); renderTabs();
@@ -773,6 +774,8 @@ window.openReq=async function(id){
     renderQuoteLines(id);
   }catch(e){ toast(e.message||e,true); }
 };
+/* ── Job# 로 열기 (활동 피드에서 사용) ── */
+window.openReqByNo=async function(no){ if(!no)return; try{ const rows=await q('quote_requests',b=>b.eq('job_no',no).limit(1)); if(rows&&rows[0]){ openReq(rows[0].id); } else { toast(no+' 건을 찾을 수 없습니다(스코프 밖일 수 있음)',true); } }catch(e){ toast(e.message||e,true); } };
 /* ── JOB 수정: DB 레코드 → 인테이크 폼(JOBW)으로 역매핑 ── */
 window.editReq=async function(id){
   try{
@@ -1711,6 +1714,19 @@ VIEWS.daily=async function(){
     wonToday.forEach(r=>ens(ownerOf(r)).won++);
     const owners=Object.keys(OW).filter(o=>(o!=='(미지정)'||OW[o].intake||OW[o].open)&&!staffExcluded(o)).sort((a,b)=>staffRank(a)-staffRank(b)||OW[b].intake-OW[a].intake||OW[b].open-OW[a].open);
     DAILY._ctx={D,todayIn,stale,wonToday,bkToday,OW,owners,ownerOf};
+    // ── 팀 활동 로그(전원 공개) + 주간 요약 ──
+    let acts=[]; try{ const ws=new Date(D+'T00:00:00'); ws.setDate(ws.getDate()-6); acts=await q('activity_logs',b=>b.gte('at',ws.toISOString().slice(0,10)).order('at',{ascending:false}).limit(700)); }catch(e){}
+    const DATA_ACT=['입력','수정','삭제'];
+    const feed=acts.filter(a=>dOf(a.at)===D&&DATA_ACT.includes(a.action)).slice(0,80);
+    const wkDays=[]; for(let i=6;i>=0;i--){ const dt=new Date(D+'T00:00:00'); dt.setDate(dt.getDate()-i); wkDays.push(dt.toISOString().slice(0,10)); }
+    const perDay=wkDays.map(dd=>({d:dd,
+      intake:reqs.filter(r=>dOf(r.created_at)===dd).length,
+      bk:bk.filter(b=>dOf(b.bkg_date)===dd).length,
+      won:reqs.filter(r=>r.won_at&&dOf(r.won_at)===dd).length,
+      act:acts.filter(a=>dOf(a.at)===dd&&DATA_ACT.includes(a.action)).length }));
+    const staffAct={}; acts.filter(a=>DATA_ACT.includes(a.action)).forEach(a=>{ const n=a.name||a.username||'(?)'; if(staffExcluded(n)||staffExcluded(a.username))return; staffAct[n]=(staffAct[n]||0)+1; });
+    const actBadge=a=>{ const map={'입력':['rgba(22,163,74,.14)','var(--win)'],'수정':['rgba(37,99,235,.12)','var(--accent)'],'삭제':['rgba(220,38,38,.12)','var(--loss)']}; const p=map[a]||['var(--panel2)','var(--mut)']; return `<span class="tag" style="background:${p[0]};color:${p[1]};font-weight:700">${esc(a)}</span>`; };
+    const jobRe=/JOB-\d+/; const feedJob=d=>{ const m=String(d||'').match(jobRe); return m?m[0]:''; };
     const tile=(l,v,n,c)=>`<div class="kpi"><div class="l">${l}</div><div class="v"${c?` style="color:${c}"`:''}>${v}</div><div class="n">${n||''}</div></div>`;
     const stg=s=>`<span class="tag st-${s||'접수'}">${s||'접수'}</span>`;
     const rowLink=r=>`onclick="openReq('${r.id}')" style="cursor:pointer"`;
@@ -1737,7 +1753,18 @@ VIEWS.daily=async function(){
       <div class="card"><h3>🔴 미처리 팔로업 <span class="pill">${stale.length}</span> <span class="d" style="display:inline">— 7일 이상 진행중 · 오래된 순</span></h3>
         ${stale.length?`<div style="overflow:auto;max-height:320px"><table><thead><tr><th>경과</th><th>Job#</th><th>화주</th><th>레인</th><th>담당</th><th>단계</th></tr></thead><tbody>
           ${stale.slice(0,40).map(r=>`<tr ${rowLink(r)}><td class="mono" style="color:var(--loss);font-weight:700">${daysAgo(r.created_at)}일</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(ownerOf(r))}</td><td>${stg(r.stage)}</td></tr>`).join('')}
-        </tbody></table></div>`:'<div class="d">7일 이상 미처리 건이 없습니다. 👍</div>'}</div>`;
+        </tbody></table></div>`:'<div class="d">7일 이상 미처리 건이 없습니다. 👍</div>'}</div>
+      <div class="card"><h3>📣 팀 활동 피드 <span class="pill">${feed.length}</span> <span class="d" style="display:inline">— 오늘 입력·수정·삭제 전원 공개 · Job# 팔로우</span></h3>
+        ${feed.length?`<div style="overflow:auto;max-height:360px"><table><thead><tr><th>시각</th><th>담당</th><th>구분</th><th>대상</th><th>내용</th></tr></thead><tbody>
+          ${feed.map(a=>{const jn=feedJob(a.detail);return `<tr${jn?` style="cursor:pointer" onclick="openReqByNo('${jn}')"`:''}><td class="mono" style="color:var(--mut);white-space:nowrap">${String(a.at||'').slice(11,16)}</td><td><b>${esc(a.name||a.username||'')}</b></td><td>${actBadge(a.action)}</td><td style="white-space:nowrap">${jn?`<span style="color:var(--accent);font-weight:700">${esc(jn)}</span>`:esc(a.entity||'')}</td><td class="d" style="max-width:420px;white-space:normal">${esc(a.detail||'')}</td></tr>`;}).join('')}
+        </tbody></table></div><div class="d" style="margin-top:6px">Job# 있는 행 클릭 → 해당 Job 상세로 이동. 전 직원이 서로의 작업을 실시간 공유합니다.</div>`:'<div class="d">오늘 입력·수정·삭제 활동이 아직 없습니다.</div>'}</div>
+      <div class="card"><h3>📅 주간 요약 <span class="d" style="display:inline">— 최근 7일 (${wkDays[0]} ~ ${D}) · 자동 집계</span></h3>
+        <div style="overflow:auto"><table><thead><tr><th>날짜</th><th class="num">신규 인테이크</th><th class="num">부킹</th><th class="num">수주</th><th class="num">팀 활동</th></tr></thead><tbody>
+          ${perDay.map(x=>`<tr${x.d===D?' style="background:rgba(37,99,235,.06);font-weight:600"':''}><td class="mono">${x.d}</td><td class="num mono">${x.intake}</td><td class="num mono">${x.bk}</td><td class="num mono" style="${x.won?'color:var(--win);font-weight:700':''}">${x.won}</td><td class="num mono">${x.act}</td></tr>`).join('')}
+          <tr style="border-top:2px solid var(--line);font-weight:800"><td>합계</td><td class="num mono">${perDay.reduce((a,x)=>a+x.intake,0)}</td><td class="num mono">${perDay.reduce((a,x)=>a+x.bk,0)}</td><td class="num mono">${perDay.reduce((a,x)=>a+x.won,0)}</td><td class="num mono">${perDay.reduce((a,x)=>a+x.act,0)}</td></tr>
+        </tbody></table></div>
+        ${Object.keys(staffAct).length?`<div class="row" style="flex-wrap:wrap;margin-top:10px;gap:6px">담당별 주간 활동 &nbsp;${Object.entries(staffAct).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<span class="pill">${esc(n)} <b style="color:var(--accent)">${c}</b></span>`).join('')}</div>`:''}
+      </div>`;
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
 };
 window.copyDaily=function(){ const c=DAILY._ctx; if(!c){toast('먼저 리포트를 불러오세요',true);return;}
@@ -2509,11 +2536,13 @@ function lcBulkHTML(bedit){ const lane=LCVIEW.lane; const EN=LCVIEW.lang==='en';
   if(!tkeys.length && !bedit)return `<div class="d">${emptyMsg}</div>`;
   const ev=s=>esc(s==null?'':String(s));
   const H=EN?['Item','Rate','Note']:['항목','요율','비고'];
+  const sortRows=arr=>arr.slice().sort((a,b)=>((a.sort_no==null?999:a.sort_no)-(b.sort_no==null?999:b.sort_no)));
+  const headCells=bedit?`<th class="car" style="position:static">항목</th><th>요율 (KRW)</th><th>USD</th><th>비고</th><th style="width:40px"></th>`:`<th class="car" style="position:static">${H[0]}</th><th>${H[1]}</th><th>${H[2]}</th>`;
   let out=tkeys.map(t=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 8px">⚓ ${esc(t)}</h3>
-    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr><th class="car" style="position:static">${H[0]}</th><th>${H[1]}</th><th>${H[2]}</th>${bedit?'<th style="width:40px"></th>':''}</tr></thead><tbody>
-    ${terms[t].map(x=>bedit
-      ? `<tr data-bid="${x.id}"><td class="car" style="position:static"><input value="${ev(x.charge_code)}" data-bf="charge_code" style="width:100%;min-width:150px;font-weight:600"></td><td><input value="${ev(x.amount_text)}" data-bf="amount_text" style="width:100%;min-width:150px"></td><td><input value="${ev(x.note)}" data-bf="note" style="width:100%;min-width:120px"></td><td style="text-align:center"><button class="btn sm" onclick="delBulkRow('${x.id}')" title="행 삭제">✕</button></td></tr>`
-      : `<tr><td class="car" style="position:static"><b>${esc(EN?lcTrans(x.charge_code,'en'):x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(EN?lcTrans(x.amount_text,'en'):(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-')))}</td><td style="color:var(--mut)">${esc(EN?lcTrans(x.note,'en'):(x.note||''))}</td></tr>`
+    <div class="lcwrap" style="max-height:none"><table class="lctbl" style="min-width:auto"><thead><tr>${headCells}</tr></thead><tbody>
+    ${sortRows(terms[t]).map(x=>bedit
+      ? `<tr data-bid="${x.id}"><td class="car" style="position:static"><input value="${ev(x.charge_code)}" data-bf="charge_code" style="width:100%;min-width:140px;font-weight:600"></td><td><input value="${ev(x.amount_text)}" data-bf="amount_text" style="width:100%;min-width:140px"></td><td><input value="${ev(x.amount_text_en)}" data-bf="amount_text_en" placeholder="USD…" style="width:100%;min-width:110px"></td><td><input value="${ev(x.note)}" data-bf="note" style="width:100%;min-width:100px"></td><td style="text-align:center"><button class="btn sm" onclick="delBulkRow('${x.id}')" title="행 삭제">✕</button></td></tr>`
+      : `<tr><td class="car" style="position:static"><b>${esc(EN?lcTrans(x.charge_code,'en'):x.charge_code)}</b></td><td style="font-weight:600;color:var(--accent)">${esc(EN?(x.amount_text_en||lcTrans(x.amount_text,'en')):(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-')))}</td><td style="color:var(--mut)">${esc(EN?lcTrans(x.note,'en'):(x.note||''))}</td></tr>`
     ).join('')}
     </tbody></table></div>
     ${bedit?`<button class="btn sm" style="margin-top:6px" onclick="addBulkRow('${encodeURIComponent(t)}')">＋ 행 추가</button>`:''}</div>`).join('');
@@ -2536,9 +2565,10 @@ window.copyBulkLC=function(){ const lane=LCVIEW.lane; const EN=LCVIEW.lang==='en
   const tr=v=>EN?lcTrans(v,'en'):(v||'');
   let html=`<div style="font-family:'Malgun Gothic',sans-serif;color:#17202b"><div style="font-weight:700;font-size:15px;margin-bottom:8px">${esc(title)}</div>`;
   const plain=[title];
+  const sortR=arr=>arr.slice().sort((a,b)=>((a.sort_no==null?999:a.sort_no)-(b.sort_no==null?999:b.sort_no)));
   Object.keys(terms).forEach(t=>{ html+=`<div style="font-weight:700;margin:12px 0 4px">⚓ ${esc(t)}</div><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr style="background:#f2f5f9"><th align="left">${H[0]}</th><th align="left">${H[1]}</th><th align="left">${H[2]}</th></tr>`;
     plain.push('',`■ ${t}`);
-    terms[t].forEach(x=>{ const rate=tr(x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-')); const code=tr(x.charge_code||''); const note=tr(x.note||''); html+=`<tr><td>${esc(code)}</td><td>${esc(rate)}</td><td>${esc(note)}</td></tr>`; plain.push(`- ${code}: ${rate}${note?'  ('+note+')':''}`); });
+    sortR(terms[t]).forEach(x=>{ const rateBase=x.amount_text||(x.amount!=null?Math.round(x.amount).toLocaleString()+'원':'-'); const rate=EN?(x.amount_text_en||lcTrans(rateBase,'en')):rateBase; const code=tr(x.charge_code||''); const note=tr(x.note||''); html+=`<tr><td>${esc(code)}</td><td>${esc(rate)}</td><td>${esc(note)}</td></tr>`; plain.push(`- ${code}: ${rate}${note?'  ('+note+')':''}`); });
     html+=`</table>`; });
   html+=`<div style="color:#54637a;font-size:11px;margin-top:8px">${EN?'※ Per F.TON/W.M basis · VAT excluded · subject to actual volume/conditions':'※ 톤(F.TON)/WM 기준 · VAT 별도 · 실제 물동량/조건에 따라 변동'}</div></div>`;
   copyRich(html, plain.join('\n')); };
@@ -3673,7 +3703,7 @@ function hideGate(){ const g=$('#loginGate'); if(g)g.style.display='none'; }
 
 /* ================= 시작 ================= */
 let APP_BOOTED=false;
-async function bootApp(){ if(APP_BOOTED)return; APP_BOOTED=true; const ok=SB?await checkConn():false; if(SB){ await loadFX(); await loadMenuPerms(); } renderSideNav(); go('dashboard'); }
+async function bootApp(){ if(APP_BOOTED)return; APP_BOOTED=true; const ok=SB?await checkConn():false; if(SB){ await loadFX(); await loadMenuPerms(); } renderSideNav(); go(isAdmin()?'dashboard':'daily'); }
 (function(){ const bl=$('#brandLogo'); if(bl)bl.src=LOGO_URI; const s=getSession(); if(s){ ME=s; hideGate(); applyUserbar(); bootApp(); } else { showGate(); } })();
 </script>
 </body>
