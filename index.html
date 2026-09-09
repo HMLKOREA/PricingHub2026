@@ -3685,7 +3685,8 @@ window.doLogin=async function(ev){ if(ev)ev.preventDefault();
     localStorage.setItem(AUTH_KEY,JSON.stringify(sess));
     ME=sess; hideGate(); applyUserbar();
     logAct('접속','auth',(row.name||row.username)+' ('+String(row.username).toUpperCase()+') 로그인');
-    bootApp();
+    if(!APP_BOOTED){ bootApp(); }
+    else { try{ if(SB) await loadMenuPerms(); }catch(e){} renderSideNav(); go(isAdmin()?'dashboard':'daily'); }  // 재로그인(유저 전환): 권한·랜딩 재적용
   }catch(e){ try{ logAct('접속실패','auth','ID='+u); }catch(_){} errEl.textContent=e.message||'로그인 실패'; btn.disabled=false; btn.textContent='로그인'; }
   return false;
 };
