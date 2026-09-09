@@ -518,7 +518,10 @@ function staffExcluded(v){ const s=String(v||'').toLowerCase().trim(); return ST
 const DOMAINS=[
  {k:'home', ic:'🏠', t:'홈', views:[['dashboard','📊 대시보드'],['daily','🗓 데일리 리포트']]},
  {k:'chat', ic:'💬', t:'데이터 챗봇', badge:'AI', views:[['datachat','💬 데이터 챗봇']]},
- {k:'sales',ic:'📋', t:'견적 · 영업', views:[['intake','📥 인테이크(AI)'],['pipeline','🗂 파이프라인'],['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['history','📜 히스토리 검색']]},
+ {k:'intake', ic:'📥', t:'인테이크', views:[['intake','📥 인테이크(AI)']]},
+ {k:'pipeline', ic:'🗂', t:'파이프라인', views:[['pipeline','🗂 파이프라인']]},
+ {k:'pricing', ic:'💲', t:'PRICING', badge:'NEW', views:[['pricematrix','💲 PRICING MATRIX'],['rateinquiry','📨 RATE INQUIRY'],['quoteresp','📄 견적 RESPONSE'],['pcharges','🏭 부대비용']]},
+ {k:'sales',ic:'📋', t:'RFQ · 견적', views:[['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['history','📜 히스토리 검색']]},
  {k:'hd',   ic:'🏗', t:'HD 섹터', views:[['hd','🏗 FR·COA 섹터']]},
  {k:'ref',  ic:'📚', t:'기준정보', views:[['rates','💱 요율'],['charges','🏭 국내 부대비용'],['ports','🌐 포트코드']]},
  {k:'ptn',  ic:'🤝', t:'파트너', views:[['partners','🌏 파트너'],['contacts','👥 연락처·선사']]},
@@ -2595,6 +2598,104 @@ VIEWS.charges=async function(){
       <div class="d" style="margin-top:10px">${note} 값 수정은 기준표(DB)에 반영됩니다.</div>`;
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
 };
+VIEWS.pcharges=VIEWS.charges;   // PRICING 도메인의 부대비용 탭(같은 화면)
+
+/* ================= 💲 PRICING MATRIX (POL/POD 운임 조회) ================= */
+let PM={pol:'',pod:'',kw:'',_rc:null,_bk:null};
+const PM_CT=['20DV','40DV','40HC','40FR','40RF'];
+const pmNum=v=>{ const n=parseFloat(String(v==null?'':v).replace(/[,\s$]/g,'')); return isNaN(n)?null:n; };
+window.setPM=function(k,v){ PM[k]=v; if(k==='pol')PM.pod=''; VIEWS.pricematrix(); };
+window.pmPickPod=function(p){ PM.pod=p; VIEWS.pricematrix(); };
+window.pmFilterPods=function(){ const kw=(document.getElementById('pmkw')?.value||'').trim().toUpperCase(); PM.kw=kw;
+  document.querySelectorAll('#pmDir tr[data-pod]').forEach(tr=>{ tr.style.display = (!kw||tr.getAttribute('data-pod').includes(kw))?'':'none'; }); };
+async function pmLoad(){ if(!PM._rc){ try{ PM._rc=await qAll('rate_cards',b=>b.eq('status','ACTIVE')); }catch(e){ PM._rc=[]; } }
+  if(!PM._bk){ try{ PM._bk=await q('bookings',b=>b.limit(2000)); }catch(e){ PM._bk=[]; } } return PM._rc; }
+function pmBest(rows,ct){ const vals=rows.filter(r=>r.container_type===ct).map(r=>pmNum(r.freight_usd)).filter(v=>v!=null); return vals.length?Math.min(...vals):null; }
+VIEWS.pricematrix=async function(){
+  $('#main').innerHTML='<div class="empty">불러오는 중…</div>';
+  const rc=await pmLoad();
+  if(!rc.length){ $('#main').innerHTML='<h2>💲 PRICING MATRIX</h2><div class="card"><div class="empty">적재된 요율(rate_cards)이 없습니다. 관리 → 가져오기에서 요율을 올리세요.</div></div>'; return; }
+  const pols=[...new Set(rc.map(r=>r.pol).filter(Boolean))].sort();
+  if(!PM.pol||!pols.includes(PM.pol)) PM.pol=pols.includes('BUSAN')?'BUSAN':pols[0];
+  const forPol=rc.filter(r=>r.pol===PM.pol);
+  const polSel=`<span class="d" style="margin:0">POL</span><select onchange="setPM('pol',this.value)">${pols.map(p=>`<option${p===PM.pol?' selected':''}>${esc(p)}</option>`).join('')}</select>`;
+  const head=`<h2>💲 PRICING MATRIX <span class="d" style="font-weight:400">· POL/POD 운임 조회 · 20'/40'/40HC 나란히</span></h2>
+    <div class="sub">유효(ACTIVE) 요율 ${rc.length.toLocaleString()}건 · 타입별 최저가 강조 · 부대비용은 상단 탭에서</div>`;
+  if(!PM.pod){
+    // ── POD 디렉토리 ──
+    const podMap={}; forPol.forEach(r=>{ const p=r.pod||'(미지정)'; (podMap[p]=podMap[p]||[]).push(r); });
+    const pods=Object.keys(podMap).sort();
+    const rowsHTML=pods.map(p=>{ const rs=podMap[p]; const b20=pmBest(rs,'20DV'),b40=pmBest(rs,'40DV'),bhc=pmBest(rs,'40HC');
+      const carr=new Set(rs.map(r=>r.carrier).filter(Boolean)).size;
+      const money=v=>v==null?'<span style="color:var(--mut2)">–</span>':'$'+v.toLocaleString();
+      return `<tr data-pod="${esc(p.toUpperCase())}" style="cursor:pointer" onclick="pmPickPod('${esc(p).replace(/'/g,"\\'")}')">
+        <td style="font-weight:700;color:var(--accent);white-space:nowrap">${esc(p)}</td>
+        <td class="num mono">${money(b20)}</td><td class="num mono">${money(b40)}</td><td class="num mono">${money(bhc)}</td>
+        <td class="num mono">${carr}</td></tr>`; }).join('');
+    $('#main').innerHTML=`${head}
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${polSel}
+        <input id="pmkw" placeholder="POD 검색 (예: HAMBURG, JEBEL ALI)" value="${esc(PM.kw||'')}" oninput="pmFilterPods()" style="min-width:240px">
+        <span class="pill">${pods.length} 목적항</span></div>
+      <div class="card"><div class="lcwrap" style="max-height:66vh"><table class="lctbl" style="min-width:auto"><thead>
+        <tr><th class="car" style="position:sticky;left:0">POD (목적항)</th><th class="num">20' 최저</th><th class="num">40' 최저</th><th class="num">40HC 최저</th><th class="num">선사수</th></tr></thead>
+        <tbody id="pmDir">${rowsHTML}</tbody></table></div>
+        <div class="d" style="margin-top:8px">행 클릭 → 선사별 20'/40'/40HC 상세 매트릭스. 최저가는 각 타입 열 최저 운임.</div></div>`;
+    return;
+  }
+  // ── 레인 매트릭스 (POL+POD) ──
+  const lane=forPol.filter(r=>r.pod===PM.pod);
+  const cts=PM_CT.filter(ct=>lane.some(r=>r.container_type===ct));
+  const carrMap={}; lane.forEach(r=>{ const k=(r.carrier||'?')+'||'+(r.rate_type||''); (carrMap[k]=carrMap[k]||{carrier:r.carrier||'?',rate_type:r.rate_type||'',valid_to:r.valid_to,tt:r.transit_days,routing:r.routing,via:r.via,v:{}}); carrMap[k].v[r.container_type]=pmNum(r.freight_usd); if(r.valid_to&&(!carrMap[k].valid_to||r.valid_to>carrMap[k].valid_to))carrMap[k].valid_to=r.valid_to; });
+  const best={}; cts.forEach(ct=>best[ct]=pmBest(lane,ct));
+  const sortCt=cts.includes('40HC')?'40HC':(cts.includes('40DV')?'40DV':cts[0]);
+  const carriers=Object.values(carrMap).sort((a,b)=>{ const av=a.v[sortCt]==null?Infinity:a.v[sortCt], bv=b.v[sortCt]==null?Infinity:b.v[sortCt]; return av-bv; });
+  const cell=(c,ct)=>{ const v=c.v[ct]; if(v==null)return '<td class="num mono" style="color:var(--mut2)">–</td>'; const isBest=best[ct]!=null&&v===best[ct]; return `<td class="num mono" style="${isBest?'color:var(--win);font-weight:800;background:rgba(22,163,74,.08)':''}">$${v.toLocaleString()}${isBest?' ▼':''}</td>`; };
+  const headRow=`<tr><th class="car" style="position:sticky;left:0">선사</th>${cts.map(ct=>`<th class="num">${ct.replace('DV',"'").replace('HC',"HC").replace('FR',"FR").replace('RF',"RF")}</th>`).join('')}<th>Rate</th><th>T/T</th><th>유효</th><th>Routing</th></tr>`;
+  const bodyRows=carriers.map(c=>`<tr><td class="car" style="position:sticky;left:0;font-weight:700">${esc(c.carrier)}</td>${cts.map(ct=>cell(c,ct)).join('')}<td>${esc(c.rate_type||'')}</td><td class="num">${c.tt||'-'}</td><td class="mono" style="white-space:nowrap;${c.valid_to&&String(c.valid_to)<new Date().toISOString().slice(0,10)?'color:var(--loss)':''}">${esc(c.valid_to||'-')}</td><td class="d" style="max-width:220px">${esc(c.routing||c.via||'')}</td></tr>`).join('');
+  // 레인 과거 실적 (bookings, POD명 부분일치)
+  const podU=PM.pod.toUpperCase(); const bk=(PM._bk||[]).filter(b=>String(b.pod||'').toUpperCase().includes(podU)&&(!PM.pol||String(b.pol||'').toUpperCase().includes(PM.pol.toUpperCase())||true)).slice(0,8);
+  const bestLine=cts.map(ct=>best[ct]!=null?`${ct} $${best[ct].toLocaleString()}`:null).filter(Boolean).join(' · ');
+  $('#main').innerHTML=`${head}
+    <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <button class="btn sm" onclick="setPM('pod','')">← 목적항 목록</button>${polSel}
+      <span style="font-size:16px;font-weight:800">${esc(PM.pol)} → ${esc(PM.pod)}</span>
+      <span class="pill">${carriers.length} 선사</span>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="go('pcharges')">🏭 부대비용</button>
+      <button class="btn primary sm" onclick="pmCopyLane()">📋 견적표 복사</button></div>
+    <div class="card" style="border-color:var(--accent)"><div class="cap" style="margin-bottom:6px">최저 운임 요약 — ${esc(PM.pol)} → ${esc(PM.pod)}</div><div style="font-size:14px;font-weight:700;color:var(--win)">${bestLine||'-'}</div></div>
+    <div class="card"><div class="lcwrap" style="max-height:56vh"><table class="lctbl" id="pmLane" style="min-width:auto"><thead>${headRow}</thead><tbody>${bodyRows}</tbody></table></div>
+      <div class="d" style="margin-top:8px">▼ = 타입별 최저가 · USD/컨테이너 · 유효기간 지난 건은 빨강. 부대비용은 별도(상단 부대비용 탭).</div></div>
+    <div class="card"><h3>📜 이 레인 과거 실적 <span class="pill">${bk.length}</span> <span class="d" style="display:inline">— bookings 기준 · 람세스/히스토리 믹스는 파일 수령 후 보강</span></h3>
+      ${bk.length?`<div style="overflow:auto"><table><thead><tr><th>BKG#</th><th>일자</th><th>화주</th><th>레인</th><th class="num">매출</th></tr></thead><tbody>
+        ${bk.map(b=>`<tr><td>${esc(b.bkg_no||'')}</td><td class="mono">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(b.pol||'?')}→${esc(b.pod||'?')}</td><td class="num mono">${b.revenue?fmtW(b.revenue):'-'}</td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="d">이 목적항 과거 부킹 기록이 없습니다.</div>'}</div>`;
+};
+window.pmCopyLane=function(){
+  const rc=PM._rc||[]; const lane=rc.filter(r=>r.pol===PM.pol&&r.pod===PM.pod&&r.status==='ACTIVE');
+  if(!lane.length){ toast('복사할 요율이 없습니다',true); return; }
+  const cts=PM_CT.filter(ct=>lane.some(r=>r.container_type===ct));
+  const carrMap={}; lane.forEach(r=>{ const k=(r.carrier||'?')+'||'+(r.rate_type||''); (carrMap[k]=carrMap[k]||{carrier:r.carrier||'?',rate_type:r.rate_type||'',valid_to:r.valid_to,tt:r.transit_days,v:{}}); carrMap[k].v[r.container_type]=pmNum(r.freight_usd); });
+  const sortCt=cts.includes('40HC')?'40HC':cts[0];
+  const carriers=Object.values(carrMap).sort((a,b)=>((a.v[sortCt]==null?Infinity:a.v[sortCt])-(b.v[sortCt]==null?Infinity:b.v[sortCt])));
+  const bd='1px solid #c9d2dd';
+  const title=`HAMEL KOREA · Ocean Freight · ${PM.pol} → ${PM.pod}`;
+  let html=`<div style="font-family:Arial,'Malgun Gothic',sans-serif;color:#17202b"><div style="font-weight:bold;font-size:14px;margin-bottom:7px">${esc(title)}</div><table style="border-collapse:collapse;font-size:12px"><tr style="background:#dfe9fa"><th style="border:${bd};padding:5px 9px">Carrier</th>${cts.map(ct=>`<th style="border:${bd};padding:5px 9px">${ct}</th>`).join('')}<th style="border:${bd};padding:5px 9px">Rate</th><th style="border:${bd};padding:5px 9px">T/T</th><th style="border:${bd};padding:5px 9px">Valid</th></tr>`;
+  const plain=[title,['Carrier',...cts,'Rate','T/T','Valid'].join('\t')];
+  carriers.forEach(c=>{ html+=`<tr><td style="border:${bd};padding:5px 9px;font-weight:bold">${esc(c.carrier)}</td>${cts.map(ct=>`<td style="border:${bd};padding:5px 9px;text-align:right">${c.v[ct]!=null?'$'+c.v[ct].toLocaleString():'-'}</td>`).join('')}<td style="border:${bd};padding:5px 9px">${esc(c.rate_type||'')}</td><td style="border:${bd};padding:5px 9px;text-align:right">${c.tt||'-'}</td><td style="border:${bd};padding:5px 9px">${esc(c.valid_to||'-')}</td></tr>`;
+    plain.push([c.carrier,...cts.map(ct=>c.v[ct]!=null?'$'+c.v[ct]:'-'),c.rate_type||'',c.tt||'-',c.valid_to||'-'].join('\t')); });
+  html+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">USD/container · Ocean freight only, local charges excluded · subject to space/validity</div></div>`;
+  copyRich(html, plain.join('\n'));
+};
+/* ── RATE INQUIRY / 견적 RESPONSE (SEA/AIR/LCL 양식 수령 후 본문 확정) ── */
+function pmStub(title,desc){ return `<h2>${title}</h2><div class="sub">${desc}</div>
+  <div class="card" style="border-color:var(--amber)"><h3>🚧 준비 중 — 양식 반영 대기</h3>
+    <div class="d" style="line-height:1.7">휘가 주기로 한 <b>SEA FREIGHT · AIR · LCL 견적 양식</b>을 받으면, 그 형식에 맞춰 이 화면을 완성합니다.<br>
+    • PRICING MATRIX/파이프라인 기존 건에서 POL·POD·운임·부대비용을 <b>자동으로 끌어와</b> 채우도록 연동 예정.<br>
+    • 완성 시: 조건 입력 → 견적서(메일용 표/본문) 원클릭 생성·복사.</div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="go('pricematrix')">💲 PRICING MATRIX로</button><button class="btn sm" onclick="go('rfqform')">✍ 현재 RFQ 양식</button></div></div>`; }
+VIEWS.rateinquiry=async function(){ $('#main').innerHTML=pmStub('📨 RATE INQUIRY','선사·협력사에 보낼 운임 문의 구성 (양식 대기 중)'); };
+VIEWS.quoteresp=async function(){ $('#main').innerHTML=pmStub('📄 견적 RESPONSE','화주에게 보내는 SEA/AIR/LCL 견적서 (양식 대기 중)'); };
 
 /* ================= 협력사 RFQ 양식 작성기 (입력→메일 본문 복사) ================= */
 let RFQF={type:'air', f:{pol:'ICN', remark:'1. DIRECT, TS 요청\n2. 대략적인 t/time 요청', cfs_cntr:"40'HQ * 1"}, vendors:[{v:'',d:''},{v:'',d:''},{v:'',d:''}]};
