@@ -3716,7 +3716,7 @@ window.doPwChange=async function(){
     if(oldHash!==row.pw_hash){ setMsg('현재 비밀번호가 올바르지 않습니다'); return; }
     const newSalt=[...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,'0')).join('');
     const newHash=await sha256hex(newSalt+np);
-    const {data,error}=await SB.rpc('hml_change_pw',{p_username:u,p_old_hash:oldHash,p_new_salt:newSalt,p_new_hash:newHash});
+    const {data,error}=await RAWSB.rpc('hml_change_pw',{p_username:u,p_old_hash:oldHash,p_new_salt:newSalt,p_new_hash:newHash});
     if(error) throw error;
     if(data===true){ try{ logAct('수정','auth','비밀번호 변경'); }catch(e){} closeModal(); toast('✅ 비밀번호가 변경되었습니다'); }
     else setMsg('변경 실패 — 현재 비밀번호를 확인하세요');
