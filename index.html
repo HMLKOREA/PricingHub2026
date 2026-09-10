@@ -409,7 +409,8 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
     <div id="scopeSw" class="scopesw"></div>
     <div class="userbar" id="userbar" style="display:none">
       <div class="av" id="ubAv">·</div>
-      <div><div class="un" id="ubName">·</div><div class="ut" id="ubTitle">·</div></div>
+      <div style="flex:1;min-width:0"><div class="un" id="ubName">·</div><div class="ut" id="ubTitle">·</div></div>
+      <button class="lo" onclick="openPwChange()" title="비밀번호 변경" style="margin-left:auto">🔑</button>
       <button class="lo" onclick="doLogout()">로그아웃</button>
     </div>
     <div class="conn"><span id="dot" class="dot"></span><span id="connTxt">연결 확인 중…</span></div>
@@ -3692,6 +3693,35 @@ window.doLogin=async function(ev){ if(ev)ev.preventDefault();
   return false;
 };
 window.doLogout=function(){ try{ logAct('로그아웃','auth',(ME&&(ME.name||ME.u)||'')+' 로그아웃'); }catch(e){} try{localStorage.removeItem(AUTH_KEY);}catch(e){} ME=null; setTimeout(()=>location.reload(),120); };
+/* ── 비밀번호 변경 (본인) ── */
+window.openPwChange=function(){ if(!ME){ toast('로그인이 필요합니다',true); return; }
+  showModal(`<h3>🔑 비밀번호 변경</h3><div class="d" style="margin-bottom:10px">${esc((ME.name||ME.u))} 님 · 본인 계정 비밀번호를 변경합니다.</div>
+    <div class="fld" style="margin-bottom:8px"><label>현재 비밀번호</label><input id="pwCur" type="password" autocomplete="current-password" style="width:100%"></div>
+    <div class="fld" style="margin-bottom:8px"><label>새 비밀번호 (4자 이상)</label><input id="pwNew" type="password" autocomplete="new-password" style="width:100%"></div>
+    <div class="fld" style="margin-bottom:6px"><label>새 비밀번호 확인</label><input id="pwNew2" type="password" autocomplete="new-password" style="width:100%" onkeydown="if(event.key==='Enter')doPwChange()"></div>
+    <div id="pwMsg" class="d" style="min-height:16px;color:var(--loss)"></div>
+    <div class="row" style="margin-top:6px"><button class="btn win" onclick="doPwChange()">변경</button></div>`);
+};
+window.doPwChange=async function(){
+  const cur=($('#pwCur')||{}).value||'', np=($('#pwNew')||{}).value||'', np2=($('#pwNew2')||{}).value||'';
+  const msg=$('#pwMsg'); const setMsg=(t,ok)=>{ if(msg){ msg.textContent=t; msg.style.color=ok?'var(--win)':'var(--loss)'; } };
+  if(!cur||!np){ setMsg('모든 칸을 입력하세요'); return; }
+  if(np.length<4){ setMsg('새 비밀번호는 4자 이상'); return; }
+  if(np!==np2){ setMsg('새 비밀번호가 일치하지 않습니다'); return; }
+  if(np===cur){ setMsg('현재와 다른 비밀번호를 입력하세요'); return; }
+  try{
+    const u=ME.u; const rows=await q('app_users',b=>b.eq('username',u).limit(1)); const row=rows&&rows[0];
+    if(!row){ setMsg('계정 조회 실패'); return; }
+    const oldHash=await sha256hex(row.salt+cur);
+    if(oldHash!==row.pw_hash){ setMsg('현재 비밀번호가 올바르지 않습니다'); return; }
+    const newSalt=[...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,'0')).join('');
+    const newHash=await sha256hex(newSalt+np);
+    const {data,error}=await SB.rpc('hml_change_pw',{p_username:u,p_old_hash:oldHash,p_new_salt:newSalt,p_new_hash:newHash});
+    if(error) throw error;
+    if(data===true){ try{ logAct('수정','auth','비밀번호 변경'); }catch(e){} closeModal(); toast('✅ 비밀번호가 변경되었습니다'); }
+    else setMsg('변경 실패 — 현재 비밀번호를 확인하세요');
+  }catch(e){ setMsg('오류: '+(e.message||e)); }
+};
 function applyUserbar(){ if(!ME)return; const ub=$('#userbar'); if(!ub)return; ub.style.display='flex';
   $('#ubName').textContent=((ME.name||ME.u)+' '+(ME.title||'')).trim();
   $('#ubTitle').textContent=(ME.role==='admin'?'관리자':'직원')+' · '+(ME.u||'').toUpperCase();
