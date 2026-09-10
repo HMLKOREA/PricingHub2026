@@ -449,7 +449,7 @@ function wrapSB(real){ if(!real)return real;
 SB=wrapSB(SB);
 
 const STAGES=["접수","견적중","제출","협상","수주","실주","보류","취소"];
-const STAFF=["안진오","권영재","김도현","노희수","김진아","전예지"];
+const STAFF=["안진오","황선화","권영재","조소영","김도현","노희수","김진아","전예지"];
 const OPEN=["접수","견적중","제출","협상"];
 const WEIGHT={"접수":0.1,"견적중":0.25,"제출":0.5,"협상":0.75,"수주":1};
 const CH=["LOCAL","OVERSEA","NOMI","PARTNER","공공입찰"];
@@ -506,10 +506,10 @@ let CURRENT='dashboard';
 const ADMIN_VIEWS=['dashboard','perms','archive','import','logs'];
 /* ===== 담당자 조직 순서(직급) · 공용 정렬/제외 — 모든 담당자별 현황에서 동일 로직 ===== */
 const STAFF_ORDER=[
-  {u:'ceo',n:'안진오'},{u:'luna',n:'권영재'},{u:'emily',n:'김도현'},
-  {u:'jina',n:'김진아'},{u:'yeji',n:'전예지'},{u:'heesoo',n:'노희수'},{u:'admin',n:'관리자'}
+  {u:'ceo',n:'안진오'},{u:'grace',n:'황선화'},{u:'luna',n:'권영재'},{u:'sophia',n:'조소영'},
+  {u:'emily',n:'김도현'},{u:'heesoo',n:'노희수'},{u:'jina',n:'김진아'},{u:'yeji',n:'전예지'},{u:'admin',n:'관리자'}
 ];
-const STAFF_EXCLUDE=['grace','황선화']; // 황선화: 입사전 → 담당자별 현황에서 제외
+const STAFF_EXCLUDE=[]; // 전원 활동 중 — 제외 없음
 function staffRank(v){ const s=String(v||'').toLowerCase().trim();
   for(let i=0;i<STAFF_ORDER.length;i++){ const o=STAFF_ORDER[i]; if(s===o.u||s===o.n.toLowerCase())return i; } return 500; }
 function staffExcluded(v){ const s=String(v||'').toLowerCase().trim(); return STAFF_EXCLUDE.some(x=>s===x.toLowerCase()); }
