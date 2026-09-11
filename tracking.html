@@ -34,6 +34,7 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",syste
 .ic{width:46px;height:46px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1px solid var(--line);padding:4px}
 .ic img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
 .fb{width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:17px;border-radius:8px}
+.chip{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;letter-spacing:.3px;border-radius:7px;text-align:center;line-height:1;padding:2px}
 .info{min-width:0;flex:1}
 .nm{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .sub{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
@@ -65,16 +66,16 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",syste
 const CATS=[{k:'all',t:'전체'},{k:'kr',t:'🇰🇷 국적선사'},{k:'global',t:'🌐 글로벌 선사'},{k:'air',t:'✈ 항공화물'},{k:'exp',t:'📦 특송'}];
 const C=[
  {n:'HMM',s:'대한민국 · 원양',h:'hmm21.com',c:'#00a19c',cat:'kr'},
- {n:'고려해운 KMTC',s:'대한민국 · 근해',h:'ekmtc.com',c:'#003a70',cat:'kr'},
- {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',ld:'sinokor.co.kr',c:'#0b4ea2',cat:'kr'},
- {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',ld:'heungaline.com',c:'#d6001c',cat:'kr'},
- {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',ld:'namsung.co.kr',c:'#004a99',cat:'kr'},
- {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',ld:'panocean.com',c:'#003f87',cat:'kr'},
- {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',ld:'ckline.co.kr',c:'#0060a9',cat:'kr'},
- {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',ld:'pcsline.co.kr',c:'#1a4f9c',cat:'kr'},
- {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',ld:'djship.co.kr',c:'#0b57a4',cat:'kr'},
+ {n:'고려해운 KMTC',s:'대한민국 · 근해',h:'ekmtc.com',c:'#003a70',cat:'kr',abbr:'KMTC'},
+ {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',ld:'sinokor.co.kr',c:'#0b4ea2',cat:'kr',abbr:'장금'},
+ {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',ld:'heungaline.com',c:'#d6001c',cat:'kr',abbr:'흥아'},
+ {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',ld:'namsung.co.kr',c:'#004a99',cat:'kr',abbr:'남성'},
+ {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',ld:'panocean.com',c:'#003f87',cat:'kr',abbr:'PAN'},
+ {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',ld:'ckline.co.kr',c:'#0060a9',cat:'kr',abbr:'CK'},
+ {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',ld:'pcsline.co.kr',c:'#1a4f9c',cat:'kr',abbr:'PCS'},
+ {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',ld:'djship.co.kr',c:'#0b57a4',cat:'kr',abbr:'동진'},
  {n:'태영상선 Taiyoung',s:'대한민국 · 근해',h:'eservice.taiyoungship.co.kr',ld:'taiyoungship.co.kr',c:'#135ba1',cat:'kr'},
- {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',ld:'smlines.com',c:'#d81a30',cat:'kr'},
+ {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',ld:'smlines.com',c:'#d81a30',cat:'kr',abbr:'SM'},
  {n:'범주해운 Pancon',s:'대한민국 · 근해',h:'pancon.co.kr',c:'#16559e',cat:'kr'},
  {n:'두우해운 Doowoo',s:'대한민국 · 근해',h:'doowoo.co.kr',c:'#1a5aa0',cat:'kr'},
  {n:'MAERSK',s:'덴마크 · 원양',h:'maersk.com',c:'#42b0d5',cat:'global'},
@@ -136,9 +137,11 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;',
 function initial(n){const m=n.replace(/[^A-Za-z가-힣]/g,'');return (m[0]||'?').toUpperCase();}
 function fbk(img){ if(img.dataset.s!=='1'){img.dataset.s='1';img.src='https://icons.duckduckgo.com/ip3/'+img.dataset.d+'.ico';}
   else{const sp=document.createElement('span');sp.className='fb';sp.style.background=img.dataset.c;sp.textContent=img.dataset.i;if(img.parentNode)img.parentNode.replaceChild(sp,img);} }
-function card(x){const url='https://'+x.h+'/';const ld=x.ld||x.h;const logo='https://icon.horse/icon/'+ld;
+function card(x){const url='https://'+x.h+'/';const ld=x.ld||x.h;
+  const ic=x.abbr?`<span class="chip" style="background:${x.c}">${esc(x.abbr)}</span>`
+    :`<img src="https://icon.horse/icon/${ld}" alt="" loading="lazy" data-d="${ld}" data-c="${x.c}" data-i="${initial(x.n)}" onerror="fbk(this)">`;
   return `<a class="cc" href="${url}" target="_blank" rel="noopener" style="--bc:${x.c}">
-    <span class="ic"><img src="${logo}" alt="" loading="lazy" data-d="${ld}" data-c="${x.c}" data-i="${initial(x.n)}" onerror="fbk(this)"></span>
+    <span class="ic">${ic}</span>
     <span class="info"><span class="nm">${esc(x.n)}</span><span class="sub">${esc(x.s)} · ${esc(x.h)}</span></span>
     <span class="go">↗</span></a>`;}
 function render(){const q=(document.getElementById('q').value||'').toLowerCase().trim();
