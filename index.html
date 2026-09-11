@@ -351,6 +351,76 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 .tray-h{font-size:11px;color:var(--mut2);font-weight:700;padding:4px;cursor:pointer;user-select:none}
 .tray-body.hide{display:none}
 .tray-sec{font-size:10px;color:var(--mut2);font-weight:700;margin:8px 2px 5px}
+
+/* ===== 📦 CBM 3D 적입 시뮬레이터 (네임스페이스: .cbmwrap) ===== */
+.cbmwrap{--navy:#0b2e4f;--navy2:#123f68;--blue:#1a6fb5;--sky:#e8f1fa;--org:#f2911e;--org2:#ffb14d;
+  --panel2:#f5f8fc;--line:#dce4ee;--txt:#17202b;--mut:#5b6b80;--mut2:#8b98a9;color:var(--txt)}
+.cbmwrap *{box-sizing:border-box}
+.cbm-hd{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.15);margin-bottom:12px}
+.cbm-logo{width:38px;height:38px;border-radius:8px;background:#fff;padding:3px;object-fit:contain}
+.cbm-brand{font-weight:800;font-size:19px;letter-spacing:.3px;line-height:1.05}
+.cbm-brand small{display:block;font-weight:600;font-size:11px;color:var(--org2);letter-spacing:1.5px}
+.cbm-moqv{background:#fff;color:#111;border:1.5px solid var(--org);border-radius:8px;padding:5px 11px;font-weight:800;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:2px}
+.cbm-moqv span{color:var(--org)}
+.cbm-moqv:hover{background:#fff7ee}
+.cbmgrid{display:grid;grid-template-columns:340px 1fr 300px;gap:12px;align-items:start}
+.cbm-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(16,32,60,.05)}
+.cbm-card h3{margin:0 0 8px;font-size:14px;color:var(--navy);display:flex;align-items:center;gap:6px;border-bottom:2px solid var(--sky);padding-bottom:6px}
+.cbm-seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px;margin-bottom:10px}
+.cbm-seg button{flex:1;border:0;background:transparent;padding:7px;border-radius:7px;font-weight:700;color:var(--mut);cursor:pointer;font-size:13px}
+.cbm-seg button.on{background:var(--navy);color:#fff}
+.cbmwrap label.cbm-fld{display:block;font-size:11px;color:var(--mut);margin:8px 0 3px;font-weight:700}
+.cbmwrap #cbmContSel,.cbmwrap .cbm-cg input{font-family:inherit}
+.cbmwrap select,.cbmwrap .cbm-cg input[type=number],.cbmwrap .cbm-cg input[type=text]{padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--txt)}
+.cbmwrap #cbmContSel{width:100%}
+.cbm-ctopt{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.cbm-ctopt label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt);background:var(--panel2);border:1px solid var(--line);padding:5px 9px;border-radius:8px;cursor:pointer}
+.cbm-presets{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.cbm-presets button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--navy);font-weight:600}
+.cbm-presets button:hover{background:var(--sky)}
+.cbm-cg{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.cbm-cg th{background:var(--navy);color:#fff;font-weight:600;padding:4px 3px;font-size:11px}
+.cbm-cg td{border-bottom:1px solid var(--line);padding:2px;text-align:center}
+.cbm-cg td input{padding:4px;border:1px solid transparent;background:transparent;text-align:center;font-size:12px;width:44px}
+.cbm-cg td.nm{ }
+.cbm-cg td.nm input{text-align:left;width:100%}
+.cbm-cg td input:focus{border-color:var(--blue);background:#fff}
+.cbm-cg tr.sel{background:var(--sky)}
+.cbm-cg .sw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.2);display:inline-block;cursor:pointer}
+.cbm-rowbtns{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.cbm-btn{border:0;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer;font-size:12px}
+.cbm-btn.g{background:var(--panel2);color:var(--navy);border:1px solid var(--line)}
+.cbm-btn.g:hover{background:var(--sky)}
+.cbm-btn.o{background:var(--org);color:#fff}
+.cbm-btn.o:hover{background:#e07f0a}
+.cbm-btn.run{background:linear-gradient(120deg,var(--org),var(--org2));color:#fff;width:100%;padding:12px;font-size:15px;margin-top:10px;box-shadow:0 3px 10px rgba(242,145,30,.35)}
+.cbm-btn.run:hover{filter:brightness(1.05)}
+#cbmScene{width:100%;height:520px;background:radial-gradient(circle at 50% 25%,#20476f,#0a1826);border-radius:12px;position:relative;overflow:hidden}
+#cbmScene canvas{display:block}
+.cbm-scenebar{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;z-index:5}
+.cbm-scenebar button{background:rgba(255,255,255,.92);border:0;border-radius:7px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--navy)}
+.cbm-scenebar button:hover{background:#fff}
+.cbm-scenehint{position:absolute;right:10px;bottom:10px;color:#cfe0f0;font-size:11px;background:rgba(0,0,0,.3);padding:4px 8px;border-radius:6px;z-index:5}
+.cbm-wm{position:absolute;right:12px;top:10px;z-index:4;opacity:.85}
+.cbm-wm img{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.25);padding:2px}
+.cbm-contcap{position:absolute;left:10px;bottom:10px;color:#e8f1fa;font-size:12px;font-weight:700;background:rgba(11,46,79,.6);padding:5px 10px;border-radius:8px;z-index:5}
+.cbm-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.cbm-kpi .k{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+.cbm-kpi .k b{display:block;font-size:20px;color:var(--navy);font-variant-numeric:tabular-nums}
+.cbm-kpi .k span{font-size:11px;color:var(--mut)}
+.cbm-kpi .k.hl{background:linear-gradient(120deg,#fff7ee,#ffefd8);border-color:var(--org)}
+.cbm-kpi .k.hl b{color:var(--org)}
+.cbm-reco{background:var(--sky);border:1px solid #bcd7ef;border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px}
+.cbm-reco .big{font-size:16px;font-weight:800;color:var(--navy)}
+.cbm-bar{height:9px;background:#dbe6f1;border-radius:5px;overflow:hidden;margin:5px 0}
+.cbm-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--org))}
+.cbm-contlist .ci{border:1px solid var(--line);border-radius:9px;padding:8px;margin-bottom:7px;font-size:12px}
+.cbm-contlist .ci b{color:var(--navy)}
+.cbm-msg{font-size:12px;color:var(--mut);text-align:center;padding:16px 6px}
+.cbm-warnbox{background:#fff4f4;border:1px solid #f2c4c4;color:#b23b3b;border-radius:9px;padding:8px;font-size:12px;margin-top:8px}
+.cbm-foot{color:var(--mut2);font-size:11px;text-align:center;padding:14px}
+@media(max-width:1100px){.cbmgrid{grid-template-columns:1fr}#cbmScene{height:420px}}
+
 </style>
 </head>
 <body>
@@ -3587,14 +3657,7 @@ window.importPartners=async function(input){
   }catch(e){ st.textContent='❌ '+(e.message||e); toast(e.message||e,true); } };
 
 /* ================= 물류도구 ================= */
-window.openCBM=function(){
-  showModal(`<h3>📦 CBM · R.TON 계산기</h3><div class="d">치수(cm)·수량·중량 입력 → CBM과 운임톤(R.TON) 자동 계산</div>
-    <div class="row" style="margin:10px 0">
-      <input id="cbmL" placeholder="가로 L(cm)" style="width:100px"><input id="cbmW" placeholder="세로 W(cm)" style="width:100px">
-      <input id="cbmH" placeholder="높이 H(cm)" style="width:100px"><input id="cbmQ" placeholder="수량" value="1" style="width:70px">
-      <input id="cbmKg" placeholder="총중량(kg)" style="width:100px"><button class="btn primary" onclick="runCBM()">계산</button></div>
-    <div id="cbmOut" class="d">값을 넣고 계산을 누르세요.</div>`);
-};
+window.openCBM=function(){ go('cbm'); };
 window.runCBM=function(){
   const L=num($('#cbmL').value),W=num($('#cbmW').value),H=num($('#cbmH').value),Q=num($('#cbmQ').value)||1,KG=num($('#cbmKg').value);
   if(L==null||W==null||H==null){ $('#cbmOut').textContent='가로·세로·높이를 입력하세요.'; return; }
@@ -3603,6 +3666,295 @@ window.runCBM=function(){
     +(KG!=null?` · 중량톤 ${(KG/1000).toFixed(3)} → <b style="color:var(--win)">R.TON ${rton.toFixed(3)}</b>`:'')+`</div>
     <div class="d" style="margin-top:6px">R.TON = max(CBM, 중량톤) · 1 CBM = ${(cbm/Q).toFixed(3)}m³/개 × ${Q}개</div>`;
 };
+/* ================= 📦 CBM 3D 적입 시뮬레이터 (물류도구) ================= */
+VIEWS.cbm=function(){
+  document.getElementById('main').innerHTML=`
+  <div class="cbmwrap">
+    <div class="cbm-hd">
+      <img src="${SHIP_URI}" alt="HAMEL" class="cbm-logo">
+      <div class="cbm-brand">HAMEL KOREA<small>PROJECT FREIGHT · CBM LOAD SIMULATOR</small></div>
+      <div style="flex:1"></div>
+      <a class="cbm-moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span>Q</span>V.KR ↗</a>
+    </div>
+    <div class="cbmgrid">
+      <div class="cbm-card">
+        <h3>⚙ 옵션 &amp; 화물 입력</h3>
+        <div class="cbm-seg" id="cbmModeSeg">
+          <button class="on" data-mode="cont" onclick="CBMSIM.setMode('cont')">🚛 컨테이너 적입</button>
+          <button data-mode="calc" onclick="CBMSIM.setMode('calc')">📐 단순 CBM계산</button>
+        </div>
+        <label class="cbm-fld">컨테이너 타입</label>
+        <select id="cbmContSel">
+          <option value="auto">🔁 자동 추천</option>
+          <option value="20DRY">20FT DRY (33.2 CBM)</option>
+          <option value="40DRY">40FT DRY (67.7 CBM)</option>
+          <option value="40HQ">40FT HQ (76.3 CBM)</option>
+        </select>
+        <div class="cbm-ctopt">
+          <label><input type="checkbox" id="cbmOptTip" checked> 눕히기/회전 허용</label>
+          <label><input type="checkbox" id="cbmOptCog"> 무게중심 표시</label>
+        </div>
+        <label class="cbm-fld">프리셋 (클릭하면 행 추가)</label>
+        <div class="cbm-presets" id="cbmPresets"></div>
+        <label class="cbm-fld">패킹리스트</label>
+        <div class="cbm-rowbtns">
+          <button class="cbm-btn g" onclick="CBMSIM.dlTemplate()">📥 엑셀 양식</button>
+          <button class="cbm-btn o" onclick="document.getElementById('cbmXls').click()">📂 패킹리스트 불러오기</button>
+          <input type="file" id="cbmXls" accept=".xlsx,.xls" style="display:none" onchange="CBMSIM.importXls(this.files[0])">
+        </div>
+        <label class="cbm-fld" style="margin-top:10px">화물 정보 (치수 cm · 중량 kg)</label>
+        <table class="cbm-cg" id="cbmTable">
+          <thead><tr><th>#</th><th>품명</th><th>L</th><th>W</th><th>H</th><th>kg</th><th>수량</th><th>2단</th><th>색</th></tr></thead>
+          <tbody id="cbmBody"></tbody>
+        </table>
+        <div class="cbm-rowbtns">
+          <button class="cbm-btn g" onclick="CBMSIM.addRow()">＋ 행추가</button>
+          <button class="cbm-btn g" onclick="CBMSIM.delSel()">✂ 선택삭제</button>
+          <button class="cbm-btn g" onclick="CBMSIM.clearRows()">🗑 전체삭제</button>
+        </div>
+        <button class="cbm-btn run" onclick="CBMSIM.run()">▶ 적입 계산 실행</button>
+      </div>
+      <div class="cbm-card">
+        <h3>🧊 3D 적입 시뮬레이션</h3>
+        <div id="cbmScene">
+          <div class="cbm-scenebar">
+            <button onclick="CBMSIM.view('iso')">🔄 시점</button>
+            <button onclick="CBMSIM.view('top')">⬇ 탑뷰</button>
+            <button onclick="CBMSIM.view('side')">➡ 측면</button>
+            <button onclick="CBMSIM.capture()">📸 캡처</button>
+          </div>
+          <div class="cbm-wm"><img src="${SHIP_URI}" alt=""></div>
+          <div class="cbm-contcap" id="cbmContCap">화물을 입력하고 ▶ 계산을 실행하세요</div>
+          <div class="cbm-scenehint">좌드래그:회전 · 우드래그:이동 · 휠:확대</div>
+        </div>
+      </div>
+      <div class="cbm-card">
+        <h3>📊 적입 결과</h3>
+        <div id="cbmRes"><div class="cbm-msg">계산 후 표시됩니다.</div></div>
+      </div>
+    </div>
+    <div class="cbm-foot">© HAMEL KOREA · Project Freight Forwarding — CBM Load Simulator · MOQV.KR</div>
+  </div>`;
+  CBMSIM.init();
+};
+
+window.CBMSIM=(function(){
+  const CONTAINERS={
+    "20DRY":{name:"20FT DRY",L:590,W:235,H:239,payload:28000,cap:33.2},
+    "40DRY":{name:"40FT DRY",L:1203,W:235,H:239,payload:26700,cap:67.7},
+    "40HQ" :{name:"40FT HQ", L:1203,W:235,H:269,payload:26500,cap:76.3},
+  };
+  const PALETTE=["#1a6fb5","#f2911e","#1f9d57","#d64545","#7b5cd6","#e0459b","#0aa2a2","#c98a1b","#5b6b80","#2b6cb0"];
+  const PRESETS=[
+    {label:"📦 박스S",L:40,W:30,H:30,kg:10},{label:"📦 박스M",L:60,W:40,H:40,kg:20},
+    {label:"📦 박스L",L:120,W:80,H:80,kg:60},{label:"🟫 KR파렛",L:110,W:110,H:15,kg:25},
+    {label:"🟫 EU파렛",L:120,W:80,H:15,kg:22},{label:"🛢 드럼",L:60,W:60,H:90,kg:180},
+  ];
+  let rows=[], selIdx=-1, lastResult=null, MODE='cont', activeCont=0;
+  const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmt=(n,d)=>Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+  const gid=id=>document.getElementById(id);
+
+  /* ---- 적입 엔진 ---- */
+  function orientations(b,allowTip){const set=new Set();const push=(l,w,h)=>set.add(l+"|"+w+"|"+h);
+    if(allowTip){const d=[b.L,b.W,b.H];[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]].forEach(p=>push(d[p[0]],d[p[1]],d[p[2]]));}
+    else{push(b.L,b.W,b.H);push(b.W,b.L,b.H);}
+    return [...set].map(s=>{const a=s.split("|").map(Number);return{l:a[0],w:a[1],h:a[2]};});}
+  function ov(a,o){return(a.x<o.x+o.l&&a.x+a.l>o.x&&a.y<o.y+o.w&&a.y+a.w>o.y&&a.z<o.z+o.h&&a.z+a.h>o.z);}
+  function canPlace(pos,dim,placed,cont){
+    if(pos.x+dim.l>cont.L+0.01||pos.y+dim.w>cont.W+0.01||pos.z+dim.h>cont.H+0.01)return false;
+    const c={x:pos.x,y:pos.y,z:pos.z,l:dim.l,w:dim.w,h:dim.h};
+    for(const p of placed){if(ov(c,p))return false;}
+    if(pos.z<=0.01)return true;
+    let sup=0;const base=dim.l*dim.w;
+    for(const p of placed){ if(Math.abs((p.z+p.h)-pos.z)>0.5)continue;
+      if(p.canStack===false)return false;
+      if(p.tier!=null&&p.maxTier!=null&&(p.tier+1)>p.maxTier)return false;
+      const ox=Math.max(0,Math.min(c.x+c.l,p.x+p.l)-Math.max(c.x,p.x));
+      const oy=Math.max(0,Math.min(c.y+c.w,p.y+p.w)-Math.max(c.y,p.y)); sup+=ox*oy; }
+    return sup>=base*0.70;}
+  function explode(boxes){const u=[];boxes.forEach((b,ti)=>{for(let i=0;i<b.qty;i++){
+      u.push({name:b.name||("화물"+(ti+1)),L:b.L,W:b.W,H:b.H,kg:b.kg||0,canStack:b.canStack!==false,maxTier:b.maxTier||99,color:b.color,typeIndex:ti});}});
+    u.sort((a,b)=>(b.L*b.W*b.H)-(a.L*a.W*a.H));return u;}
+  function packOne(units,cont,allowTip){
+    const placed=[];let eps=[{x:0,y:0,z:0}];let weight=0;const leftover=[];
+    for(const u of units){ if(weight+u.kg>cont.payload){leftover.push(u);continue;}
+      const ors=orientations(u,allowTip); eps.sort((a,b)=>a.z-b.z||a.y-b.y||a.x-b.x); let done=false;
+      for(const ep of eps){ for(const o of ors){ if(canPlace(ep,o,placed,cont)){
+        let tier=0; if(ep.z>0.01){for(const p of placed){if(Math.abs((p.z+p.h)-ep.z)<0.5)tier=Math.max(tier,(p.tier||0)+1);}}
+        placed.push({x:ep.x,y:ep.y,z:ep.z,l:o.l,w:o.w,h:o.h,name:u.name,color:u.color,canStack:u.canStack,maxTier:u.maxTier,tier:tier,kg:u.kg,typeIndex:u.typeIndex});
+        weight+=u.kg; eps=eps.filter(e=>!(e.x===ep.x&&e.y===ep.y&&e.z===ep.z));
+        eps.push({x:ep.x+o.l,y:ep.y,z:ep.z});eps.push({x:ep.x,y:ep.y+o.w,z:ep.z});eps.push({x:ep.x,y:ep.y,z:ep.z+o.h});
+        const seen=new Set();eps=eps.filter(e=>{const k=Math.round(e.x)+","+Math.round(e.y)+","+Math.round(e.z);if(seen.has(k))return false;seen.add(k);return true;});
+        done=true;break;}} if(done)break; }
+      if(!done)leftover.push(u); }
+    return{placed,weight,leftover};}
+  function packAll(boxes,contKey,allowTip,maxCont){
+    const cont=CONTAINERS[contKey];let units=explode(boxes);const total=units.length;const containers=[];let g=0;
+    while(units.length&&g<(maxCont||30)){const r=packOne(units,cont,allowTip);if(r.placed.length===0)break;
+      const volUsed=r.placed.reduce((s,p)=>s+p.l*p.w*p.h,0)/1e6;
+      containers.push({placed:r.placed,weight:r.weight,volUsed,volPct:volUsed/cont.cap*100,wtPct:r.weight/cont.payload*100});
+      units=r.leftover;g++;}
+    return{cont,containers,loadedUnits:total-units.length,totalUnits:total,unloaded:units.length};}
+  function autoRecommend(boxes,allowTip){const order=["20DRY","40DRY","40HQ"];let best=null;
+    for(const k of order){const r=packAll(boxes,k,allowTip,30); if(r.unloaded>0&&r.containers.length>=30)continue;
+      const score={key:k,r,cont:CONTAINERS[k].cap*r.containers.length,n:r.containers.length,unloaded:r.unloaded};
+      if(!best)best=score;
+      else if(score.unloaded<best.unloaded)best=score;
+      else if(score.unloaded===best.unloaded&&score.cont<best.cont-0.01)best=score;
+      else if(score.unloaded===best.unloaded&&Math.abs(score.cont-best.cont)<0.01&&score.n<best.n)best=score;}
+    return best;}
+
+  /* ---- 입력 테이블 ---- */
+  function renderPresets(){gid('cbmPresets').innerHTML=PRESETS.map((p,i)=>`<button onclick="CBMSIM.addPreset(${i})">${p.label}</button>`).join('');}
+  function addPreset(i){const p=PRESETS[i];rows.push({name:p.label.replace(/^[^ ]+ /,''),L:p.L,W:p.W,H:p.H,kg:p.kg,qty:1,canStack:true,color:PALETTE[rows.length%PALETTE.length]});renderRows();}
+  function addRow(){rows.push({name:"화물"+(rows.length+1),L:"",W:"",H:"",kg:"",qty:1,canStack:true,color:PALETTE[rows.length%PALETTE.length]});renderRows();}
+  function clearRows(){rows=[];selIdx=-1;renderRows();}
+  function delSel(){if(selIdx>=0){rows.splice(selIdx,1);selIdx=-1;renderRows();}}
+  function renderRows(){const b=gid('cbmBody'); if(!b)return;
+    if(!rows.length){b.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--mut);padding:10px">＋ 행추가 · 프리셋 · 패킹리스트로 화물을 입력하세요</td></tr>`;return;}
+    b.innerHTML=rows.map((r,i)=>`<tr class="${i===selIdx?'sel':''}" onclick="CBMSIM.sel(${i})">
+      <td>${i+1}</td>
+      <td class="nm"><input value="${esc(r.name)}" onchange="CBMSIM.upd(${i},'name',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${r.L}" style="width:44px" onchange="CBMSIM.upd(${i},'L',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${r.W}" style="width:44px" onchange="CBMSIM.upd(${i},'W',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${r.H}" style="width:44px" onchange="CBMSIM.upd(${i},'H',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${r.kg}" style="width:48px" onchange="CBMSIM.upd(${i},'kg',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${r.qty}" style="width:40px" onchange="CBMSIM.upd(${i},'qty',this.value)" onclick="event.stopPropagation()"></td>
+      <td><input type="checkbox" ${r.canStack!==false?'checked':''} onchange="CBMSIM.upd(${i},'canStack',this.checked)" onclick="event.stopPropagation()"></td>
+      <td><span class="sw" style="background:${r.color}" onclick="event.stopPropagation();CBMSIM.cycleColor(${i})"></span></td>
+    </tr>`).join('');}
+  function sel(i){selIdx=i;renderRows();}
+  function upd(i,k,v){if(k==='canStack')rows[i][k]=v;else if(['L','W','H','kg','qty'].includes(k))rows[i][k]=(v===''?'':Number(v));else rows[i][k]=v;}
+  function cycleColor(i){const cur=PALETTE.indexOf(rows[i].color);rows[i].color=PALETTE[(cur+1)%PALETTE.length];renderRows();}
+
+  /* ---- 엑셀 ---- */
+  async function dlTemplate(){const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('패킹리스트');
+    ws.columns=[{header:'품명',key:'name',width:22},{header:'가로L(cm)',key:'L',width:12},{header:'세로W(cm)',key:'W',width:12},
+      {header:'높이H(cm)',key:'H',width:12},{header:'중량(kg)',key:'kg',width:12},{header:'수량',key:'qty',width:10},{header:'적재가능(Y/N)',key:'stack',width:14}];
+    ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B2E4F'}};
+    [['샘플 박스A',60,40,40,20,10,'Y'],['샘플 박스B',120,80,80,60,4,'Y'],['철재 팔레트',110,110,90,300,2,'N']].forEach(r=>ws.addRow(r));
+    const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='하멜_패킹리스트_양식.xlsx';a.click();}
+  function findCol(H,cands){for(let i=0;i<H.length;i++){const h=String(H[i]||'').toLowerCase().replace(/[\s()（）_\-]/g,'');for(const c of cands){if(h.includes(c))return i;}}return -1;}
+  async function importXls(file){ if(!file)return;
+    try{ const buf=await file.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);const ws=wb.worksheets[0];const grid=[];
+      ws.eachRow(row=>{const arr=[];row.eachCell({includeEmpty:true},c=>arr.push(c.value&&c.value.result!=null?c.value.result:c.value));grid.push(arr);});
+      if(grid.length<2){alert('데이터가 없습니다.');return;}
+      let hi=0; for(let i=0;i<Math.min(5,grid.length);i++){const j=grid[i].map(x=>String(x||'').toLowerCase());
+        if(j.some(v=>/가로|length|길이|^l$|l\(/.test(v))&&j.some(v=>/높이|height|^h$|h\(/.test(v))){hi=i;break;}}
+      const H=grid[hi].map(x=>String(x||''));
+      const cName=findCol(H,['품명','품목','name','item','description','descr','제품']);
+      const cL=findCol(H,['가로','length','길이','l(','lcm']);const cW=findCol(H,['세로','width','폭','w(','wcm']);
+      const cH=findCol(H,['높이','height','h(','hcm']);const cKg=findCol(H,['중량','weight','kg','무게']);
+      const cQ=findCol(H,['수량','qty','quantity','ea','개수','pcs']);const cS=findCol(H,['적재','stack','단적','y/n']);
+      if(cL<0||cW<0||cH<0){alert('L/W/H(가로·세로·높이) 컬럼을 찾지 못했습니다. 양식을 확인하세요.');return;}
+      const nr=[]; for(let i=hi+1;i<grid.length;i++){const g=grid[i];const L=Number(g[cL]),W=Number(g[cW]),Hh=Number(g[cH]);
+        if(!(L>0&&W>0&&Hh>0))continue; const st=cS>=0?String(g[cS]||'').toLowerCase():'';
+        nr.push({name:(cName>=0?String(g[cName]||''):'')||('화물'+(nr.length+1)),L,W,H:Hh,kg:cKg>=0?(Number(g[cKg])||0):0,
+          qty:cQ>=0?(Number(g[cQ])||1):1,canStack:!(st==='n'||st==='no'||st==='불가'||st==='x'),color:PALETTE[nr.length%PALETTE.length]});}
+      if(!nr.length){alert('유효한 화물 행이 없습니다.');return;}
+      rows=nr;selIdx=-1;renderRows();gid('cbmXls').value='';
+      try{ if(typeof logAct==='function') logAct('입력','cbm','패킹리스트 '+nr.length+'건'); }catch(e){}
+      alert(nr.length+'개 화물을 불러왔습니다. ▶ 적입 계산을 실행하세요.');
+    }catch(e){alert('엑셀 파싱 오류: '+e.message);} }
+
+  /* ---- 실행/결과 ---- */
+  function collect(){const bs=[];for(const r of rows){const L=Number(r.L),W=Number(r.W),Hh=Number(r.H),q=Number(r.qty)||1;
+    if(L>0&&W>0&&Hh>0&&q>0)bs.push({name:r.name,L,W,H:Hh,kg:Number(r.kg)||0,qty:q,canStack:r.canStack!==false,color:r.color,maxTier:99});}return bs;}
+  function setMode(m){document.querySelectorAll('#cbmModeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));MODE=m;}
+  function run(){ const boxes=collect(); if(!boxes.length){alert('가로·세로·높이·수량이 유효한 화물을 최소 1개 입력하세요.');return;}
+    let totCbm=0,totKg=0,totPcs=0,totVolWt=0;
+    boxes.forEach(b=>{const cbm=b.L*b.W*b.H/1e6;totCbm+=cbm*b.qty;totKg+=b.kg*b.qty;totPcs+=b.qty;totVolWt+=(b.L*b.W*b.H/6000)*b.qty;});
+    const metrics={totCbm,totKg,totPcs,rton:Math.max(totCbm,totKg/1000),airChg:Math.max(totKg,totVolWt),totVolWt};
+    if(MODE==='calc'){renderCalc(metrics);return;}
+    const allowTip=gid('cbmOptTip').checked;const selv=gid('cbmContSel').value;let key,result;
+    if(selv==='auto'){const rec=autoRecommend(boxes,allowTip);if(!rec){alert('어느 컨테이너에도 들어가지 않는 치수입니다.');return;}key=rec.key;result=rec.r;}
+    else{key=selv;result=packAll(boxes,key,allowTip,30);}
+    lastResult={key,result,metrics,boxes};activeCont=0;renderResult();
+    draw3D(result.containers[0],CONTAINERS[key],gid('cbmOptCog').checked);
+    try{ if(typeof logAct==='function') logAct('입력','cbm',CONTAINERS[key].name+' × '+result.containers.length+'대'); }catch(e){}}
+  function renderCalc(m){gid('cbmRes').innerHTML=`
+    <div class="cbm-kpi">
+      <div class="k hl"><b>${fmt(m.totCbm,3)}</b><span>총 CBM (m³)</span></div>
+      <div class="k hl"><b>${fmt(m.rton,3)}</b><span>해상 R.TON</span></div>
+      <div class="k"><b>${fmt(m.totKg,1)}</b><span>총중량 kg</span></div>
+      <div class="k"><b>${fmt(m.totPcs)}</b><span>총 수량</span></div>
+      <div class="k"><b>${fmt(m.totVolWt,1)}</b><span>항공 용적중량 kg</span></div>
+      <div class="k"><b>${fmt(m.airChg,1)}</b><span>항공 청구중량 kg</span></div>
+    </div>
+    <div class="cbm-reco"><div>해상운임은 <b>R.TON(=max(CBM, 중량/1000))</b>, 항공운임은 <b>청구중량(=max(실중량, 용적중량))</b> 기준. 용적중량 = L×W×H(cm)÷6000.</div></div>`;
+    gid('cbmContCap').textContent='단순 CBM 계산 모드';}
+  function renderResult(){const {key,result,metrics}=lastResult;const cont=CONTAINERS[key];const nCont=result.containers.length;
+    const avgVol=result.containers.reduce((s,c)=>s+c.volPct,0)/(nCont||1);const selv=gid('cbmContSel').value;
+    let html=`<div class="cbm-kpi">
+        <div class="k hl"><b>${fmt(metrics.totCbm,2)}</b><span>총 CBM</span></div>
+        <div class="k hl"><b>${fmt(metrics.rton,2)}</b><span>R.TON</span></div>
+        <div class="k"><b>${fmt(metrics.totKg,0)}</b><span>총중량 kg</span></div>
+        <div class="k"><b>${fmt(metrics.totPcs)}</b><span>총 수량</span></div>
+      </div>
+      <div class="cbm-reco"><div class="big">${cont.name} × ${nCont}대 ${selv==='auto'?'(자동추천)':''}</div>
+        <div style="font-size:12px;color:var(--mut);margin-top:3px">적입 ${fmt(result.loadedUnits)}/${fmt(result.totalUnits)}개 · 평균 적재율 ${fmt(avgVol,1)}%</div>
+        <div class="cbm-bar"><i style="width:${Math.min(100,avgVol).toFixed(1)}%"></i></div></div><div class="cbm-contlist">`;
+    result.containers.forEach((c,i)=>{html+=`<div class="ci" style="cursor:pointer;${i===activeCont?'border-color:var(--org);background:#fff7ee':''}" onclick="CBMSIM.showCont(${i})">
+      <b>#${i+1} ${cont.name}</b> · ${c.placed.length}박스<br>적재율(부피) ${fmt(c.volPct,1)}% · 중량 ${fmt(c.weight,0)}kg (${fmt(c.wtPct,1)}%)
+      <div class="cbm-bar"><i style="width:${Math.min(100,c.volPct).toFixed(1)}%"></i></div></div>`;});
+    html+=`</div>`;
+    if(result.unloaded>0)html+=`<div class="cbm-warnbox">⚠ 미적입 ${result.unloaded}개 — 컨테이너 상한(30대) 초과 또는 단일 화물이 컨테이너보다 큽니다.</div>`;
+    gid('cbmRes').innerHTML=html;
+    gid('cbmContCap').textContent=`${cont.name} · #${activeCont+1}/${nCont} · 적재율 ${fmt(result.containers[activeCont].volPct,1)}%`;}
+  function showCont(i){if(!lastResult)return;activeCont=i;draw3D(lastResult.result.containers[i],CONTAINERS[lastResult.key],gid('cbmOptCog').checked);renderResult();}
+
+  /* ---- 3D ---- */
+  let renderer,scene,camera,raf;
+  let camTarget={x:0,y:0,z:0},camSph={r:1400,theta:0.9,phi:1.0};
+  function loadThree(){return new Promise((res,rej)=>{ if(window.THREE)return res();
+    const s=document.createElement('script');s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+    s.onload=()=>res();s.onerror=()=>rej(new Error('THREE 로드 실패'));document.head.appendChild(s);});}
+  function updateCam(){const s=camSph;camera.position.set(
+    camTarget.x+s.r*Math.sin(s.phi)*Math.cos(s.theta),camTarget.y+s.r*Math.cos(s.phi),camTarget.z+s.r*Math.sin(s.phi)*Math.sin(s.theta));
+    camera.lookAt(camTarget.x,camTarget.y,camTarget.z);}
+  function bindOrbit(el){let mode=0,px=0,py=0;
+    el.addEventListener('contextmenu',e=>e.preventDefault());
+    el.addEventListener('mousedown',e=>{mode=(e.button===2||e.shiftKey)?2:1;px=e.clientX;py=e.clientY;});
+    window.addEventListener('mouseup',()=>mode=0);
+    window.addEventListener('mousemove',e=>{if(!mode)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
+      if(mode===1){camSph.theta+=dx*0.01;camSph.phi=Math.max(0.15,Math.min(Math.PI-0.15,camSph.phi-dy*0.01));}
+      else{const s=camSph.r*0.0016;camTarget.x-=dx*s*Math.sin(camSph.theta);camTarget.z+=dx*s*Math.cos(camSph.theta);camTarget.y+=dy*s;}
+      updateCam();});
+    el.addEventListener('wheel',e=>{e.preventDefault();camSph.r=Math.max(300,Math.min(9000,camSph.r*(1+(e.deltaY>0?0.1:-0.1))));updateCam();},{passive:false});}
+  function initRenderer(){const host=gid('cbmScene');if(renderer)return;
+    renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+    renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.setSize(host.clientWidth,host.clientHeight);host.appendChild(renderer.domElement);
+    camera=new THREE.PerspectiveCamera(45,host.clientWidth/host.clientHeight,1,20000);bindOrbit(renderer.domElement);
+    window.addEventListener('resize',()=>{if(!renderer)return;const h=gid('cbmScene');if(!h)return;renderer.setSize(h.clientWidth,h.clientHeight);camera.aspect=h.clientWidth/h.clientHeight;camera.updateProjectionMatrix();});}
+  async function draw3D(contData,cont,showCog){
+    try{await loadThree();}catch(e){gid('cbmContCap').textContent='3D 로드 실패 (결과 수치는 정상)';return;}
+    initRenderer();scene=new THREE.Scene();
+    scene.add(new THREE.AmbientLight(0xffffff,0.75));
+    const dir=new THREE.DirectionalLight(0xffffff,0.7);dir.position.set(1,2,1.5);scene.add(dir);
+    const L=cont.L,W=cont.W,H=cont.H;camTarget={x:L/2,y:H/2,z:W/2};
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(L,4,W),new THREE.MeshLambertMaterial({color:0x24374a}));floor.position.set(L/2,-2,W/2);scene.add(floor);
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L,H,W)),new THREE.LineBasicMaterial({color:0x9fc4e8}));edges.position.set(L/2,H/2,W/2);scene.add(edges);
+    const door=new THREE.Mesh(new THREE.PlaneGeometry(W,H),new THREE.MeshBasicMaterial({color:0xf2911e,transparent:true,opacity:0.13,side:THREE.DoubleSide}));door.rotation.y=Math.PI/2;door.position.set(0.5,H/2,W/2);scene.add(door);
+    const CAP=2500;const list=contData.placed.slice(0,CAP);
+    list.forEach(p=>{const g=new THREE.BoxGeometry(p.l,p.h,p.w);const col=new THREE.Color(p.color||PALETTE[(p.typeIndex||0)%PALETTE.length]);
+      const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col}));m.position.set(p.x+p.l/2,p.z+p.h/2,p.y+p.w/2);scene.add(m);
+      const eg=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x0b2e4f,transparent:true,opacity:0.35}));eg.position.copy(m.position);scene.add(eg);});
+    if(showCog){let sx=0,sy=0,sz=0,sw=0;contData.placed.forEach(p=>{const w=p.kg||1;sx+=(p.x+p.l/2)*w;sy+=(p.z+p.h/2)*w;sz+=(p.y+p.w/2)*w;sw+=w;});
+      if(sw){const cog=new THREE.Mesh(new THREE.SphereGeometry(Math.max(8,L*0.02),16,16),new THREE.MeshBasicMaterial({color:0xff2d2d}));cog.position.set(sx/sw,sy/sw,sz/sw);scene.add(cog);}}
+    updateCam(); if(raf)cancelAnimationFrame(raf);
+    (function loop(){raf=requestAnimationFrame(loop); if(gid('cbmScene')){renderer.render(scene,camera);} else {cancelAnimationFrame(raf);} })();}
+  function view(v){if(v==='top'){camSph.theta=0.0001;camSph.phi=0.15;}else if(v==='side'){camSph.theta=0;camSph.phi=Math.PI/2;}else{camSph.theta=0.9;camSph.phi=1.0;}if(camera)updateCam();}
+  function capture(){if(!renderer){alert('먼저 계산을 실행하세요.');return;}const a=document.createElement('a');a.href=renderer.domElement.toDataURL('image/png');a.download='하멜_적입_시뮬레이션.png';a.click();}
+
+  function init(){ rows=[]; selIdx=-1; lastResult=null; MODE='cont'; activeCont=0;
+    renderer=null; scene=null; camera=null; if(raf){cancelAnimationFrame(raf);raf=null;}
+    renderPresets(); addPreset(1); addPreset(2); renderRows(); }
+
+  return {init,setMode,run,addRow,delSel,clearRows,addPreset,sel,upd,cycleColor,dlTemplate,importXls,showCont,view,capture};
+})();
+
 window.openIncoterms=function(){
   const rows=[['EXW','공장인도','수입자','수출자 공장에서 인수, 이후 전부 수입자'],
    ['FCA','운송인인도','수출자→지정지','지정장소/운송인 인도까지 수출자'],
