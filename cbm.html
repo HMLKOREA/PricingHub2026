@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하멜코리아 · CBM 적입 시뮬레이터</title>
+<style>
+:root{
+  --navy:#0b2e4f; --navy2:#123f68; --blue:#1a6fb5; --sky:#e8f1fa;
+  --org:#f2911e; --org2:#ffb14d; --ok:#1f9d57; --warn:#d9822b; --bad:#d64545;
+  --bg:#eef2f7; --panel:#fff; --panel2:#f5f8fc; --line:#dce4ee; --txt:#17202b; --mut:#5b6b80; --mut2:#8b98a9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:14px}
+.hd{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.hd .logo{display:flex;align-items:center;gap:10px}
+.hd .logo svg{display:block}
+.hd .brand{font-weight:800;font-size:19px;letter-spacing:.3px;line-height:1.05}
+.hd .brand small{display:block;font-weight:600;font-size:11px;color:var(--org2);letter-spacing:2px}
+.hd .tit{font-weight:700;font-size:15px;opacity:.95}
+.hd .sp{flex:1}
+.moqv{background:#fff;color:#111;border:1.5px solid var(--org);border-radius:8px;padding:5px 11px;font-weight:800;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:2px}
+.moqv .q{color:var(--org)}
+.moqv:hover{background:#fff7ee}
+.wrap{display:grid;grid-template-columns:340px 1fr 300px;gap:12px;padding:12px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(16,32,60,.05)}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--navy);display:flex;align-items:center;gap:6px;border-bottom:2px solid var(--sky);padding-bottom:6px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;padding:7px;border-radius:7px;font-weight:700;color:var(--mut);cursor:pointer;font-size:13px}
+.seg button.on{background:var(--navy);color:#fff}
+label.fld{display:block;font-size:11px;color:var(--mut);margin:8px 0 3px;font-weight:700}
+select,input[type=text],input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--txt)}
+.ctopt{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ctopt label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt);background:var(--panel2);border:1px solid var(--line);padding:5px 9px;border-radius:8px;cursor:pointer}
+.presets{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.presets button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--navy);font-weight:600}
+.presets button:hover{background:var(--sky)}
+table.cg{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+table.cg th{background:var(--navy);color:#fff;font-weight:600;padding:4px 3px;font-size:11px}
+table.cg td{border-bottom:1px solid var(--line);padding:2px}
+table.cg td input{padding:4px;border:1px solid transparent;background:transparent;text-align:center;font-size:12px}
+table.cg td input:focus{border-color:var(--blue);background:#fff}
+table.cg tr.sel{background:var(--sky)}
+table.cg .nm input{text-align:left}
+table.cg .sw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.2);display:inline-block;cursor:pointer}
+.rowbtns{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.btn{border:0;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer;font-size:12px}
+.btn.g{background:var(--panel2);color:var(--navy);border:1px solid var(--line)}
+.btn.g:hover{background:var(--sky)}
+.btn.o{background:var(--org);color:#fff}
+.btn.o:hover{background:#e07f0a}
+.btn.n{background:var(--navy);color:#fff}
+.btn.run{background:linear-gradient(120deg,var(--org),var(--org2));color:#fff;width:100%;padding:12px;font-size:15px;margin-top:10px;box-shadow:0 3px 10px rgba(242,145,30,.35)}
+.btn.run:hover{filter:brightness(1.05)}
+#scene{width:100%;height:520px;background:radial-gradient(circle at 50% 25%,#20476f,#0a1826);border-radius:12px;position:relative;overflow:hidden}
+#scene canvas{display:block}
+.scenebar{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;z-index:5}
+.scenebar button{background:rgba(255,255,255,.92);border:0;border-radius:7px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--navy)}
+.scenebar button:hover{background:#fff}
+.scenehint{position:absolute;right:10px;bottom:10px;color:#cfe0f0;font-size:11px;background:rgba(0,0,0,.3);padding:4px 8px;border-radius:6px;z-index:5}
+.wm{position:absolute;right:12px;top:10px;z-index:4;opacity:.9}
+.contcap{position:absolute;left:10px;bottom:10px;color:#e8f1fa;font-size:12px;font-weight:700;background:rgba(11,46,79,.6);padding:5px 10px;border-radius:8px;z-index:5}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kpi .k{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+.kpi .k b{display:block;font-size:20px;color:var(--navy);font-variant-numeric:tabular-nums}
+.kpi .k span{font-size:11px;color:var(--mut)}
+.kpi .k.hl{background:linear-gradient(120deg,#fff7ee,#ffefd8);border-color:var(--org)}
+.kpi .k.hl b{color:var(--org)}
+.reco{background:var(--sky);border:1px solid #bcd7ef;border-radius:10px;padding:10px;margin-bottom:10px}
+.reco .big{font-size:16px;font-weight:800;color:var(--navy)}
+.bar{height:9px;background:#dbe6f1;border-radius:5px;overflow:hidden;margin:5px 0}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--org))}
+.contlist .ci{border:1px solid var(--line);border-radius:9px;padding:8px;margin-bottom:7px;font-size:12px}
+.contlist .ci b{color:var(--navy)}
+.msg{font-size:12px;color:var(--mut);text-align:center;padding:16px 6px}
+.warnbox{background:#fff4f4;border:1px solid #f2c4c4;color:#b23b3b;border-radius:9px;padding:8px;font-size:12px;margin-top:8px}
+.foot{color:var(--mut2);font-size:11px;text-align:center;padding:14px}
+@media(max-width:1100px){ .wrap{grid-template-columns:1fr} #scene{height:420px} }
+/* fix accidental */
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="logo">
+    <svg width="34" height="34" viewBox="0 0 48 48" aria-label="HAMEL"><rect width="48" height="48" rx="9" fill="#fff"/><path d="M8 30h32l-4 8H12z" fill="#0b2e4f"/><path d="M24 8l10 18H14z" fill="#1a6fb5"/><rect x="22" y="6" width="4" height="14" fill="#f2911e"/></svg>
+    <div class="brand">HAMEL KOREA<small>PROJECT FREIGHT</small></div>
+  </div>
+  <div class="tit">📦 CBM 적입 시뮬레이터</div>
+  <div class="sp"></div>
+  <a class="moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span class="q">Q</span>V.KR ↗</a>
+</div>
+
+<div class="wrap">
+  <!-- LEFT: INPUT -->
+  <div class="card" style="align-self:stretch">
+    <h3>⚙ 옵션 &amp; 화물 입력</h3>
+    <div class="seg" id="modeSeg">
+      <button class="on" data-mode="cont" onclick="setMode('cont')">🚛 컨테이너 적입</button>
+      <button data-mode="calc" onclick="setMode('calc')">📐 단순 CBM계산</button>
+    </div>
+
+    <label class="fld">컨테이너 타입</label>
+    <select id="contSel">
+      <option value="auto">🔁 자동 추천</option>
+      <option value="20DRY">20FT DRY (33.2 CBM)</option>
+      <option value="40DRY">40FT DRY (67.7 CBM)</option>
+      <option value="40HQ">40FT HQ (76.3 CBM)</option>
+    </select>
+    <div class="ctopt">
+      <label><input type="checkbox" id="optTip" checked> 눕히기/회전 허용</label>
+      <label><input type="checkbox" id="optCog"> 무게중심 표시</label>
+    </div>
+
+    <label class="fld">프리셋 (클릭하면 행 추가)</label>
+    <div class="presets" id="presets"></div>
+
+    <label class="fld">패킹리스트</label>
+    <div class="rowbtns">
+      <button class="btn g" onclick="dlTemplate()">📥 엑셀 양식</button>
+      <button class="btn o" onclick="document.getElementById('xlsFile').click()">📂 패킹리스트 불러오기</button>
+      <input type="file" id="xlsFile" accept=".xlsx,.xls" style="display:none" onchange="importXls(this.files[0])">
+    </div>
+
+    <label class="fld" style="margin-top:10px">화물 정보 (치수 cm · 중량 kg)</label>
+    <table class="cg" id="cgTable">
+      <thead><tr><th>#</th><th>품명</th><th>L</th><th>W</th><th>H</th><th>kg</th><th>수량</th><th>2단</th><th>색</th></tr></thead>
+      <tbody id="cgBody"></tbody>
+    </table>
+    <div class="rowbtns">
+      <button class="btn g" onclick="addRow()">＋ 행추가</button>
+      <button class="btn g" onclick="delSel()">✂ 선택삭제</button>
+      <button class="btn g" onclick="clearRows()">🗑 전체삭제</button>
+    </div>
+    <button class="btn run" onclick="runSim()">▶ 적입 계산 실행</button>
+  </div>
+
+  <!-- CENTER: 3D -->
+  <div class="card">
+    <h3>🧊 3D 적입 시뮬레이션</h3>
+    <div id="scene">
+      <div class="scenebar">
+        <button onclick="viewPreset('iso')">🔄 시점</button>
+        <button onclick="viewPreset('top')">⬇ 탑뷰</button>
+        <button onclick="viewPreset('side')">➡ 측면</button>
+        <button onclick="capture()">📸 캡처</button>
+      </div>
+      <div class="wm">
+        <svg width="26" height="26" viewBox="0 0 48 48" opacity="0.85"><rect width="48" height="48" rx="9" fill="#ffffff33"/><path d="M8 30h32l-4 8H12z" fill="#ffffffaa"/><path d="M24 8l10 18H14z" fill="#ffffff88"/></svg>
+      </div>
+      <div class="contcap" id="contCap">화물을 입력하고 ▶ 계산을 실행하세요</div>
+      <div class="scenehint">좌드래그:회전 · 우드래그:이동 · 휠:확대</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: RESULTS -->
+  <div class="card">
+    <h3>📊 적입 결과</h3>
+    <div id="resBox"><div class="msg">계산 후 표시됩니다.</div></div>
+  </div>
+</div>
+<div class="foot">© HAMEL KOREA · Project Freight Forwarding — CBM Load Simulator · MOQV.KR</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+/* ============ 적입 엔진 (자체구현) ============ */
+const CONTAINERS={
+  "20DRY":{name:"20FT DRY",L:590,W:235,H:239,payload:28000,cap:33.2},
+  "40DRY":{name:"40FT DRY",L:1203,W:235,H:239,payload:26700,cap:67.7},
+  "40HQ" :{name:"40FT HQ", L:1203,W:235,H:269,payload:26500,cap:76.3},
+};
+function orientations(b,allowTip){
+  const set=new Set(); const push=(l,w,h)=>set.add(l+"|"+w+"|"+h);
+  if(allowTip){ const d=[b.L,b.W,b.H];
+    [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]].forEach(p=>push(d[p[0]],d[p[1]],d[p[2]])); }
+  else { push(b.L,b.W,b.H); push(b.W,b.L,b.H); }
+  return [...set].map(s=>{const a=s.split("|").map(Number);return{l:a[0],w:a[1],h:a[2]};});
+}
+function aabbOverlap(a,o){return(a.x<o.x+o.l&&a.x+a.l>o.x&&a.y<o.y+o.w&&a.y+a.w>o.y&&a.z<o.z+o.h&&a.z+a.h>o.z);}
+function canPlace(pos,dim,placed,cont){
+  if(pos.x+dim.l>cont.L+0.01||pos.y+dim.w>cont.W+0.01||pos.z+dim.h>cont.H+0.01)return false;
+  const c={x:pos.x,y:pos.y,z:pos.z,l:dim.l,w:dim.w,h:dim.h};
+  for(const p of placed){if(aabbOverlap(c,p))return false;}
+  if(pos.z<=0.01)return true;
+  let sup=0; const base=dim.l*dim.w;
+  for(const p of placed){
+    if(Math.abs((p.z+p.h)-pos.z)>0.5)continue;
+    if(p.canStack===false)return false;
+    if(p.tier!=null&&p.maxTier!=null&&(p.tier+1)>p.maxTier)return false;
+    const ox=Math.max(0,Math.min(c.x+c.l,p.x+p.l)-Math.max(c.x,p.x));
+    const oy=Math.max(0,Math.min(c.y+c.w,p.y+p.w)-Math.max(c.y,p.y));
+    sup+=ox*oy;
+  }
+  return sup>=base*0.70;
+}
+function explode(boxes){
+  const u=[]; boxes.forEach((b,ti)=>{ for(let i=0;i<b.qty;i++){
+    u.push({name:b.name||("화물"+(ti+1)),L:b.L,W:b.W,H:b.H,kg:b.kg||0,canStack:b.canStack!==false,maxTier:b.maxTier||99,color:b.color,typeIndex:ti});
+  }});
+  u.sort((a,b)=>(b.L*b.W*b.H)-(a.L*a.W*a.H)); return u;
+}
+function packOne(units,cont,allowTip){
+  const placed=[]; let eps=[{x:0,y:0,z:0}]; let weight=0; const leftover=[];
+  for(const u of units){
+    if(weight+u.kg>cont.payload){leftover.push(u);continue;}
+    const ors=orientations(u,allowTip);
+    eps.sort((a,b)=>a.z-b.z||a.y-b.y||a.x-b.x);
+    let done=false;
+    for(const ep of eps){ for(const o of ors){ if(canPlace(ep,o,placed,cont)){
+      let tier=0; if(ep.z>0.01){for(const p of placed){if(Math.abs((p.z+p.h)-ep.z)<0.5)tier=Math.max(tier,(p.tier||0)+1);}}
+      placed.push({x:ep.x,y:ep.y,z:ep.z,l:o.l,w:o.w,h:o.h,name:u.name,color:u.color,canStack:u.canStack,maxTier:u.maxTier,tier:tier,kg:u.kg,typeIndex:u.typeIndex});
+      weight+=u.kg;
+      eps=eps.filter(e=>!(e.x===ep.x&&e.y===ep.y&&e.z===ep.z));
+      eps.push({x:ep.x+o.l,y:ep.y,z:ep.z}); eps.push({x:ep.x,y:ep.y+o.w,z:ep.z}); eps.push({x:ep.x,y:ep.y,z:ep.z+o.h});
+      const seen=new Set(); eps=eps.filter(e=>{const k=Math.round(e.x)+","+Math.round(e.y)+","+Math.round(e.z);if(seen.has(k))return false;seen.add(k);return true;});
+      done=true;break; } } if(done)break; }
+    if(!done)leftover.push(u);
+  }
+  return{placed,weight,leftover};
+}
+function packAll(boxes,contKey,allowTip,maxCont){
+  const cont=CONTAINERS[contKey]; let units=explode(boxes); const total=units.length;
+  const containers=[]; let g=0;
+  while(units.length&&g<(maxCont||30)){
+    const r=packOne(units,cont,allowTip); if(r.placed.length===0)break;
+    const volUsed=r.placed.reduce((s,p)=>s+p.l*p.w*p.h,0)/1e6;
+    containers.push({placed:r.placed,weight:r.weight,volUsed,volPct:volUsed/cont.cap*100,wtPct:r.weight/cont.payload*100});
+    units=r.leftover; g++;
+  }
+  return{cont,containers,loadedUnits:total-units.length,totalUnits:total,unloaded:units.length};
+}
+function autoRecommend(boxes,allowTip){
+  // 최소 컨테이너 수 → 동률이면 적재율 높은 순. 40HQ>40DRY>20DRY 우선순위 보조
+  const order=["20DRY","40DRY","40HQ"]; let best=null;
+  for(const k of order){
+    const r=packAll(boxes,k,allowTip,30);
+    if(r.unloaded>0 && r.containers.length>=30) continue;
+    const avgVol=r.containers.reduce((s,c)=>s+c.volPct,0)/(r.containers.length||1);
+    const score={key:k,r,cont:CONTAINERS[k].cap*r.containers.length,n:r.containers.length,avgVol,unloaded:r.unloaded};
+    if(!best) best=score;
+    else{
+      // 미적입 적은 것 우선 → 총내용적(낭비) 적은 것 → 컨테이너 수 적은 것
+      if(score.unloaded<best.unloaded) best=score;
+      else if(score.unloaded===best.unloaded && score.cont<best.cont-0.01) best=score;
+      else if(score.unloaded===best.unloaded && Math.abs(score.cont-best.cont)<0.01 && score.n<best.n) best=score;
+    }
+  }
+  return best;
+}
+
+/* ============ 상태 & 입력 테이블 ============ */
+const PALETTE=["#1a6fb5","#f2911e","#1f9d57","#d64545","#7b5cd6","#e0459b","#0aa2a2","#c98a1b","#5b6b80","#2b6cb0"];
+let rows=[]; let selIdx=-1; let lastResult=null;
+const PRESETS=[
+  {label:"📦 박스S",L:40,W:30,H:30,kg:10},
+  {label:"📦 박스M",L:60,W:40,H:40,kg:20},
+  {label:"📦 박스L",L:120,W:80,H:80,kg:60},
+  {label:"🟫 KR파렛",L:110,W:110,H:15,kg:25},
+  {label:"🟫 EU파렛",L:120,W:80,H:15,kg:22},
+  {label:"🛢 드럼",L:60,W:60,H:90,kg:180},
+];
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderPresets(){
+  document.getElementById('presets').innerHTML=PRESETS.map((p,i)=>`<button onclick="addPreset(${i})">${p.label}</button>`).join('');
+}
+function addPreset(i){const p=PRESETS[i];rows.push({name:p.label.replace(/^[^ ]+ /,''),L:p.L,W:p.W,H:p.H,kg:p.kg,qty:1,canStack:true,color:PALETTE[rows.length%PALETTE.length]});renderRows();}
+function addRow(){rows.push({name:"화물"+(rows.length+1),L:"",W:"",H:"",kg:"",qty:1,canStack:true,color:PALETTE[rows.length%PALETTE.length]});renderRows();}
+function clearRows(){rows=[];selIdx=-1;renderRows();}
+function delSel(){if(selIdx>=0){rows.splice(selIdx,1);selIdx=-1;renderRows();}}
+function renderRows(){
+  const b=document.getElementById('cgBody');
+  if(!rows.length){b.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--mut);padding:10px">＋ 행추가 · 프리셋 · 패킹리스트로 화물을 입력하세요</td></tr>`;return;}
+  b.innerHTML=rows.map((r,i)=>`<tr class="${i===selIdx?'sel':''}" onclick="selIdx=${i};renderRows()">
+    <td>${i+1}</td>
+    <td class="nm"><input value="${esc(r.name)}" onchange="upd(${i},'name',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="number" value="${r.L}" style="width:44px" onchange="upd(${i},'L',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="number" value="${r.W}" style="width:44px" onchange="upd(${i},'W',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="number" value="${r.H}" style="width:44px" onchange="upd(${i},'H',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="number" value="${r.kg}" style="width:48px" onchange="upd(${i},'kg',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="number" value="${r.qty}" style="width:40px" onchange="upd(${i},'qty',this.value)" onclick="event.stopPropagation()"></td>
+    <td><input type="checkbox" ${r.canStack!==false?'checked':''} onchange="upd(${i},'canStack',this.checked)" onclick="event.stopPropagation()" title="위에 다른 화물 적재 가능"></td>
+    <td><span class="sw" style="background:${r.color}" onclick="event.stopPropagation();cycleColor(${i})"></span></td>
+  </tr>`).join('');
+}
+function upd(i,k,v){ if(k==='canStack'){rows[i][k]=v;} else if(['L','W','H','kg','qty'].includes(k)){rows[i][k]=v===''?'':Number(v);} else rows[i][k]=v; }
+function cycleColor(i){const cur=PALETTE.indexOf(rows[i].color);rows[i].color=PALETTE[(cur+1)%PALETTE.length];renderRows();}
+
+/* ============ 엑셀 양식/업로드 ============ */
+async function dlTemplate(){
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('패킹리스트');
+  ws.columns=[
+    {header:'품명',key:'name',width:22},{header:'가로L(cm)',key:'L',width:12},{header:'세로W(cm)',key:'W',width:12},
+    {header:'높이H(cm)',key:'H',width:12},{header:'중량(kg)',key:'kg',width:12},{header:'수량',key:'qty',width:10},{header:'적재가능(Y/N)',key:'stack',width:14}];
+  ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}}; ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B2E4F'}};
+  [['샘플 박스A',60,40,40,20,10,'Y'],['샘플 박스B',120,80,80,60,4,'Y'],['철재 팔레트',110,110,90,300,2,'N']].forEach(r=>ws.addRow(r));
+  const buf=await wb.xlsx.writeBuffer(); const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='하멜_패킹리스트_양식.xlsx'; a.click();
+}
+function findCol(headers,cands){
+  for(let i=0;i<headers.length;i++){const h=String(headers[i]||'').toLowerCase().replace(/[\s()（）_\-]/g,'');
+    for(const c of cands){ if(h.includes(c)) return i; }}
+  return -1;
+}
+async function importXls(file){
+  if(!file)return;
+  try{
+    const buf=await file.arrayBuffer(); const wb=new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+    const ws=wb.worksheets[0]; const grid=[];
+    ws.eachRow((row)=>{const arr=[];row.eachCell({includeEmpty:true},(c)=>{arr.push(c.value&&c.value.result!=null?c.value.result:c.value);});grid.push(arr);});
+    if(grid.length<2){alert('데이터가 없습니다.');return;}
+    // 헤더행 탐색: L/W/H 키워드가 있는 첫 행
+    let hi=0;
+    for(let i=0;i<Math.min(5,grid.length);i++){const j=grid[i].map(x=>String(x||'').toLowerCase());
+      if(j.some(v=>/가로|length|길이|^l$|l\(/.test(v))&&j.some(v=>/높이|height|^h$|h\(/.test(v))){hi=i;break;}}
+    const H=grid[hi].map(x=>String(x||''));
+    const cName=findCol(H,['품명','품목','name','item','description','descr','제품']);
+    const cL=findCol(H,['가로','length','길이','l(','lcm']); const cW=findCol(H,['세로','width','폭','w(','wcm']);
+    const cH=findCol(H,['높이','height','h(','hcm']); const cKg=findCol(H,['중량','weight','kg','무게']);
+    const cQ=findCol(H,['수량','qty','quantity','q\'ty','ea','개수','pcs']); const cS=findCol(H,['적재','stack','단적','y/n']);
+    if(cL<0||cW<0||cH<0){alert('L/W/H(가로·세로·높이) 컬럼을 찾지 못했습니다. 양식을 확인하세요.');return;}
+    const nr=[];
+    for(let i=hi+1;i<grid.length;i++){const g=grid[i]; const L=Number(g[cL]),W=Number(g[cW]),Hh=Number(g[cH]);
+      if(!(L>0&&W>0&&Hh>0))continue;
+      const st=cS>=0?String(g[cS]||'').toLowerCase():'';
+      nr.push({name:(cName>=0?String(g[cName]||''):'')||('화물'+(nr.length+1)),L,W,H:Hh,
+        kg:cKg>=0?(Number(g[cKg])||0):0, qty:cQ>=0?(Number(g[cQ])||1):1,
+        canStack:!(st==='n'||st==='no'||st==='불가'||st==='x'), color:PALETTE[nr.length%PALETTE.length]});
+    }
+    if(!nr.length){alert('유효한 화물 행이 없습니다.');return;}
+    rows=nr; selIdx=-1; renderRows();
+    document.getElementById('xlsFile').value='';
+    alert(nr.length+'개 화물을 불러왔습니다. ▶ 적입 계산을 실행하세요.');
+  }catch(e){ alert('엑셀 파싱 오류: '+e.message); }
+}
+
+/* ============ 계산 실행 ============ */
+function collect(){
+  const bs=[]; for(const r of rows){ const L=Number(r.L),W=Number(r.W),Hh=Number(r.H),q=Number(r.qty)||1;
+    if(L>0&&W>0&&Hh>0&&q>0) bs.push({name:r.name,L,W,H:Hh,kg:Number(r.kg)||0,qty:q,canStack:r.canStack!==false,color:r.color,maxTier:99}); }
+  return bs;
+}
+function setMode(m){ document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m)); MODE=m; }
+let MODE='cont';
+function runSim(){
+  const boxes=collect();
+  if(!boxes.length){ alert('가로·세로·높이·수량이 유효한 화물을 최소 1개 입력하세요.'); return; }
+  // 공통 지표
+  let totCbm=0,totKg=0,totPcs=0,totVolWt=0;
+  boxes.forEach(b=>{ const cbm=b.L*b.W*b.H/1e6; totCbm+=cbm*b.qty; totKg+=b.kg*b.qty; totPcs+=b.qty; totVolWt+=(b.L*b.W*b.H/6000)*b.qty; });
+  const rton=Math.max(totCbm, totKg/1000);
+  const airChg=Math.max(totKg, totVolWt);
+  const metrics={totCbm,totKg,totPcs,rton,airChg,totVolWt};
+
+  if(MODE==='calc'){ renderCalc(metrics); return; }
+
+  const allowTip=document.getElementById('optTip').checked;
+  const sel=document.getElementById('contSel').value;
+  let key,result;
+  if(sel==='auto'){ const rec=autoRecommend(boxes,allowTip); if(!rec){alert('어느 컨테이너에도 들어가지 않는 치수입니다.');return;} key=rec.key; result=rec.r; }
+  else { key=sel; result=packAll(boxes,key,allowTip,30); }
+  lastResult={key,result,metrics,boxes};
+  renderResult(lastResult);
+  draw3D(result.containers[0], CONTAINERS[key], document.getElementById('optCog').checked);
+  activeCont=0;
+}
+function fmt(n,d){return Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});}
+function renderCalc(m){
+  document.getElementById('resBox').innerHTML=`
+    <div class="kpi">
+      <div class="k hl"><b>${fmt(m.totCbm,3)}</b><span>총 CBM (m³)</span></div>
+      <div class="k hl"><b>${fmt(m.rton,3)}</b><span>해상 R.TON</span></div>
+      <div class="k"><b>${fmt(m.totKg,1)}</b><span>총중량 kg</span></div>
+      <div class="k"><b>${fmt(m.totPcs)}</b><span>총 수량</span></div>
+      <div class="k"><b>${fmt(m.totVolWt,1)}</b><span>항공 용적중량 kg</span></div>
+      <div class="k"><b>${fmt(m.airChg,1)}</b><span>항공 청구중량 kg</span></div>
+    </div>
+    <div class="reco"><div>해상운임은 <b>R.TON(=max(CBM, 중량/1000))</b> 기준, 항공운임은 <b>청구중량(=max(실중량, 용적중량))</b> 기준으로 산정됩니다. 용적중량 = L×W×H(cm)÷6000.</div></div>`;
+  document.getElementById('contCap').textContent='단순 CBM 계산 모드';
+}
+let activeCont=0;
+function renderResult(D){
+  const {key,result,metrics}=D; const cont=CONTAINERS[key];
+  const nCont=result.containers.length;
+  const avgVol=result.containers.reduce((s,c)=>s+c.volPct,0)/(nCont||1);
+  const sel=document.getElementById('contSel').value;
+  let html=`<div class="kpi">
+      <div class="k hl"><b>${fmt(metrics.totCbm,2)}</b><span>총 CBM</span></div>
+      <div class="k hl"><b>${fmt(metrics.rton,2)}</b><span>R.TON</span></div>
+      <div class="k"><b>${fmt(metrics.totKg,0)}</b><span>총중량 kg</span></div>
+      <div class="k"><b>${fmt(metrics.totPcs)}</b><span>총 수량</span></div>
+    </div>
+    <div class="reco">
+      <div class="big">${cont.name} × ${nCont}대 ${sel==='auto'?'(자동추천)':''}</div>
+      <div style="font-size:12px;color:var(--mut);margin-top:3px">적입 ${fmt(result.loadedUnits)}/${fmt(result.totalUnits)}개 · 평균 적재율 ${fmt(avgVol,1)}%</div>
+      <div class="bar"><i style="width:${Math.min(100,avgVol).toFixed(1)}%"></i></div>
+    </div>`;
+  html+=`<div class="contlist">`;
+  result.containers.forEach((c,i)=>{ html+=`<div class="ci" style="cursor:pointer;${i===activeCont?'border-color:var(--org);background:#fff7ee':''}" onclick="showCont(${i})">
+    <b>#${i+1} ${cont.name}</b> · ${c.placed.length}박스<br>
+    적재율(부피) ${fmt(c.volPct,1)}% · 중량 ${fmt(c.weight,0)}kg (${fmt(c.wtPct,1)}%)
+    <div class="bar"><i style="width:${Math.min(100,c.volPct).toFixed(1)}%"></i></div></div>`; });
+  html+=`</div>`;
+  if(result.unloaded>0) html+=`<div class="warnbox">⚠ 미적입 ${result.unloaded}개 — 컨테이너 상한(30대)을 초과했거나 단일 화물이 컨테이너보다 큽니다.</div>`;
+  document.getElementById('resBox').innerHTML=html;
+  document.getElementById('contCap').textContent=`${cont.name} · #${activeCont+1}/${nCont} · 적재율 ${fmt(result.containers[activeCont].volPct,1)}%`;
+}
+function showCont(i){ if(!lastResult)return; activeCont=i; const cont=CONTAINERS[lastResult.key];
+  draw3D(lastResult.result.containers[i],cont,document.getElementById('optCog').checked); renderResult(lastResult); }
+
+/* ============ 3D (Three.js 지연로딩 + 자체 오빗컨트롤) ============ */
+let THREE_READY=false, renderer,scene,camera,raf,orbit={};
+function loadThree(){
+  return new Promise((res,rej)=>{
+    if(window.THREE){THREE_READY=true;return res();}
+    const s=document.createElement('script');
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+    s.onload=()=>{THREE_READY=true;res();}; s.onerror=()=>rej(new Error('THREE 로드 실패'));
+    document.head.appendChild(s);
+  });
+}
+let camTarget={x:0,y:0,z:0}, camSph={r:1400,theta:0.9,phi:1.0};
+function initRenderer(){
+  const host=document.getElementById('scene');
+  if(renderer){ return; }
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  renderer.setSize(host.clientWidth,host.clientHeight);
+  host.appendChild(renderer.domElement);
+  camera=new THREE.PerspectiveCamera(45,host.clientWidth/host.clientHeight,1,20000);
+  bindOrbit(renderer.domElement);
+  window.addEventListener('resize',()=>{ if(!renderer)return; const h=document.getElementById('scene'); renderer.setSize(h.clientWidth,h.clientHeight); camera.aspect=h.clientWidth/h.clientHeight; camera.updateProjectionMatrix(); });
+}
+function updateCam(){
+  const s=camSph; camera.position.set(
+    camTarget.x + s.r*Math.sin(s.phi)*Math.cos(s.theta),
+    camTarget.y + s.r*Math.cos(s.phi),
+    camTarget.z + s.r*Math.sin(s.phi)*Math.sin(s.theta));
+  camera.lookAt(camTarget.x,camTarget.y,camTarget.z);
+}
+function bindOrbit(el){
+  let mode=0,px=0,py=0;
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('mousedown',e=>{mode=e.button===2||e.shiftKey?2:1;px=e.clientX;py=e.clientY;});
+  window.addEventListener('mouseup',()=>mode=0);
+  window.addEventListener('mousemove',e=>{ if(!mode)return; const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
+    if(mode===1){ camSph.theta+=dx*0.01; camSph.phi=Math.max(0.15,Math.min(Math.PI-0.15,camSph.phi-dy*0.01)); }
+    else { const s=camSph.r*0.0016; camTarget.x-=dx*s*Math.sin(camSph.theta); camTarget.z+=dx*s*Math.cos(camSph.theta); camTarget.y+=dy*s; }
+    updateCam(); });
+  el.addEventListener('wheel',e=>{e.preventDefault();camSph.r=Math.max(300,Math.min(9000,camSph.r*(1+(e.deltaY>0?0.1:-0.1))));updateCam();},{passive:false});
+}
+function viewPreset(v){ if(v==='top'){camSph.theta=0.0001;camSph.phi=0.15;} else if(v==='side'){camSph.theta=0;camSph.phi=Math.PI/2;} else {camSph.theta=0.9;camSph.phi=1.0;} updateCam(); }
+async function draw3D(contData,cont,showCog){
+  try{ await loadThree(); }catch(e){ document.getElementById('contCap').textContent='3D 로드 실패 (결과 수치는 정상)'; return; }
+  initRenderer();
+  scene=new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff,0.75));
+  const dir=new THREE.DirectionalLight(0xffffff,0.7); dir.position.set(1,2,1.5); scene.add(dir);
+  // 컨테이너 프레임 (x=L, y=H(up), z=W) — 화면상 up은 y로 매핑
+  const L=cont.L,W=cont.W,H=cont.H;
+  camTarget={x:L/2,y:H/2,z:W/2};
+  // 바닥
+  const floor=new THREE.Mesh(new THREE.BoxGeometry(L,4,W),new THREE.MeshLambertMaterial({color:0x24374a}));
+  floor.position.set(L/2,-2,W/2); scene.add(floor);
+  // 와이어 컨테이너
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L,H,W)),new THREE.LineBasicMaterial({color:0x9fc4e8}));
+  edges.position.set(L/2,H/2,W/2); scene.add(edges);
+  // 도어(입구, x=0쪽) 표시
+  const door=new THREE.Mesh(new THREE.PlaneGeometry(W,H),new THREE.MeshBasicMaterial({color:0xf2911e,transparent:true,opacity:0.13,side:THREE.DoubleSide}));
+  door.rotation.y=Math.PI/2; door.position.set(0.5,H/2,W/2); scene.add(door);
+  // 박스들
+  const CAP=2500; const list=contData.placed.slice(0,CAP);
+  list.forEach(p=>{
+    const g=new THREE.BoxGeometry(p.l,p.h,p.w);
+    const col=new THREE.Color(p.color||PALETTE[(p.typeIndex||0)%PALETTE.length]);
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col}));
+    m.position.set(p.x+p.l/2,p.z+p.h/2,p.y+p.w/2); scene.add(m);
+    const eg=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x0b2e4f,transparent:true,opacity:0.35}));
+    eg.position.copy(m.position); scene.add(eg);
+  });
+  if(showCog){ // 무게중심
+    let sx=0,sy=0,sz=0,sw=0; contData.placed.forEach(p=>{const w=p.kg||1;sx+=(p.x+p.l/2)*w;sy+=(p.z+p.h/2)*w;sz+=(p.y+p.w/2)*w;sw+=w;});
+    if(sw){ const cog=new THREE.Mesh(new THREE.SphereGeometry(Math.max(8,L*0.02),16,16),new THREE.MeshBasicMaterial({color:0xff2d2d}));
+      cog.position.set(sx/sw,sy/sw,sz/sw); scene.add(cog); }
+  }
+  updateCam();
+  if(raf)cancelAnimationFrame(raf);
+  (function loop(){ raf=requestAnimationFrame(loop); renderer.render(scene,camera); })();
+}
+function capture(){ if(!renderer){alert('먼저 계산을 실행하세요.');return;} const a=document.createElement('a'); a.href=renderer.domElement.toDataURL('image/png'); a.download='하멜_적입_시뮬레이션.png'; a.click(); }
+
+/* init */
+renderPresets(); addPreset(1); addPreset(2); renderRows();
+</script>
+</body>
+</html>
