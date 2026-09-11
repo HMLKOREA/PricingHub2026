@@ -4015,17 +4015,17 @@ window.TRK=(function(){
   const CATS=[{k:'all',t:'전체'},{k:'kr',t:'🇰🇷 국적선사'},{k:'global',t:'🌐 글로벌 선사'},{k:'air',t:'✈ 항공화물'},{k:'exp',t:'📦 특송'}];
   // n:이름 s:설명 h:추적링크도메인 ld:로고조회도메인(원본) c:브랜드색 cat:분류
   const C=[
-    {n:'HMM',s:'대한민국 · 원양',h:'hmm21.com',c:'#00a19c',cat:'kr'},
+    {n:'HMM',s:'대한민국 · 원양',h:'hmm21.com',c:'#00a19c',cat:'kr',logoUrl:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/HMM_Logo_Basic_Form.svg/250px-HMM_Logo_Basic_Form.svg.png'},
     {n:'고려해운 KMTC',s:'대한민국 · 근해',h:'ekmtc.com',c:'#003a70',cat:'kr',abbr:'KMTC'},
-    {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',ld:'sinokor.co.kr',c:'#0b4ea2',cat:'kr',abbr:'장금'},
-    {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',ld:'heungaline.com',c:'#d6001c',cat:'kr',abbr:'흥아'},
-    {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',ld:'namsung.co.kr',c:'#004a99',cat:'kr',abbr:'남성'},
-    {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',ld:'panocean.com',c:'#003f87',cat:'kr',abbr:'PAN'},
-    {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',ld:'ckline.co.kr',c:'#0060a9',cat:'kr',abbr:'CK'},
-    {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',ld:'pcsline.co.kr',c:'#1a4f9c',cat:'kr',abbr:'PCS'},
-    {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',ld:'djship.co.kr',c:'#0b57a4',cat:'kr',abbr:'동진'},
+    {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',ld:'sinokor.co.kr',c:'#0b4ea2',cat:'kr',abbr:'SINOKOR'},
+    {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',ld:'heungaline.com',c:'#d6001c',cat:'kr',abbr:'HEUNG-A'},
+    {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',ld:'namsung.co.kr',c:'#004a99',cat:'kr',abbr:'NAMSUNG'},
+    {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',ld:'panocean.com',c:'#003f87',cat:'kr',abbr:'PAN OCEAN'},
+    {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',ld:'ckline.co.kr',c:'#0060a9',cat:'kr',abbr:'CK LINE'},
+    {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',ld:'pcsline.co.kr',c:'#1a4f9c',cat:'kr',abbr:'PCS LINE'},
+    {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',ld:'djship.co.kr',c:'#0b57a4',cat:'kr',abbr:'DONGJIN'},
     {n:'태영상선 Taiyoung',s:'대한민국 · 근해',h:'eservice.taiyoungship.co.kr',ld:'taiyoungship.co.kr',c:'#135ba1',cat:'kr'},
-    {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',ld:'smlines.com',c:'#d81a30',cat:'kr',abbr:'SM'},
+    {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',ld:'smlines.com',c:'#d81a30',cat:'kr',abbr:'SM LINE'},
     {n:'범주해운 Pancon',s:'대한민국 · 근해',h:'pancon.co.kr',c:'#16559e',cat:'kr'},
     {n:'두우해운 Doowoo',s:'대한민국 · 근해',h:'doowoo.co.kr',c:'#1a5aa0',cat:'kr'},
     {n:'MAERSK',s:'덴마크 · 원양',h:'maersk.com',c:'#42b0d5',cat:'global'},
@@ -4088,9 +4088,12 @@ window.TRK=(function(){
   function fb(img){ // 로고 로드 실패 시: icon.horse → DuckDuckGo → 컬러 이니셜 타일
     if(img.dataset.s!=='1'){ img.dataset.s='1'; img.src='https://icons.duckduckgo.com/ip3/'+img.dataset.d+'.ico'; }
     else { const sp=document.createElement('span'); sp.className='trk-fb'; sp.style.background=img.dataset.c; sp.textContent=img.dataset.i; if(img.parentNode)img.parentNode.replaceChild(sp,img); } }
+  function chipFont(t){ const n=(t||'').length; return n>=8?'8.5px':n>=6?'10px':n>=4?'12px':'15px'; }
   function card(x){ const url='https://'+x.h+'/'; const ld=x.ld||x.h;
-    const ic = x.abbr
-      ? `<span class="trk-chip" style="background:${x.c}">${esc(x.abbr)}</span>`
+    const ic = x.logoUrl
+      ? `<img src="${x.logoUrl}" alt="" loading="lazy" data-d="${ld}" data-c="${x.c}" data-i="${esc(x.abbr||initial(x.n))}" onerror="TRK.fb(this)">`
+      : x.abbr
+      ? `<span class="trk-chip" style="background:${x.c};font-size:${chipFont(x.abbr)}">${esc(x.abbr)}</span>`
       : `<img src="https://icon.horse/icon/${ld}" alt="" loading="lazy" data-d="${ld}" data-c="${x.c}" data-i="${initial(x.n)}" onerror="TRK.fb(this)">`;
     return `<a class="trk-cc" href="${url}" target="_blank" rel="noopener" style="--bc:${x.c}">
       <span class="trk-ic">${ic}</span>
