@@ -11,7 +11,6 @@
 body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:14px}
 .hd{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .hd .logo{width:36px;height:36px;border-radius:8px;background:#fff;padding:3px}
-.hd .logo svg{display:block}
 .hd .brand{font-weight:800;font-size:19px;letter-spacing:.3px;line-height:1.05}
 .hd .brand small{display:block;font-weight:600;font-size:11px;color:var(--org2);letter-spacing:1.5px}
 .hd .tit{font-weight:700;font-size:15px;opacity:.95}
@@ -30,15 +29,15 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",syste
 .sec h2{font-size:15px;color:var(--navy);margin:0 0 10px;display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--sky);padding-bottom:7px}
 .sec h2 .badge{background:var(--sky);color:var(--navy);font-size:12px;border-radius:12px;padding:1px 9px;font-weight:700}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
-.cc{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--bc,var(--blue));border-radius:11px;padding:11px 12px;text-decoration:none;color:var(--txt);transition:.12s;position:relative}
+.cc{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--bc,var(--blue));border-radius:11px;padding:11px 12px;text-decoration:none;color:var(--txt);transition:.12s}
 .cc:hover{box-shadow:0 4px 14px rgba(16,32,60,.13);transform:translateY(-1px);border-color:var(--bc,var(--blue))}
-.cc .ic{width:38px;height:38px;border-radius:9px;background:var(--panel2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1px solid var(--line)}
-.cc .ic img{width:32px;height:32px;object-fit:contain;display:block}
-.cc .ic .fb{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px}
-.cc .info{min-width:0;flex:1}
-.cc .nm{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cc .sub{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cc .go{color:var(--mut2);font-size:15px;flex-shrink:0}
+.ic{width:46px;height:46px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1px solid var(--line);padding:4px}
+.ic img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
+.fb{width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:17px;border-radius:8px}
+.info{min-width:0;flex:1}
+.nm{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.sub{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.go{color:var(--mut2);font-size:15px;flex-shrink:0}
 .cc:hover .go{color:var(--org)}
 .empty{color:var(--mut);text-align:center;padding:26px}
 .foot{color:var(--mut2);font-size:11px;text-align:center;padding:18px}
@@ -62,109 +61,95 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",syste
   <div id="list"></div>
 </div>
 <div class="foot">© HAMEL KOREA · Project Freight Forwarding — 화물추적 포털 · 각 로고/상표는 해당 선사의 자산입니다. · MOQV.KR</div>
-
 <script>
-/* 카테고리 */
 const CATS=[{k:'all',t:'전체'},{k:'kr',t:'🇰🇷 국적선사'},{k:'global',t:'🌐 글로벌 선사'},{k:'air',t:'✈ 항공화물'},{k:'exp',t:'📦 특송'}];
-/* 선사 데이터 (이름/코드/도메인/브랜드색/카테고리) — 링크는 각 사 e-service·추적 포털 */
 const C=[
-  // 국적선사
-  {n:'HMM',s:'대한민국 · 원양',h:'hmm21.com',c:'#00a19c',cat:'kr'},
-  {n:'고려해운 KMTC',s:'대한민국 · 근해',h:'ekmtc.com',c:'#003a70',cat:'kr'},
-  {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',c:'#0b4ea2',cat:'kr'},
-  {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',c:'#d6001c',cat:'kr'},
-  {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',c:'#004a99',cat:'kr'},
-  {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',c:'#003f87',cat:'kr'},
-  {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',c:'#0060a9',cat:'kr'},
-  {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',c:'#1a4f9c',cat:'kr'},
-  {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',c:'#0b57a4',cat:'kr'},
-  {n:'태영상선 Taiyoung',s:'대한민국 · 근해',h:'eservice.taiyoungship.co.kr',c:'#135ba1',cat:'kr'},
-  {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',c:'#d81a30',cat:'kr'},
-  {n:'범주해운 Pancon',s:'대한민국 · 근해',h:'pancon.co.kr',c:'#16559e',cat:'kr'},
-  {n:'두우해운 Doowoo',s:'대한민국 · 근해',h:'doowoo.co.kr',c:'#1a5aa0',cat:'kr'},
-  // 글로벌 선사
-  {n:'MAERSK',s:'덴마크 · 원양',h:'maersk.com',c:'#42b0d5',cat:'global'},
-  {n:'MSC',s:'스위스 · 원양',h:'msc.com',c:'#862633',cat:'global'},
-  {n:'CMA CGM',s:'프랑스 · 원양',h:'cma-cgm.com',c:'#003b7f',cat:'global'},
-  {n:'ONE (Ocean Network Express)',s:'일본/싱가포르 · 원양',h:'ecomm.one-line.com',c:'#d0006f',cat:'global'},
-  {n:'COSCO Shipping',s:'중국 · 원양',h:'elines.coscoshipping.com',c:'#005baa',cat:'global'},
-  {n:'Hapag-Lloyd',s:'독일 · 원양',h:'hapag-lloyd.com',c:'#ea5b0c',cat:'global'},
-  {n:'EVERGREEN',s:'대만 · 원양',h:'shipmentlink.com',c:'#009a44',cat:'global'},
-  {n:'OOCL',s:'홍콩 · 원양',h:'oocl.com',c:'#003da5',cat:'global'},
-  {n:'YANG MING',s:'대만 · 원양',h:'yml.co.kr',c:'#003876',cat:'global'},
-  {n:'WAN HAI LINES',s:'대만 · 근해',h:'wanhai.com',c:'#d6001c',cat:'global'},
-  {n:'SITC',s:'중국 · 근해',h:'ebusiness.sitcline.com',c:'#00539b',cat:'global'},
-  {n:'ZIM',s:'이스라엘 · 원양',h:'zim.com',c:'#0a9bd6',cat:'global'},
-  {n:'APL',s:'싱가포르 · 원양',h:'apl.com',c:'#003da5',cat:'global'},
-  {n:'ANL Container Line',s:'호주 · 원양',h:'anl.com.au',c:'#e4002b',cat:'global'},
-  {n:'CNC Line',s:'싱가포르 · 근해',h:'cnc-line.com',c:'#0067b1',cat:'global'},
-  {n:'PIL (Pacific Int’l Lines)',s:'싱가포르 · 원양',h:'pilship.com',c:'#003f87',cat:'global'},
-  {n:'TS Lines',s:'대만 · 근해',h:'tslines.co.kr',c:'#e60012',cat:'global'},
-  {n:'SEALAND (A Maersk Co.)',s:'미주/아시아 · 원양',h:'sealandmaersk.com',c:'#0091da',cat:'global'},
-  {n:'Sinotrans',s:'중국 · 물류',h:'sinotrans.co.kr',c:'#c8102e',cat:'global'},
-  {n:'Emirates Shipping',s:'UAE · 원양',h:'emiratesline.com',c:'#c8102e',cat:'global'},
-  {n:'Hamburg Süd',s:'독일 · 원양',h:'hamburgsud-line.com',c:'#e4002b',cat:'global'},
-  {n:'Gold Star Line',s:'홍콩 · 근해',h:'gslltd.com.hk',c:'#e0a000',cat:'global'},
-  {n:'SeaLead Shipping',s:'싱가포르 · 원양',h:'tracking.sea-lead.com',c:'#0a3d62',cat:'global'},
-  {n:'Safmarine',s:'남아공 · 원양',h:'safmarine.com',c:'#0091da',cat:'global'},
-  // 항공화물
-  {n:'대한항공 Korean Air Cargo',s:'KE · 대한민국',h:'cargo.koreanair.com',c:'#00256c',cat:'air'},
-  {n:'아시아나항공 Asiana Cargo',s:'OZ · 대한민국',h:'asianacargo.com',c:'#cd2e3a',cat:'air'},
-  {n:'제주항공 Jeju Air Cargo',s:'7C · 대한민국',h:'cargo.jejuair.net',c:'#ff6600',cat:'air'},
-  {n:'Cathay Cargo',s:'CX · 홍콩',h:'cathaycargo.com',c:'#006564',cat:'air'},
-  {n:'China Airlines Cargo',s:'CI · 대만',h:'china-airlines.com',c:'#e4002b',cat:'air'},
-  {n:'EVA Air Cargo',s:'BR · 대만',h:'brcargo.com',c:'#016a3a',cat:'air'},
-  {n:'Singapore Airlines Cargo',s:'SQ · 싱가포르',h:'siacargo.com',c:'#f9a01b',cat:'air'},
-  {n:'ANA Cargo',s:'NH · 일본',h:'anacargo.jp',c:'#13448f',cat:'air'},
-  {n:'Lufthansa Cargo',s:'LH · 독일',h:'lufthansa-cargo.com',c:'#05164d',cat:'air'},
-  {n:'Air France-KLM Cargo',s:'AF/KL · 프랑스/네덜란드',h:'afklcargo.com',c:'#002157',cat:'air'},
-  {n:'Emirates SkyCargo',s:'EK · UAE',h:'skycargo.com',c:'#d71921',cat:'air'},
-  {n:'Qatar Airways Cargo',s:'QR · 카타르',h:'qrcargo.com',c:'#5c0d34',cat:'air'},
-  {n:'Turkish Cargo',s:'TK · 튀르키예',h:'tkcargo.com',c:'#c8102e',cat:'air'},
-  {n:'Air China Cargo',s:'CA · 중국',h:'airchinacargo.com',c:'#c8102e',cat:'air'},
-  {n:'China Southern Cargo',s:'CZ · 중국',h:'csair.com',c:'#00529b',cat:'air'},
-  {n:'China Cargo Airlines',s:'MU · 중국',h:'chinacargo-airlines.com',c:'#c8102e',cat:'air'},
-  {n:'American Airlines Cargo',s:'AA · 미국',h:'aacargo.com',c:'#0d233f',cat:'air'},
-  {n:'Atlas Air',s:'5Y · 미국',h:'atlasair.com',c:'#c8102e',cat:'air'},
-  {n:'Nippon Cargo Airlines',s:'KZ · 일본',h:'nca.aero',c:'#0b3b8f',cat:'air'},
-  {n:'Polar Air Cargo',s:'PO · 미국',h:'polaraircargo.com',c:'#0067b1',cat:'air'},
-  {n:'AirBridgeCargo',s:'RU · 러시아',h:'airbridgecargo.com',c:'#004a99',cat:'air'},
-  {n:'Qantas Freight',s:'QF · 호주',h:'freight.qantas.com',c:'#e40000',cat:'air'},
-  {n:'MASkargo',s:'MH · 말레이시아',h:'maskargo.com',c:'#c8102e',cat:'air'},
-  {n:'Cargolux',s:'CV · 룩셈부르크',h:'cargolux.com',c:'#004d9f',cat:'air'},
-  // 특송
-  {n:'FedEx',s:'미국 · 특송',h:'fedex.com',c:'#4d148c',cat:'exp'},
-  {n:'UPS',s:'미국 · 특송',h:'ups.com',c:'#644117',cat:'exp'},
-  {n:'DHL Express',s:'독일 · 특송',h:'dhl.com',c:'#d40511',cat:'exp'},
-  {n:'TNT',s:'네덜란드 · 특송',h:'tnt.com',c:'#ff6600',cat:'exp'},
-  {n:'EMS (우체국 국제특송)',s:'대한민국 · 특송',h:'ems.epost.go.kr',c:'#e4002b',cat:'exp'},
+ {n:'HMM',s:'대한민국 · 원양',h:'hmm21.com',c:'#00a19c',cat:'kr'},
+ {n:'고려해운 KMTC',s:'대한민국 · 근해',h:'ekmtc.com',c:'#003a70',cat:'kr'},
+ {n:'장금상선 Sinokor',s:'대한민국 · 근해',h:'ebiz.sinokor.co.kr',ld:'sinokor.co.kr',c:'#0b4ea2',cat:'kr'},
+ {n:'흥아라인 Heung-A',s:'대한민국 · 근해',h:'ebiz.heungaline.com',ld:'heungaline.com',c:'#d6001c',cat:'kr'},
+ {n:'남성해운 Namsung',s:'대한민국 · 근해',h:'ebiz.namsung.co.kr',ld:'namsung.co.kr',c:'#004a99',cat:'kr'},
+ {n:'팬오션 Pan Ocean',s:'대한민국 · 컨테이너',h:'container.panocean.com',ld:'panocean.com',c:'#003f87',cat:'kr'},
+ {n:'천경해운 CK Line',s:'대한민국 · 근해',h:'es.ckline.co.kr',ld:'ckline.co.kr',c:'#0060a9',cat:'kr'},
+ {n:'동영해운 PCS Line',s:'대한민국 · 근해',h:'ebiz.pcsline.co.kr',ld:'pcsline.co.kr',c:'#1a4f9c',cat:'kr'},
+ {n:'동진상선 Dongjin',s:'대한민국 · 근해',h:'esvc.djship.co.kr',ld:'djship.co.kr',c:'#0b57a4',cat:'kr'},
+ {n:'태영상선 Taiyoung',s:'대한민국 · 근해',h:'eservice.taiyoungship.co.kr',ld:'taiyoungship.co.kr',c:'#135ba1',cat:'kr'},
+ {n:'에스엠상선 SM Line',s:'대한민국 · 원양/근해',h:'esvc.smlines.com',ld:'smlines.com',c:'#d81a30',cat:'kr'},
+ {n:'범주해운 Pancon',s:'대한민국 · 근해',h:'pancon.co.kr',c:'#16559e',cat:'kr'},
+ {n:'두우해운 Doowoo',s:'대한민국 · 근해',h:'doowoo.co.kr',c:'#1a5aa0',cat:'kr'},
+ {n:'MAERSK',s:'덴마크 · 원양',h:'maersk.com',c:'#42b0d5',cat:'global'},
+ {n:'MSC',s:'스위스 · 원양',h:'msc.com',c:'#862633',cat:'global'},
+ {n:'CMA CGM',s:'프랑스 · 원양',h:'cma-cgm.com',c:'#003b7f',cat:'global'},
+ {n:'ONE (Ocean Network Express)',s:'일본/싱가포르 · 원양',h:'ecomm.one-line.com',ld:'one-line.com',c:'#d0006f',cat:'global'},
+ {n:'COSCO Shipping',s:'중국 · 원양',h:'elines.coscoshipping.com',ld:'coscoshipping.com',c:'#005baa',cat:'global'},
+ {n:'Hapag-Lloyd',s:'독일 · 원양',h:'hapag-lloyd.com',c:'#ea5b0c',cat:'global'},
+ {n:'EVERGREEN',s:'대만 · 원양',h:'shipmentlink.com',ld:'evergreen-line.com',c:'#009a44',cat:'global'},
+ {n:'OOCL',s:'홍콩 · 원양',h:'oocl.com',c:'#003da5',cat:'global'},
+ {n:'YANG MING',s:'대만 · 원양',h:'yml.co.kr',c:'#003876',cat:'global'},
+ {n:'WAN HAI LINES',s:'대만 · 근해',h:'wanhai.com',c:'#d6001c',cat:'global'},
+ {n:'SITC',s:'중국 · 근해',h:'ebusiness.sitcline.com',ld:'sitcline.com',c:'#00539b',cat:'global'},
+ {n:'ZIM',s:'이스라엘 · 원양',h:'zim.com',c:'#0a9bd6',cat:'global'},
+ {n:'APL',s:'싱가포르 · 원양',h:'apl.com',c:'#003da5',cat:'global'},
+ {n:'ANL Container Line',s:'호주 · 원양',h:'anl.com.au',c:'#e4002b',cat:'global'},
+ {n:'CNC Line',s:'싱가포르 · 근해',h:'cnc-line.com',c:'#0067b1',cat:'global'},
+ {n:'PIL',s:'싱가포르 · 원양',h:'pilship.com',c:'#003f87',cat:'global'},
+ {n:'TS Lines',s:'대만 · 근해',h:'tslines.co.kr',c:'#e60012',cat:'global'},
+ {n:'SEALAND',s:'미주/아시아 · 원양',h:'sealandmaersk.com',c:'#0091da',cat:'global'},
+ {n:'Sinotrans',s:'중국 · 물류',h:'sinotrans.co.kr',c:'#c8102e',cat:'global'},
+ {n:'Emirates Shipping',s:'UAE · 원양',h:'emiratesline.com',c:'#c8102e',cat:'global'},
+ {n:'Hamburg Süd',s:'독일 · 원양',h:'hamburgsud-line.com',ld:'hamburgsud.com',c:'#e4002b',cat:'global'},
+ {n:'Gold Star Line',s:'홍콩 · 근해',h:'gslltd.com.hk',ld:'goldstarline.com',c:'#e0a000',cat:'global'},
+ {n:'SeaLead Shipping',s:'싱가포르 · 원양',h:'tracking.sea-lead.com',ld:'sea-lead.com',c:'#0a3d62',cat:'global'},
+ {n:'Safmarine',s:'남아공 · 원양',h:'safmarine.com',c:'#0091da',cat:'global'},
+ {n:'대한항공 Korean Air Cargo',s:'KE · 대한민국',h:'cargo.koreanair.com',ld:'koreanair.com',c:'#00256c',cat:'air'},
+ {n:'아시아나항공 Asiana Cargo',s:'OZ · 대한민국',h:'asianacargo.com',c:'#cd2e3a',cat:'air'},
+ {n:'제주항공 Jeju Air Cargo',s:'7C · 대한민국',h:'cargo.jejuair.net',ld:'jejuair.net',c:'#ff6600',cat:'air'},
+ {n:'Cathay Cargo',s:'CX · 홍콩',h:'cathaycargo.com',c:'#006564',cat:'air'},
+ {n:'China Airlines Cargo',s:'CI · 대만',h:'china-airlines.com',c:'#e4002b',cat:'air'},
+ {n:'EVA Air Cargo',s:'BR · 대만',h:'brcargo.com',ld:'evaair.com',c:'#016a3a',cat:'air'},
+ {n:'Singapore Airlines Cargo',s:'SQ · 싱가포르',h:'siacargo.com',c:'#f9a01b',cat:'air'},
+ {n:'ANA Cargo',s:'NH · 일본',h:'anacargo.jp',c:'#13448f',cat:'air'},
+ {n:'Lufthansa Cargo',s:'LH · 독일',h:'lufthansa-cargo.com',c:'#05164d',cat:'air'},
+ {n:'Air France-KLM Cargo',s:'AF/KL · 프랑스/네덜란드',h:'afklcargo.com',c:'#002157',cat:'air'},
+ {n:'Emirates SkyCargo',s:'EK · UAE',h:'skycargo.com',ld:'emirates.com',c:'#d71921',cat:'air'},
+ {n:'Qatar Airways Cargo',s:'QR · 카타르',h:'qrcargo.com',ld:'qatarairways.com',c:'#5c0d34',cat:'air'},
+ {n:'Turkish Cargo',s:'TK · 튀르키예',h:'tkcargo.com',ld:'turkishcargo.com',c:'#c8102e',cat:'air'},
+ {n:'Air China Cargo',s:'CA · 중국',h:'airchinacargo.com',c:'#c8102e',cat:'air'},
+ {n:'China Southern Cargo',s:'CZ · 중국',h:'csair.com',c:'#00529b',cat:'air'},
+ {n:'China Cargo Airlines',s:'MU · 중국',h:'chinacargo-airlines.com',c:'#c8102e',cat:'air'},
+ {n:'American Airlines Cargo',s:'AA · 미국',h:'aacargo.com',c:'#0d233f',cat:'air'},
+ {n:'Atlas Air',s:'5Y · 미국',h:'atlasair.com',c:'#c8102e',cat:'air'},
+ {n:'Nippon Cargo Airlines',s:'KZ · 일본',h:'nca.aero',c:'#0b3b8f',cat:'air'},
+ {n:'Polar Air Cargo',s:'PO · 미국',h:'polaraircargo.com',c:'#0067b1',cat:'air'},
+ {n:'AirBridgeCargo',s:'RU · 러시아',h:'airbridgecargo.com',c:'#004a99',cat:'air'},
+ {n:'Qantas Freight',s:'QF · 호주',h:'freight.qantas.com',ld:'qantas.com',c:'#e40000',cat:'air'},
+ {n:'MASkargo',s:'MH · 말레이시아',h:'maskargo.com',c:'#c8102e',cat:'air'},
+ {n:'Cargolux',s:'CV · 룩셈부르크',h:'cargolux.com',c:'#004d9f',cat:'air'},
+ {n:'FedEx',s:'미국 · 특송',h:'fedex.com',c:'#4d148c',cat:'exp'},
+ {n:'UPS',s:'미국 · 특송',h:'ups.com',c:'#644117',cat:'exp'},
+ {n:'DHL Express',s:'독일 · 특송',h:'dhl.com',c:'#d40511',cat:'exp'},
+ {n:'TNT',s:'네덜란드 · 특송',h:'tnt.com',c:'#ff6600',cat:'exp'},
+ {n:'EMS 우체국국제특송',s:'대한민국 · 특송',h:'ems.epost.go.kr',ld:'epost.go.kr',c:'#e4002b',cat:'exp'},
 ];
 let TAB='all';
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 function initial(n){const m=n.replace(/[^A-Za-z가-힣]/g,'');return (m[0]||'?').toUpperCase();}
-function card(x){
-  const url='https://'+x.h+'/';
-  const fav='https://www.google.com/s2/favicons?domain='+encodeURIComponent(x.h)+'&sz=64';
+function fbk(img){ if(img.dataset.s!=='1'){img.dataset.s='1';img.src='https://icons.duckduckgo.com/ip3/'+img.dataset.d+'.ico';}
+  else{const sp=document.createElement('span');sp.className='fb';sp.style.background=img.dataset.c;sp.textContent=img.dataset.i;if(img.parentNode)img.parentNode.replaceChild(sp,img);} }
+function card(x){const url='https://'+x.h+'/';const ld=x.ld||x.h;const logo='https://icon.horse/icon/'+ld;
   return `<a class="cc" href="${url}" target="_blank" rel="noopener" style="--bc:${x.c}">
-    <span class="ic"><img src="${fav}" alt="" loading="lazy" onerror="this.style.display='none';this.parentNode.innerHTML='<span class=\\'fb\\' style=\\'background:${x.c}\\'>${initial(x.n)}</span>'"></span>
-    <span class="info"><span class="nm">${x.n}</span><span class="sub">${x.s} · ${x.h}</span></span>
-    <span class="go">↗</span></a>`;
-}
-function render(){
-  const q=(document.getElementById('q').value||'').toLowerCase().trim();
-  const secs=CATS.filter(c=>c.k!=='all');
-  let shown=0, html='';
-  for(const sc of secs){
-    if(TAB!=='all'&&TAB!==sc.k)continue;
-    let items=C.filter(x=>x.cat===sc.k);
-    if(q) items=items.filter(x=>(x.n+' '+x.s+' '+x.h).toLowerCase().includes(q));
-    if(!items.length)continue;
-    shown+=items.length;
-    html+=`<div class="sec"><h2>${sc.t}<span class="badge">${items.length}</span></h2><div class="grid">${items.map(card).join('')}</div></div>`;
-  }
-  if(!shown) html=`<div class="empty">검색 결과가 없습니다. 다른 키워드로 검색해 보세요.</div>`;
+    <span class="ic"><img src="${logo}" alt="" loading="lazy" data-d="${ld}" data-c="${x.c}" data-i="${initial(x.n)}" onerror="fbk(this)"></span>
+    <span class="info"><span class="nm">${esc(x.n)}</span><span class="sub">${esc(x.s)} · ${esc(x.h)}</span></span>
+    <span class="go">↗</span></a>`;}
+function render(){const q=(document.getElementById('q').value||'').toLowerCase().trim();
+  const secs=CATS.filter(c=>c.k!=='all');let shown=0,html='';
+  for(const sc of secs){ if(TAB!=='all'&&TAB!==sc.k)continue;
+    let items=C.filter(x=>x.cat===sc.k); if(q)items=items.filter(x=>(x.n+' '+x.s+' '+x.h).toLowerCase().includes(q));
+    if(!items.length)continue; shown+=items.length;
+    html+=`<div class="sec"><h2>${sc.t}<span class="badge">${items.length}</span></h2><div class="grid">${items.map(card).join('')}</div></div>`;}
+  if(!shown)html=`<div class="empty">검색 결과가 없습니다.</div>`;
   document.getElementById('list').innerHTML=html;
-  document.getElementById('cnt').textContent='총 '+C.length+'개 선사·항공사'+(q?(' · 검색 '+shown+'개'):'');
-}
+  document.getElementById('cnt').textContent='총 '+C.length+'개 선사·항공사'+(q?(' · 검색 '+shown+'개'):'');}
 function renderTabs(){document.getElementById('tabs').innerHTML=CATS.map(c=>{
   const n=c.k==='all'?C.length:C.filter(x=>x.cat===c.k).length;
   return `<button class="${TAB===c.k?'on':''}" onclick="TAB='${c.k}';renderTabs();render()">${c.t} ${n}</button>`;}).join('');}
