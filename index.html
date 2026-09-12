@@ -457,6 +457,55 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 .trk-foot{color:var(--mut2);font-size:11px;text-align:center;padding:16px}
 @media(max-width:560px){.trk-grid{grid-template-columns:1fr 1fr}}
 
+
+/* ===== 📝 RFQ 견적작성 (네임스페이스: .rfqwrap) ===== */
+.rfqwrap{--navy:#0b2e4f;--navy2:#123f68;--org:#f2911e;--line:#c9d3df;--sky:#eef4fb;--mut:#5b6b80;color:var(--txt)}
+.rfqwrap *{box-sizing:border-box}
+.rfq-hd{display:flex;align-items:center;gap:12px;background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;border-radius:12px;padding:10px 16px;margin-bottom:10px}
+.rfq-logo{width:44px;height:44px;background:#fff;border-radius:9px;padding:5px;display:flex;align-items:center;justify-content:center}
+.rfq-logo img{max-width:100%;max-height:100%;object-fit:contain}
+.rfq-co{font-weight:800;font-size:17px;line-height:1.1}
+.rfq-co small{display:block;font-size:10.5px;color:#ffb14d;font-weight:700;letter-spacing:1.2px}
+.rfq-ti{font-weight:800;font-size:15px;letter-spacing:1px}
+.rfq-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.rfq-toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;min-width:230px;background:#fff;color:var(--txt)}
+.rfq-btn{border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:12.5px}
+.rfq-btn.o{background:var(--org);color:#fff}.rfq-btn.o:hover{background:#e07f0a}
+.rfq-btn.n{background:var(--navy);color:#fff}.rfq-btn.g{background:#e9eef5;color:var(--navy);border:1px solid var(--line)}
+.rfq-stat{color:var(--org);font-size:12px;font-weight:700;margin-left:4px}
+.rfq-grid{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start}
+.rfq-doc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.rfq-form{width:100%;border-collapse:collapse}
+.rfq-form td{border:1px solid #9aa8ba;padding:0;vertical-align:middle}
+.rfq-form .hdr{background:var(--navy);color:#fff;text-align:center;font-weight:700;padding:7px;font-size:12px}
+.rfq-form .lbl{background:var(--sky);font-weight:800;color:var(--navy);text-align:center;padding:8px;font-size:12.5px}
+.rfqwrap .cin{width:100%;border:0;padding:8px 9px;font-size:13px;font-family:inherit;background:transparent;color:var(--txt)}
+.rfqwrap .cin:focus{outline:2px solid var(--org);background:#fff8ee}
+.rfqwrap select.cin{cursor:pointer;-webkit-appearance:menulist}
+.rfqwrap textarea.cin{resize:vertical;min-height:56px;line-height:1.5}
+.rfq-mini{border:1px solid var(--org);background:#fff7ee;color:#b5670a;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-weight:700;margin-right:6px}
+.rfq-dim{margin-top:16px}
+.rfq-dim h4{font-size:13px;color:var(--navy);margin:0 0 7px}.rfq-dim h4 small{color:var(--mut);font-weight:500;font-size:11px}
+.rfq-dim table{width:100%;border-collapse:collapse}
+.rfq-dim th{background:var(--navy);color:#fff;font-weight:700;font-size:11px;padding:5px 3px;border:1px solid #9aa8ba;text-align:center}
+.rfq-dim td{border:1px solid #9aa8ba;padding:0;text-align:center}
+.rfq-dim td .cin{text-align:center;padding:6px 3px}
+.rfq-dim .cbm{background:#f4f8fc;font-weight:700;color:var(--navy)}
+.rfq-dim tr.tot td{background:#eaf2fb;font-weight:800;color:var(--navy);padding:6px}
+.rfq-rowtools{margin-top:7px;display:flex;gap:6px}
+.rfq-rowtools button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--navy);font-weight:600}
+.rfq-side{position:sticky;top:8px}
+.rfq-side-h{font-weight:800;color:var(--navy);font-size:13px;margin-bottom:6px}
+.rfq-mailbox{width:100%;height:300px;border:1px solid var(--line);border-radius:9px;padding:10px;font-family:"Consolas",monospace;font-size:11.5px;line-height:1.5;resize:vertical;color:var(--txt);background:#fff}
+.rfq-arch{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+.rfq-arch-i{padding:8px 10px;border-bottom:1px solid #eef2f7;cursor:pointer;font-size:12px}
+.rfq-arch-i:hover{background:var(--sky)}
+.rfq-arch-i b{color:var(--navy)}.rfq-arch-i span{color:var(--org);font-weight:700;margin-left:5px}
+.rfq-arch-i small{display:block;color:var(--mut);font-size:10.5px;margin-top:2px}
+.rfq-muted{color:var(--mut);font-size:12px;padding:12px;text-align:center}
+@media(max-width:960px){.rfq-grid{grid-template-columns:1fr}.rfq-side{position:static}}
+@media print{.no-print{display:none!important}.rfq-grid{grid-template-columns:1fr}.rfq-hd{border-radius:0}.rfq-doc{border:0}}
+
 </style>
 </head>
 <body>
@@ -502,6 +551,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
           <a onclick="openCBM()">📦 CBM계산</a>
           <a onclick="openIncoterms()">📄 인코텀즈</a>
           <a onclick="go('tracking')">🚢 화물추적</a>
+          <a onclick="go('rfq')">📝 RFQ 견적작성</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
           <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
@@ -3707,7 +3757,7 @@ VIEWS.cbm=function(){
   document.getElementById('main').innerHTML=`
   <div class="cbmwrap">
     <div class="cbm-hd">
-      <img src="${SHIP_URI}" alt="HAMEL" class="cbm-logo">
+      <img src="${LOGO_URI}" alt="HAMEL" class="cbm-logo">
       <div class="cbm-brand">HAMEL KOREA<small>PROJECT FREIGHT · CBM LOAD SIMULATOR</small></div>
       <div style="flex:1"></div>
       <a class="cbm-moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span>Q</span>V.KR ↗</a>
@@ -3996,7 +4046,7 @@ VIEWS.tracking=function(){
   document.getElementById('main').innerHTML=`
   <div class="trkwrap">
     <div class="trk-hd">
-      <img src="${SHIP_URI}" alt="HAMEL" class="trk-logo">
+      <img src="${LOGO_URI}" alt="HAMEL" class="trk-logo">
       <div class="trk-brand">HAMEL KOREA<small>PROJECT FREIGHT · CARGO TRACKING</small></div>
       <div style="flex:1"></div>
       <a class="trk-moqv" href="https://moqv.kr" target="_blank" rel="noopener">MO<span>Q</span>V.KR ↗</a>
@@ -4114,6 +4164,180 @@ window.TRK=(function(){
   function setTab(k){TAB=k;renderTabs();render();}
   function init(){TAB='all';renderTabs();render();}
   return {init,render,setTab,fb};
+})();
+
+/* ================= 📝 RFQ 견적작성 (인테이크→메일본문→아카이브) ================= */
+VIEWS.rfq=function(){
+  document.getElementById('main').innerHTML=`
+  <div class="rfqwrap">
+    <div class="rfq-hd">
+      <div class="rfq-logo"><img src="${LOGO_URI}" alt="HAMEL"></div>
+      <div class="rfq-co">HAMEL KOREA<small>PROJECT FREIGHT FORWARDING · RFQ</small></div>
+      <div style="flex:1"></div>
+      <div class="rfq-ti">RFQ · 견적의뢰</div>
+    </div>
+    <div class="rfq-toolbar">
+      <select id="rfqIntake"><option value="">📥 인테이크 불러오기…</option></select>
+      <button class="rfq-btn o" onclick="RFQSIM.buildMail()">✉ 메일본문 복사</button>
+      <button class="rfq-btn n" onclick="RFQSIM.save()">💾 저장·아카이브</button>
+      <button class="rfq-btn g" onclick="RFQSIM.newForm()">🆕 새 폼</button>
+      <button class="rfq-btn g" onclick="window.print()">🖨 PDF</button>
+      <span id="rfqStat" class="rfq-stat"></span>
+    </div>
+    <div class="rfq-grid">
+      <div class="rfq-doc" id="rfqDoc">
+        <table class="rfq-form">
+          <tr><td class="hdr" style="width:150px">DIST</td><td class="hdr">DETAIL</td><td class="hdr" style="width:220px">NOTE</td></tr>
+          <tr><td class="lbl">ACCT</td><td><input class="cin" id="rfq_acct" placeholder="화주/계정"></td><td><input class="cin" id="rfq_acctn"></td></tr>
+          <tr><td class="lbl">ITEM / COMM</td><td><input class="cin" id="rfq_item" placeholder="품목/커머디티"></td><td><input class="cin" id="rfq_hs" placeholder="HS CODE :"></td></tr>
+          <tr><td class="lbl">POL</td><td><input class="cin" id="rfq_pol" placeholder="선적항"></td><td><input class="cin" id="rfq_poln"></td></tr>
+          <tr><td class="lbl">POD</td><td><input class="cin" id="rfq_pod" placeholder="양륙항"></td><td><input class="cin" id="rfq_podn"></td></tr>
+          <tr><td class="lbl">FINAL DEST</td><td><input class="cin" id="rfq_dest" placeholder="최종목적지 (없으면 -)"></td><td><input class="cin" id="rfq_destn"></td></tr>
+          <tr><td class="lbl">INCOTERMS</td><td><select class="cin" id="rfq_inco"><option value="">선택</option><option>EXW</option><option>FCA</option><option>FAS</option><option>FOB</option><option>CFR</option><option>CIF</option><option>CPT</option><option>CIP</option><option>DAP</option><option>DPU</option><option>DDP</option></select></td><td><input class="cin" id="rfq_incon"></td></tr>
+          <tr><td class="lbl">TOS / CGO READY</td><td><input class="cin" id="rfq_ready" placeholder="카고레디 (예: 2024-12-18)"></td><td><input class="cin" id="rfq_readyn" placeholder="예: 22일 이후 선적"></td></tr>
+          <tr><td class="lbl">VOLUME</td><td><input class="cin" id="rfq_vol" placeholder="예: 40'FR X 8EA (OWH)"><button class="rfq-mini no-print" onclick="RFQSIM.fillVol()">↧ 규격합계</button></td><td><input class="cin" id="rfq_voln"></td></tr>
+          <tr><td class="lbl">REMARK</td><td colspan="2"><textarea class="cin" id="rfq_remark" placeholder="비고"></textarea></td></tr>
+        </table>
+        <div class="rfq-dim">
+          <h4>📐 DIMENSION DETAILS <small>CBM 자동 (L×W×H mm ÷ 10⁹)</small></h4>
+          <table>
+            <thead><tr><th style="width:40px">#</th><th>L(mm)</th><th>W(mm)</th><th>H(mm)</th><th>WT(kg)</th><th>CBM</th><th style="width:100px">TYPE</th><th>NOTE</th></tr></thead>
+            <tbody id="rfqDimBody"></tbody>
+            <tfoot><tr class="tot"><td>TOT</td><td colspan="3" id="rfqTpkg"></td><td id="rfqTwt"></td><td id="rfqTcbm"></td><td colspan="2"></td></tr></tfoot>
+          </table>
+          <div class="rfq-rowtools no-print"><button onclick="RFQSIM.addDim()">＋ 행추가</button><button onclick="RFQSIM.delDim()">－ 삭제</button></div>
+        </div>
+      </div>
+      <div class="rfq-side no-print">
+        <div class="rfq-side-h">✉ 메일 본문 미리보기</div>
+        <textarea id="rfqMail" class="rfq-mailbox" placeholder="‘메일본문 복사’를 누르면 여기에 생성되고 클립보드에 복사됩니다."></textarea>
+        <button class="rfq-btn o" style="width:100%;margin-top:6px" onclick="RFQSIM.copyMail()">📋 다시 복사</button>
+        <div class="rfq-side-h" style="margin-top:14px">🗂 최근 RFQ 아카이브</div>
+        <div id="rfqArchive" class="rfq-arch"><div class="rfq-muted">불러오는 중…</div></div>
+      </div>
+    </div>
+  </div>`;
+  RFQSIM.init();
+};
+
+window.RFQSIM=(function(){
+  const TYPES=['','NORMAL','BULK','20OT OH','20FR','40OT','40FR','40FR OWH','OOG','OWH','OH','DG','REEFER'];
+  let loadedId=null;
+  const g=id=>document.getElementById(id);
+  const val=id=>{const e=g(id);return e?String(e.value||'').trim():'';};
+  const setv=(id,v)=>{const e=g(id);if(e)e.value=(v==null?'':v);};
+
+  function dimRow(d){ d=d||{}; const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="pk"></td>
+      <td><input class="cin dn" type="number" value="${d.L||''}"></td>
+      <td><input class="cin dn" type="number" value="${d.W||''}"></td>
+      <td><input class="cin dn" type="number" value="${d.H||''}"></td>
+      <td><input class="cin dn" type="number" value="${d.kg||''}"></td>
+      <td class="cbm">-</td>
+      <td><select class="cin dt">${TYPES.map(t=>`<option ${t===(d.type||'')?'selected':''}>${t}</option>`).join('')}</select></td>
+      <td><input class="cin" value="${(d.note||'').replace(/"/g,'&quot;')}"></td>`;
+    tr.querySelectorAll('.dn').forEach(i=>i.addEventListener('input',recalc)); return tr; }
+  function addDim(d){ g('rfqDimBody').appendChild(dimRow(d)); renumber(); recalc(); }
+  function delDim(){ const b=g('rfqDimBody'); if(b.rows.length>1){b.deleteRow(b.rows.length-1);renumber();recalc();} }
+  function renumber(){ [...g('rfqDimBody').rows].forEach((tr,i)=>tr.querySelector('.pk').textContent=i+1); }
+  function recalc(){ let tw=0,tc=0,n=0;
+    [...g('rfqDimBody').rows].forEach(tr=>{ const v=tr.querySelectorAll('.dn');
+      const L=+v[0].value||0,W=+v[1].value||0,H=+v[2].value||0,kg=+v[3].value||0; const cbm=(L*W*H)/1e9;
+      tr.querySelector('.cbm').textContent=cbm?cbm.toFixed(2):'-'; tw+=kg; tc+=cbm; n++; });
+    g('rfqTpkg').textContent=n+' PKG'; g('rfqTwt').textContent=tw?tw.toLocaleString('en-US')+' kg':''; g('rfqTcbm').textContent=tc?tc.toFixed(2)+' CBM':'';
+    window.__rfqtot={n,tw,tc}; }
+  function fillVol(){ const t=window.__rfqtot||{}; if(!t.n)return; setv('rfq_vol',`${t.n} PKG / ${Math.round(t.tw).toLocaleString('en-US')} Kgs / ${t.tc.toFixed(2)} CBM`); }
+  function dims(){ return [...g('rfqDimBody').rows].map(tr=>{ const v=tr.querySelectorAll('.dn');
+    return {L:+v[0].value||0,W:+v[1].value||0,H:+v[2].value||0,kg:+v[3].value||0,cbm:+(((+v[0].value||0)*(+v[1].value||0)*(+v[2].value||0))/1e9).toFixed(2),type:tr.querySelector('.dt').value,note:tr.cells[7].querySelector('input').value}; })
+    .filter(d=>d.L||d.W||d.H||d.kg); }
+
+  /* ---- 인테이크 불러오기 ---- */
+  async function loadIntakeList(){
+    try{ const rows=await q('quote_requests',b=>b.order('created_at',{ascending:false}).limit(60));
+      const sel=g('rfqIntake'); if(!sel)return;
+      sel.innerHTML='<option value="">📥 인테이크 불러오기…</option>'+rows.map(r=>{
+        const lbl=[r.shipper||r.owner||'', (r.origin_port||'')+'→'+(r.dest_port||''), (r.cargo_desc||r.commodity||'').slice(0,20)].filter(Boolean).join(' · ');
+        return `<option value="${r.id}">${esc(lbl||r.subject||r.id.slice(0,8))}</option>`; }).join('');
+      window.__rfqRows=rows;
+      sel.onchange=()=>{ if(sel.value){ const r=(window.__rfqRows||[]).find(x=>x.id===sel.value); if(r)fillFrom(r); } };
+    }catch(e){ }
+  }
+  function fillFrom(r){
+    loadedId=r.id;
+    setv('rfq_acct', r.shipper||r.owner||''); setv('rfq_item', r.cargo_desc||r.commodity||''); setv('rfq_hs', r.hs_code||'');
+    setv('rfq_pol', r.origin_port||''); setv('rfq_pod', r.dest_port||''); setv('rfq_dest', r.delivery||r.delivery_addr||'');
+    setv('rfq_inco', r.incoterms||''); setv('rfq_ready', r.deadline||''); setv('rfq_vol', r.volume||'');
+    setv('rfq_remark', r.remark||r.notes||r.special_note||'');
+    g('rfqDimBody').innerHTML='';
+    let items=r.cargo_items; if(typeof items==='string'){ try{items=JSON.parse(items);}catch(e){items=null;} }
+    if(Array.isArray(items)&&items.length){ items.forEach(it=>addDim({L:it.L||it.l||it.length||'',W:it.W||it.w||it.width||'',H:it.H||it.h||it.height||'',kg:it.kg||it.weight||it.wt||'',type:it.type||'',note:it.note||''})); }
+    else { addDim(); addDim(); }
+    recalc(); g('rfqStat').textContent='인테이크 불러옴 · 수정 후 저장/메일생성'; }
+
+  /* ---- 메일 본문 ---- */
+  function mailText(){
+    const pol=val('rfq_pol'),pod=val('rfq_pod'),dest=val('rfq_dest');
+    const route=pol+' → '+pod+((dest&&dest!=='-')?(' → '+dest):'');
+    const L=[];
+    L.push('안녕하세요, 하멜코리아입니다.');
+    L.push('요청주신 건 아래와 같이 견적 안내드립니다.');
+    L.push('');
+    if(val('rfq_acct')) L.push('■ ACCT : '+val('rfq_acct'));
+    if(val('rfq_item')) L.push('■ ITEM : '+val('rfq_item')+(val('rfq_hs')?('  ('+val('rfq_hs').replace(/^HS ?CODE ?:?/i,'HS ').trim()+')'):''));
+    L.push('■ ROUTE : '+route);
+    if(val('rfq_inco')) L.push('■ INCOTERMS : '+val('rfq_inco'));
+    if(val('rfq_ready')) L.push('■ CARGO READY : '+val('rfq_ready')+(val('rfq_readyn')?(' ('+val('rfq_readyn')+')'):''));
+    if(val('rfq_vol')) L.push('■ VOLUME : '+val('rfq_vol'));
+    const ds=dims();
+    if(ds.length){ L.push(''); L.push('[ DIMENSION ]');
+      L.push('No.  L×W×H(mm)                WT(kg)      CBM     TYPE');
+      ds.forEach((d,i)=>{ L.push(String(i+1).padEnd(4)+ (d.L+'×'+d.W+'×'+d.H).padEnd(24)+ (d.kg?d.kg.toLocaleString('en-US'):'').padEnd(11)+ (d.cbm?d.cbm.toFixed(2):'').padEnd(8)+ (d.type||'')); });
+      const t=window.__rfqtot||{}; L.push('TOTAL  '+(t.n||ds.length)+' PKG   '+(t.tw?Math.round(t.tw).toLocaleString('en-US')+' kg':'')+'   '+(t.tc?t.tc.toFixed(2)+' CBM':''));
+    }
+    if(val('rfq_remark')){ L.push(''); L.push('■ REMARK'); val('rfq_remark').split('\n').forEach(x=>L.push('  '+x)); }
+    L.push(''); L.push('※ 상기 견적은 스페이스/스케줄 상황에 따라 변동될 수 있습니다.');
+    L.push(''); L.push('감사합니다.'); L.push('HAMEL KOREA / PROJECT FREIGHT FORWARDING');
+    return L.join('\n');
+  }
+  function buildMail(){ const t=mailText(); const m=g('rfqMail'); if(m)m.value=t; copyMail(); }
+  function copyMail(){ const m=g('rfqMail'); if(!m||!m.value){ buildMail(); return; }
+    try{ navigator.clipboard.writeText(m.value); toast('✅ 메일 본문이 클립보드에 복사됐습니다'); }
+    catch(e){ m.select(); try{document.execCommand('copy');toast('복사됨');}catch(_){toast('복사 실패 — 직접 선택 복사',true);} } }
+
+  /* ---- 저장/아카이브 ---- */
+  async function save(){
+    if(!val('rfq_pol')&&!val('rfq_pod')&&!val('rfq_acct')){ toast('최소 ACCT 또는 POL/POD를 입력하세요',true); return; }
+    const t=window.__rfqtot||{};
+    const payload={ shipper:val('rfq_acct')||null, cargo_desc:val('rfq_item')||null, hs_code:val('rfq_hs').replace(/^HS ?CODE ?:?/i,'').trim()||null,
+      origin_port:val('rfq_pol')||null, dest_port:val('rfq_pod')||null, delivery:val('rfq_dest')||null, incoterms:val('rfq_inco')||null,
+      deadline:val('rfq_ready')||null, volume:val('rfq_vol')||null, remark:val('rfq_remark')||null,
+      cargo_items:dims(), volume_cbm:(t.tc||null), channel:'RFQ', mode:'SEA', updated_at:new Date().toISOString() };
+    try{
+      let res;
+      if(loadedId){ res=await SB.from('quote_requests').update(payload).eq('id',loadedId); }
+      else { payload.status='RFQ'; payload.stage='RFQ'; res=await SB.from('quote_requests').insert(payload).select(); if(res&&res.data&&res.data[0])loadedId=res.data[0].id; }
+      if(res&&res.error) throw res.error;
+      try{ if(typeof logAct==='function') logAct(loadedId?'수정':'입력','rfq',(val('rfq_acct')||'')+' '+(val('rfq_pol')||'')+'→'+(val('rfq_pod')||'')); }catch(e){}
+      g('rfqStat').textContent='저장 완료 · 아카이브됨'; toast('💾 RFQ가 아카이브에 저장됐습니다'); loadArchive();
+    }catch(e){ toast('저장 오류: '+(e.message||e),true); }
+  }
+  async function loadArchive(){
+    try{ const rows=await q('quote_requests',b=>b.eq('channel','RFQ').order('updated_at',{ascending:false}).limit(30));
+      const el=g('rfqArchive'); if(!el)return;
+      if(!rows.length){ el.innerHTML='<div class="rfq-muted">저장된 RFQ가 없습니다.</div>'; return; }
+      el.innerHTML=rows.map(r=>`<div class="rfq-arch-i" onclick="RFQSIM.openArch('${r.id}')">
+        <b>${esc(r.shipper||'-')}</b> <span>${esc((r.origin_port||'')+'→'+(r.dest_port||''))}</span>
+        <small>${esc((r.cargo_desc||'').slice(0,26))} · ${r.volume_cbm?(r.volume_cbm+' CBM'):''} · ${(r.updated_at||'').slice(0,10)}</small></div>`).join('');
+      window.__rfqArch=rows;
+    }catch(e){ }
+  }
+  function openArch(id){ const r=(window.__rfqArch||[]).find(x=>x.id===id); if(r){ fillFrom(r); g('rfqStat').textContent='아카이브 불러옴'; window.scrollTo(0,0); } }
+
+  function newForm(){ loadedId=null; ['rfq_acct','rfq_acctn','rfq_item','rfq_hs','rfq_pol','rfq_poln','rfq_pod','rfq_podn','rfq_dest','rfq_destn','rfq_inco','rfq_incon','rfq_ready','rfq_readyn','rfq_vol','rfq_voln','rfq_remark'].forEach(id=>setv(id,''));
+    g('rfqDimBody').innerHTML=''; addDim(); addDim(); addDim(); recalc(); const m=g('rfqMail'); if(m)m.value=''; g('rfqStat').textContent='새 폼'; const sel=g('rfqIntake'); if(sel)sel.value=''; }
+
+  function init(){ loadedId=null; g('rfqDimBody').innerHTML=''; addDim(); addDim(); addDim(); recalc(); loadIntakeList(); loadArchive(); }
+  return {init,addDim,delDim,fillVol,buildMail,copyMail,save,openArch,newForm};
 })();
 
 window.openIncoterms=function(){
