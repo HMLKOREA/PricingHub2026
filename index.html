@@ -551,7 +551,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
           <a onclick="openCBM()">📦 CBM계산</a>
           <a onclick="openIncoterms()">📄 인코텀즈</a>
           <a onclick="go('tracking')">🚢 화물추적</a>
-          <a onclick="go('rfq')">📝 RFQ 견적작성</a>
+          <a onclick="go('rfqmk')">📝 RFQ 견적작성</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
           <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
@@ -677,7 +677,7 @@ const DOMAINS=[
  {k:'intake', ic:'📥', t:'인테이크', views:[['intake','📥 인테이크(AI)']]},
  {k:'pipeline', ic:'🗂', t:'파이프라인', views:[['pipeline','🗂 파이프라인']]},
  {k:'pricing', ic:'💲', t:'PRICING', badge:'NEW', views:[['pricematrix','💲 PRICING MATRIX'],['rateinquiry','📨 RATE INQUIRY'],['quoteresp','📄 견적 RESPONSE'],['pcharges','🏭 부대비용']]},
- {k:'sales',ic:'📋', t:'RFQ · 견적', views:[['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['history','📜 히스토리 검색']]},
+ {k:'sales',ic:'📋', t:'RFQ · 견적', views:[['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['rfqmk','📝 RFQ 작성'],['shipdocs','📄 선적서류'],['history','📜 히스토리 검색']]},
  {k:'hd',   ic:'🏗', t:'HD 섹터', views:[['hd','🏗 FR·COA 섹터']]},
  {k:'ref',  ic:'📚', t:'기준정보', views:[['rates','💱 요율'],['charges','🏭 국내 부대비용'],['ports','🌐 포트코드']]},
  {k:'ptn',  ic:'🤝', t:'파트너', views:[['partners','🌏 파트너'],['contacts','👥 연락처·선사']]},
@@ -4167,7 +4167,7 @@ window.TRK=(function(){
 })();
 
 /* ================= 📝 RFQ 견적작성 (인테이크→메일본문→아카이브) ================= */
-VIEWS.rfq=function(){
+VIEWS.rfqmk=function(){
   document.getElementById('main').innerHTML=`
   <div class="rfqwrap">
     <div class="rfq-hd">
@@ -4340,6 +4340,13 @@ window.RFQSIM=(function(){
   return {init,addDim,delDim,fillVol,buildMail,copyMail,save,openArch,newForm};
 })();
 
+/* ================= 📄 선적서류 양식 (선적스케줄/부킹컨펌/Air견적/해상견적) ================= */
+VIEWS.shipdocs=function(){
+  document.getElementById('main').innerHTML=`<div style="padding:2px 2px 0">
+    <div style="font-size:12px;color:var(--mut);margin:2px 4px 8px">화주 발송용 선적서류 · 셀 입력 후 각 폼의 🖨 버튼으로 인쇄/PDF</div>
+    <iframe src="docs.html" title="선적서류 양식" style="width:100%;height:calc(100vh - 150px);min-height:620px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
+  </div>`;
+};
 window.openIncoterms=function(){
   const rows=[['EXW','공장인도','수입자','수출자 공장에서 인수, 이후 전부 수입자'],
    ['FCA','운송인인도','수출자→지정지','지정장소/운송인 인도까지 수출자'],
