@@ -78,6 +78,11 @@ tbody tr:nth-child(even){background:#f7f9fc}
   </div>
   <div class="sp"></div>
   <button class="btn-n" onclick="location.reload()">↺ 초기화</button>
+  <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.14);padding:4px 8px;border-radius:8px;margin-left:4px">
+    <input id="jobIn" placeholder="JOB# 입력" style="width:120px;padding:5px 8px;border:0;border-radius:6px;font-size:12.5px" onkeydown="if(event.key==='Enter')loadJob()">
+    <button class="btn-g" onclick="loadJob()">🔍 JOB# 불러오기</button>
+    <span id="jobStat" style="color:#ffd9a8;font-size:11.5px;font-weight:700"></span>
+  </span>
   <button class="btn-o" onclick="window.print()">🖨 인쇄 / PDF</button>
 </div>
 
@@ -214,7 +219,33 @@ tbody tr:nth-child(even){background:#f7f9fc}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* ===== JOB# 인테이크 자동채우기 ===== */
+const SUPA_URL="https://kppbychtpsrxdgzjkyjp.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcGJ5Y2h0cHNyeGRnempreWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5NzE3ODIsImV4cCI6MjA5ODU0Nzc4Mn0.C1lZa-4sLCvn8gT-DeezQNZgPDonlsXVls0QAuufFyY";
+let SBD=null; try{ SBD=window.supabase.createClient(SUPA_URL,SUPA_KEY); }catch(e){}
+function jobFillLabel(label,v){ if(v==null||v==='')return; [...document.querySelectorAll('td.lbl')].forEach(td=>{ if(td.textContent.trim()===label){ const val=td.nextElementSibling; if(val)val.textContent=v; } }); }
+async function loadJob(){
+  const stat=document.getElementById('jobStat'); const jn=(document.getElementById('jobIn').value||'').trim();
+  if(!jn){ stat.textContent='JOB# 입력'; return; } if(!SBD){ stat.textContent='DB 연결 안됨'; return; }
+  stat.textContent='조회중…';
+  try{
+    let {data}=await SBD.from('quote_requests').select('*').ilike('job_no','%'+jn+'%').limit(1);
+    if(!data||!data.length){ const r2=await SBD.from('quote_requests').select('*').ilike('bkg_no','%'+jn+'%').limit(1); data=r2.data; }
+    if(!data||!data.length){ stat.textContent='JOB# "'+jn+'" 없음'; return; }
+    const r=data[0];
+    ['docA','docC','docD'].forEach(id=>{ const b=document.querySelector('#'+id+' .meta b'); if(b&&r.shipper)b.textContent=r.shipper; });
+    jobFillLabel('A. SHIPPER',r.shipper); jobFillLabel('LINE',r.selected_carrier); jobFillLabel('BOOKING NO',r.bkg_no); jobFillLabel('SIZE',r.volume);
+    const aRow=document.querySelector('#schedBody tr');
+    if(aRow&&aRow.cells.length>=9){ const c=aRow.cells;
+      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.bkg_no)c[1].textContent=r.bkg_no; if(r.dest_port)c[2].textContent=r.dest_port; if(r.volume)c[8].textContent=r.volume; }
+    const dRow=document.querySelector('#seaBody tr');
+    if(dRow&&dRow.cells.length>=3){ const c=dRow.cells;
+      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.origin_port)c[1].textContent=r.origin_port; if(r.dest_port)c[2].textContent=r.dest_port; }
+    stat.textContent='✅ '+(r.job_no||jn)+' · '+(r.shipper||'-');
+  }catch(e){ stat.textContent='오류: '+(e.message||e); }
+}
 const SCHED_SAMPLE=[
   ['CMA','SEL2139204A','SAVANNAH','EVER FAVOR / VSP000E19','9/21 10','9/23','9/24','10/21','40HC X1'],
   ['CMA','SEL2139204B','SAVANNAH','EVER FAVOR / VSP000E19','9/21 10','9/23','9/24','10/21','40HC X1'],

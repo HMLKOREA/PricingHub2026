@@ -1864,6 +1864,8 @@ VIEWS.daily=async function(){
     const todayIn=reqs.filter(r=>dOf(r.created_at)===D).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
     const open=reqs.filter(r=>OPEN.includes(r.stage||'접수'));
     const stale=open.filter(r=>daysAgo(r.created_at)>=7).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const idleOf=r=>Math.max(0,Math.floor((endT-new Date(r.updated_at||r.created_at))/86400000));
+    const fuList=open.map(r=>({...r,_idle:idleOf(r)})).sort((a,b)=>b._idle-a._idle);
     const wonToday=reqs.filter(r=>r.won_at&&dOf(r.won_at)===D);
     const bkToday=bk.filter(b=>dOf(b.bkg_date)===D);
     // 담당자별 집계
@@ -1873,6 +1875,7 @@ VIEWS.daily=async function(){
     wonToday.forEach(r=>ens(ownerOf(r)).won++);
     const owners=Object.keys(OW).filter(o=>(o!=='(미지정)'||OW[o].intake||OW[o].open)&&!staffExcluded(o)).sort((a,b)=>staffRank(a)-staffRank(b)||OW[b].intake-OW[a].intake||OW[b].open-OW[a].open);
     DAILY._ctx={D,todayIn,stale,wonToday,bkToday,OW,owners,ownerOf};
+    DAILY._fu=fuList; DAILY._fuOwners=[...new Set(fuList.map(r=>ownerOf(r)))].filter(o=>o!=='(미지정)'&&!staffExcluded(o)).sort((a,b)=>staffRank(a)-staffRank(b));
     // ── 팀 활동 로그(전원 공개) + 주간 요약 ──
     let acts=[]; try{ const ws=new Date(D+'T00:00:00'); ws.setDate(ws.getDate()-6); acts=await q('activity_logs',b=>b.gte('at',ws.toISOString().slice(0,10)).order('at',{ascending:false}).limit(700)); }catch(e){}
     const DATA_ACT=['입력','수정','삭제'];
@@ -1909,10 +1912,15 @@ VIEWS.daily=async function(){
         ${todayIn.length?`<div style="overflow:auto;max-height:320px"><table><thead><tr><th>시각</th><th>Job#</th><th>화주</th><th>레인</th><th>채널</th><th>담당</th><th>단계</th></tr></thead><tbody>
           ${todayIn.map(r=>`<tr ${rowLink(r)}><td class="mono" style="color:var(--mut)">${String(r.created_at||'').slice(11,16)}</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(r.channel||'')}</td><td>${esc(ownerOf(r))}</td><td>${stg(r.stage)}</td></tr>`).join('')}
         </tbody></table></div>`:'<div class="d">오늘 신규 인테이크가 없습니다.</div>'}</div>
-      <div class="card"><h3>🔴 미처리 팔로업 <span class="pill">${stale.length}</span> <span class="d" style="display:inline">— 7일 이상 진행중 · 오래된 순</span></h3>
-        ${stale.length?`<div style="overflow:auto;max-height:320px"><table><thead><tr><th>경과</th><th>Job#</th><th>화주</th><th>레인</th><th>담당</th><th>단계</th></tr></thead><tbody>
-          ${stale.slice(0,40).map(r=>`<tr ${rowLink(r)}><td class="mono" style="color:var(--loss);font-weight:700">${daysAgo(r.created_at)}일</td><td style="color:var(--accent);font-weight:700;white-space:nowrap">${esc(r.job_no||'')}</td><td>${esc(r.shipper||'')}</td><td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td><td>${esc(ownerOf(r))}</td><td>${stg(r.stage)}</td></tr>`).join('')}
-        </tbody></table></div>`:'<div class="d">7일 이상 미처리 건이 없습니다. 👍</div>'}</div>
+      <div class="card"><h3>🔔 팔로우업 필요 <span class="pill" id="fuCount">0</span> <span class="d" style="display:inline">— 인테이크 후 업데이트 정체 · 담당자별 정렬 · 화주 피드백 챙기기</span></h3>
+        <div class="row noprint" style="gap:7px;flex-wrap:wrap;margin-bottom:9px">
+          <select id="fuOwner" onchange="renderFollowup()"><option value="">담당 전체</option>${DAILY._fuOwners.map(o=>`<option>${esc(o)}</option>`).join('')}</select>
+          <select id="fuStage" onchange="renderFollowup()"><option value="">단계 전체</option><option>접수</option><option>견적중</option><option>제출</option><option>협상</option></select>
+          <select id="fuMin" onchange="renderFollowup()"><option value="0">전체 경과</option><option value="3">3일↑</option><option value="7" selected>7일↑</option><option value="14">14일↑</option></select>
+          <select id="fuSort" onchange="renderFollowup()"><option value="idle">경과일 ↓ (오래된 순)</option><option value="idleA">경과일 ↑</option><option value="owner">담당자순</option><option value="shipper">화주순</option><option value="stage">단계순</option></select>
+        </div>
+        <div style="overflow:auto;max-height:440px"><table><thead><tr><th>경과</th><th>담당</th><th>화주</th><th>레인</th><th>품목</th><th>단계</th><th>최근수정</th><th class="noprint"></th></tr></thead><tbody id="fuBody"></tbody></table></div>
+        <div class="d" style="margin-top:6px">경과 = 마지막 업데이트 후 경과일 (7일↑ 주황 · 14일↑ 빨강). <b>✉</b> = 화주 피드백 요청 문안 복사. 상태가 바뀌면 <b>열기</b>에서 단계를 업데이트하세요.</div></div>
       <div class="card"><h3>📣 팀 활동 피드 <span class="pill">${feed.length}</span> <span class="d" style="display:inline">— 오늘 입력·수정·삭제 전원 공개 · Job# 팔로우</span></h3>
         ${feed.length?`<div style="overflow:auto;max-height:360px"><table><thead><tr><th>시각</th><th>담당</th><th>구분</th><th>대상</th><th>내용</th></tr></thead><tbody>
           ${feed.map(a=>{const jn=feedJob(a.detail);return `<tr${jn?` style="cursor:pointer" onclick="openReqByNo('${jn}')"`:''}><td class="mono" style="color:var(--mut);white-space:nowrap">${String(a.at||'').slice(11,16)}</td><td><b>${esc(a.name||a.username||'')}</b></td><td>${actBadge(a.action)}</td><td style="white-space:nowrap">${jn?`<span style="color:var(--accent);font-weight:700">${esc(jn)}</span>`:esc(a.entity||'')}</td><td class="d" style="max-width:420px;white-space:normal">${esc(a.detail||'')}</td></tr>`;}).join('')}
@@ -1924,7 +1932,45 @@ VIEWS.daily=async function(){
         </tbody></table></div>
         ${Object.keys(staffAct).length?`<div class="row" style="flex-wrap:wrap;margin-top:10px;gap:6px">담당별 주간 활동 &nbsp;${Object.entries(staffAct).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<span class="pill">${esc(n)} <b style="color:var(--accent)">${c}</b></span>`).join('')}</div>`:''}
       </div>`;
+    renderFollowup();
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
+};
+window.renderFollowup=function(){
+  const body=document.getElementById('fuBody'); if(!body)return;
+  const list=DAILY._fu||[]; const ownerOf=r=>r.owner||r.assigned_to||'(미지정)';
+  const gv=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  const ow=gv('fuOwner'), st=gv('fuStage'), mn=+(gv('fuMin')||0), so=gv('fuSort')||'idle';
+  let rows=list.filter(r=>r._idle>=mn && (!ow||ownerOf(r)===ow) && (!st||(r.stage||'접수')===st));
+  const cmp={idle:(a,b)=>b._idle-a._idle,idleA:(a,b)=>a._idle-b._idle,
+    owner:(a,b)=>ownerOf(a).localeCompare(ownerOf(b))||b._idle-a._idle,
+    shipper:(a,b)=>String(a.shipper||'').localeCompare(String(b.shipper||''))||b._idle-a._idle,
+    stage:(a,b)=>String(a.stage||'').localeCompare(String(b.stage||''))||b._idle-a._idle};
+  rows.sort(cmp[so]||cmp.idle);
+  const badge=d=>{const c=d>=14?'var(--loss)':d>=7?'#d9822b':'var(--mut)';return `<b style="color:${c}">${d}일</b>`;};
+  const stg=s=>`<span class="tag st-${s||'접수'}">${s||'접수'}</span>`;
+  const cnt=document.getElementById('fuCount'); if(cnt)cnt.textContent=rows.length;
+  body.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td class="mono">${badge(r._idle)}</td><td>${esc(ownerOf(r))}</td><td>${esc(r.shipper||'')}</td>
+    <td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td>
+    <td class="d" style="max-width:180px;white-space:normal">${esc((r.cargo_desc||r.commodity||'').slice(0,32))}</td>
+    <td>${stg(r.stage)}</td><td class="mono d" style="white-space:nowrap">${String(r.updated_at||r.created_at||'').slice(0,10)}</td>
+    <td class="noprint" style="white-space:nowrap"><button class="btn sm" onclick="openReq('${r.id}')">열기</button> <button class="btn sm" onclick="fuCopyNudge('${r.id}')" title="화주 피드백 요청 문안 복사">✉</button></td>
+  </tr>`).join(''):'<tr><td colspan="8" class="d">조건에 맞는 정체 건이 없습니다. 👍</td></tr>';
+};
+window.fuCopyNudge=function(id){ const r=(DAILY._fu||[]).find(x=>x.id===id); if(!r){return;}
+  const route=(r.origin_port||'?')+' → '+(r.dest_port||'?');
+  const L=['안녕하세요, 하멜코리아입니다.',
+    (r.shipper||'고객')+'님, 아래 건 진행 여부 회신 부탁드립니다.','',
+    '- 화주 : '+(r.shipper||'-'),
+    '- 구간 : '+route,
+    (r.cargo_desc||r.commodity)?('- 품목 : '+(r.cargo_desc||r.commodity)):'',
+    (r.job_no)?('- JOB# : '+r.job_no):'',
+    '- 현재 단계 : '+(r.stage||'접수')+' (경과 '+r._idle+'일)','',
+    '견적/스케줄 관련 피드백 주시면 신속히 진행하겠습니다. 감사합니다.',
+    'HAMEL KOREA / PROJECT FREIGHT FORWARDING'].filter(x=>x!=='');
+  const t=L.join('\n');
+  try{ navigator.clipboard.writeText(t); toast('✉ 화주 피드백 요청 문안 복사됨'); }
+  catch(e){ toast('복사 실패',true); }
 };
 window.copyDaily=function(){ const c=DAILY._ctx; if(!c){toast('먼저 리포트를 불러오세요',true);return;}
   const L=[]; L.push(`[하멜코리아 데일리 리포트] ${c.D}`);
