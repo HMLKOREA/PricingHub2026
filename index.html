@@ -1200,7 +1200,9 @@ window.saveBooking=async function(id){
 /* ===== 견적 라인 (타입/사이즈별 Sell·Buy) ===== */
 let QLINES=[];
 const QTYPES_F=['O/F','BAF','CAF','LSS','EBS','PSS','20DV','40HQ','LCL(R.TON)','AIR(kg)','BULK(R.TON)','기타'];
-const QTYPES_L=['THC','DOF(B/L)','WFG','CCC','DOC','HANDLING','PFS','PSC','FSC','SEAL','CFS','드레이지','부두세','기타'];
+const QTYPES_L=['THC','DOF(B/L)','WFG','CCC','DOC','HANDLING','PFS','PSC','FSC','SEAL','CFS','드레이지',
+  'STEVEDORING','SURVEY CHARGE','CRANE HIRE','FORKLIFT','MAFI LASHING','PORT CLEANING','STORAGE','WHARFAGE','LASHING/SHORING','VAT',
+  '부두세','기타'];
 const QCATS=[['FREIGHT','🚢 운임 (Freight)','USD',QTYPES_F],['LOCAL','🏭 로컬차지 (Local)','KRW',QTYPES_L]];
 const QCURS=['USD','KRW','EUR','CNY'];
 function qlineRow(l){
