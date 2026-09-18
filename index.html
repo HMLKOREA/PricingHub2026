@@ -1953,7 +1953,7 @@ window.renderFollowup=function(){
     <td class="mono">${badge(r._idle)}</td><td>${esc(ownerOf(r))}</td><td>${esc(r.shipper||'')}</td>
     <td style="white-space:nowrap">${esc(r.origin_port||'?')}→${esc(r.dest_port||'?')}</td>
     <td class="d" style="max-width:180px;white-space:normal">${esc((r.cargo_desc||r.commodity||'').slice(0,32))}</td>
-    <td>${stg(r.stage)}</td><td class="mono d" style="white-space:nowrap">${String(r.updated_at||r.created_at||'').slice(0,10)}</td>
+    <td><select onchange="fuSetStage('${r.id}',this.value)" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 4px;border-radius:6px;border:1px solid var(--line);background:#fff">${['접수','견적중','제출','협상','수주','취소'].map(s=>`<option ${((r.stage||'접수')===s)?'selected':''}>${s}</option>`).join('')}</select></td><td class="mono d" style="white-space:nowrap">${String(r.updated_at||r.created_at||'').slice(0,10)}</td>
     <td class="noprint" style="white-space:nowrap"><button class="btn sm" onclick="openReq('${r.id}')">열기</button> <button class="btn sm" onclick="fuCopyNudge('${r.id}')" title="화주 피드백 요청 문안 복사">✉</button></td>
   </tr>`).join(''):'<tr><td colspan="8" class="d">조건에 맞는 정체 건이 없습니다. 👍</td></tr>';
 };
@@ -1971,6 +1971,17 @@ window.fuCopyNudge=function(id){ const r=(DAILY._fu||[]).find(x=>x.id===id); if(
   const t=L.join('\n');
   try{ navigator.clipboard.writeText(t); toast('✉ 화주 피드백 요청 문안 복사됨'); }
   catch(e){ toast('복사 실패',true); }
+};
+window.fuSetStage=async function(id,stage){
+  try{
+    const {error}=await SB.from('quote_requests').update({stage:stage,updated_at:new Date().toISOString()}).eq('id',id);
+    if(error)throw error;
+    try{ if(typeof logAct==='function') logAct('수정','quote_requests','단계→'+stage+' (팔로우업)'); }catch(e){}
+    const it=(DAILY._fu||[]).find(x=>x.id===id);
+    if(it){ it.stage=stage; it.updated_at=new Date().toISOString(); it._idle=0; }
+    if(stage==='수주'||stage==='취소'){ DAILY._fu=(DAILY._fu||[]).filter(x=>x.id!==id); }
+    renderFollowup(); toast('✅ 단계 업데이트: '+stage);
+  }catch(e){ toast('업데이트 실패: '+(e.message||e),true); }
 };
 window.copyDaily=function(){ const c=DAILY._ctx; if(!c){toast('먼저 리포트를 불러오세요',true);return;}
   const L=[]; L.push(`[하멜코리아 데일리 리포트] ${c.D}`);
@@ -4226,6 +4237,8 @@ VIEWS.rfqmk=function(){
     </div>
     <div class="rfq-toolbar">
       <select id="rfqIntake"><option value="">📥 인테이크 불러오기…</option></select>
+      <input id="rfqJob" placeholder="JOB# 검색" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12.5px" onkeydown="if(event.key==='Enter')RFQSIM.findJob()">
+      <button class="rfq-btn g" onclick="RFQSIM.findJob()">🔍 JOB#</button>
       <button class="rfq-btn o" onclick="RFQSIM.buildMail()">✉ 메일본문 복사</button>
       <button class="rfq-btn n" onclick="RFQSIM.save()">💾 저장·아카이브</button>
       <button class="rfq-btn g" onclick="RFQSIM.newForm()">🆕 새 폼</button>
@@ -4384,8 +4397,14 @@ window.RFQSIM=(function(){
   function newForm(){ loadedId=null; ['rfq_acct','rfq_acctn','rfq_item','rfq_hs','rfq_pol','rfq_poln','rfq_pod','rfq_podn','rfq_dest','rfq_destn','rfq_inco','rfq_incon','rfq_ready','rfq_readyn','rfq_vol','rfq_voln','rfq_remark'].forEach(id=>setv(id,''));
     g('rfqDimBody').innerHTML=''; addDim(); addDim(); addDim(); recalc(); const m=g('rfqMail'); if(m)m.value=''; g('rfqStat').textContent='새 폼'; const sel=g('rfqIntake'); if(sel)sel.value=''; }
 
+  async function findJob(){ const el=g('rfqJob'); const jn=(el?el.value:'').trim(); if(!jn){return;}
+    try{ let rows=await q('quote_requests',b=>b.ilike('job_no','%'+jn+'%').limit(1));
+      if(!rows||!rows.length){ rows=await q('quote_requests',b=>b.ilike('bkg_no','%'+jn+'%').limit(1)); }
+      if(rows&&rows.length){ fillFrom(rows[0]); g('rfqStat').textContent='JOB# '+(rows[0].job_no||jn)+' 불러옴'; }
+      else{ g('rfqStat').textContent='JOB# "'+jn+'" 없음'; }
+    }catch(e){ g('rfqStat').textContent='조회 오류'; } }
   function init(){ loadedId=null; g('rfqDimBody').innerHTML=''; addDim(); addDim(); addDim(); recalc(); loadIntakeList(); loadArchive(); }
-  return {init,addDim,delDim,fillVol,buildMail,copyMail,save,openArch,newForm};
+  return {init,addDim,delDim,fillVol,buildMail,copyMail,save,openArch,newForm,findJob};
 })();
 
 /* ================= 📄 선적서류 양식 (선적스케줄/부킹컨펌/Air견적/해상견적) ================= */

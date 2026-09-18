@@ -235,14 +235,19 @@ async function loadJob(){
     if(!data||!data.length){ const r2=await SBD.from('quote_requests').select('*').ilike('bkg_no','%'+jn+'%').limit(1); data=r2.data; }
     if(!data||!data.length){ stat.textContent='JOB# "'+jn+'" 없음'; return; }
     const r=data[0];
+    // 컨테이너 구성 문자열 (volume 없으면 cntr_* 로 조립)
+    const cntr=[['cntr_20dv',"20'DV"],['cntr_40dv',"40'DV"],['cntr_40hq',"40'HQ"],['cntr_20fr',"20'FR"],['cntr_40fr',"40'FR"],['cntr_20ot',"20'OT"],['cntr_40ot',"40'OT"],['cntr_20rf',"20'RF"],['cntr_40rf',"40'RF"]]
+      .filter(x=>+r[x[0]]>0).map(x=>x[1]+' X '+r[x[0]]).join(' + ');
+    const sizeStr=r.volume||cntr||'';
+    const remarkStr=r.special_note||r.remark||'';
     ['docA','docC','docD'].forEach(id=>{ const b=document.querySelector('#'+id+' .meta b'); if(b&&r.shipper)b.textContent=r.shipper; });
-    jobFillLabel('A. SHIPPER',r.shipper); jobFillLabel('LINE',r.selected_carrier); jobFillLabel('BOOKING NO',r.bkg_no); jobFillLabel('SIZE',r.volume);
+    jobFillLabel('A. SHIPPER',r.shipper); jobFillLabel('LINE',r.selected_carrier); jobFillLabel('BOOKING NO',r.bkg_no); jobFillLabel('SIZE',sizeStr); jobFillLabel('REMARK',remarkStr);
     const aRow=document.querySelector('#schedBody tr');
     if(aRow&&aRow.cells.length>=9){ const c=aRow.cells;
-      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.bkg_no)c[1].textContent=r.bkg_no; if(r.dest_port)c[2].textContent=r.dest_port; if(r.volume)c[8].textContent=r.volume; }
+      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.bkg_no)c[1].textContent=r.bkg_no; if(r.dest_port)c[2].textContent=r.dest_port; if(sizeStr)c[8].textContent=sizeStr; }
     const dRow=document.querySelector('#seaBody tr');
-    if(dRow&&dRow.cells.length>=3){ const c=dRow.cells;
-      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.origin_port)c[1].textContent=r.origin_port; if(r.dest_port)c[2].textContent=r.dest_port; }
+    if(dRow&&dRow.cells.length>=6){ const c=dRow.cells;
+      if(r.selected_carrier)c[0].textContent=r.selected_carrier; if(r.origin_port)c[1].textContent=r.origin_port; if(r.dest_port)c[2].textContent=r.dest_port; if(remarkStr)c[5].textContent=remarkStr; }
     stat.textContent='✅ '+(r.job_no||jn)+' · '+(r.shipper||'-');
   }catch(e){ stat.textContent='오류: '+(e.message||e); }
 }
