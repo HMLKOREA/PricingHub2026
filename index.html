@@ -555,6 +555,7 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
           <a onclick="openCBM()">📦 CBM계산</a>
           <a onclick="openIncoterms()">📄 인코텀즈</a>
           <a onclick="go('tracking')">🚢 화물추적</a>
+          <a onclick="go('hscode')">🔖 HS CODE 분류</a>
           <a onclick="go('rfqmk')">📝 RFQ 견적작성</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
           <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
@@ -4424,6 +4425,295 @@ VIEWS.shipdocs=function(){
     <iframe src="docs.html" title="선적서류 양식" style="width:100%;height:calc(100vh - 150px);min-height:620px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
   </div>`;
 };
+/* ================= 🔖 HS CODE 분류 · 세번조회 (네임스페이스: .hswrap) ================= */
+window.openHScode=function(){ go('hscode'); };
+VIEWS.hscode=function(){
+  if(!document.getElementById('hscss')){
+    const st=document.createElement('style'); st.id='hscss'; st.textContent=`
+.hswrap{--navy:#0b2e4f;--navy2:#123f68;--org:#f2911e;--line:#c9d3df;--sky:#eef4fb;--mut:#5b6b80;color:var(--txt)}
+.hswrap *{box-sizing:border-box}
+.hs-hd{display:flex;align-items:center;gap:12px;background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;border-radius:12px;padding:10px 16px;margin-bottom:12px}
+.hs-logo{width:44px;height:44px;background:#fff;border-radius:9px;padding:5px;display:flex;align-items:center;justify-content:center}
+.hs-logo img{max-width:100%;max-height:100%;object-fit:contain}
+.hs-co{font-weight:800;font-size:17px;line-height:1.1}
+.hs-co small{display:block;font-size:10.5px;color:#ffb14d;font-weight:700;letter-spacing:1.2px}
+.hs-ti{font-weight:800;font-size:15px;letter-spacing:1px;margin-left:auto}
+.hs-search{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.hs-search input{flex:1;min-width:220px;padding:11px 13px;border:2px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:#111}
+.hs-search input:focus{outline:0;border-color:var(--org);background:#fff8ee}
+.hs-sbtn{border:0;border-radius:10px;padding:11px 18px;font-weight:800;cursor:pointer;font-size:14px;background:var(--org);color:#fff}
+.hs-sbtn:hover{background:#e07f0a}
+.hs-hint{font-size:11.5px;color:var(--mut);margin:0 2px 10px}
+.hs-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.hs-chip{border:1px solid var(--line);background:var(--panel2,#f3f6fa);color:var(--mut);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600}
+.hs-chip:hover,.hs-chip.on{border-color:var(--org);color:var(--org);background:#fff7ee}
+.hs-grid{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+.hs-res{display:flex;flex-direction:column;gap:9px;min-height:120px}
+.hs-card{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fff;display:flex;gap:13px;align-items:flex-start}
+.hs-card:hover{border-color:var(--org);box-shadow:0 2px 10px rgba(11,46,79,.07)}
+.hs-code{font-family:"Consolas",monospace;font-weight:800;font-size:19px;color:var(--navy);letter-spacing:.5px;white-space:nowrap;min-width:96px}
+.hs-body{flex:1;min-width:0}
+.hs-kr{font-weight:700;font-size:14px;color:#111;line-height:1.35}
+.hs-en{font-size:12px;color:var(--mut);margin-top:2px}
+.hs-meta{font-size:11px;color:var(--org);font-weight:700;margin-top:4px}
+.hs-actions{display:flex;flex-direction:column;gap:5px}
+.hs-mini{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:7px;padding:5px 9px;font-size:11.5px;cursor:pointer;font-weight:700;white-space:nowrap}
+.hs-mini:hover{border-color:var(--org);color:var(--org)}
+.hs-mini.o{background:var(--org);color:#fff;border-color:var(--org)}
+.hs-empty{color:var(--mut);font-size:13px;text-align:center;padding:34px 12px;border:1px dashed var(--line);border-radius:11px}
+.hs-side{display:flex;flex-direction:column;gap:12px;position:sticky;top:8px}
+.hs-panel{border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden}
+.hs-panel h4{margin:0;background:var(--sky);color:var(--navy);font-size:12.5px;font-weight:800;padding:8px 12px;border-bottom:1px solid var(--line)}
+.hs-panel .pb{padding:9px 12px}
+.hs-hist{max-height:210px;overflow:auto}
+.hs-hi{padding:7px 12px;border-bottom:1px solid #eef2f7;cursor:pointer;font-size:12px}
+.hs-hi:hover{background:var(--sky)}
+.hs-hi b{color:var(--navy);font-family:"Consolas",monospace}
+.hs-hi span{display:block;color:var(--mut);font-size:11px;margin-top:1px}
+.hs-lnk{display:block;padding:7px 12px;border-bottom:1px solid #eef2f7;font-size:12.5px;color:var(--navy);text-decoration:none;font-weight:600}
+.hs-lnk:hover{background:var(--sky);color:var(--org)}
+.hs-lnk:last-child{border-bottom:0}
+.hs-note{font-size:11px;color:var(--mut);line-height:1.5}
+.hs-cnt{font-size:11.5px;color:var(--mut);margin:0 2px 8px;font-weight:600}
+@media(max-width:960px){.hs-grid{grid-template-columns:1fr}.hs-side{position:static}}
+`; document.head.appendChild(st);
+  }
+  const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // ===== 큐레이션 HS 데이터 (HS 2022, 6단위 국제공통) =====
+  const HSDATA=[
+   // 화학·플라스틱·고무
+   {c:'2804.61',kr:'실리콘(규소) 순도99.99% 이상',en:'Silicon >=99.99%',s:'화학',kw:'폴리실리콘 웨이퍼 반도체 silicon'},
+   {c:'2807.00',kr:'황산',en:'Sulphuric acid',s:'화학',kw:'황산 sulfuric acid'},
+   {c:'2901.10',kr:'포화 비환식 탄화수소',en:'Saturated acyclic hydrocarbons',s:'화학',kw:'탄화수소 hydrocarbon'},
+   {c:'2902.30',kr:'톨루엔',en:'Toluene',s:'화학',kw:'톨루엔 toluene 용제'},
+   {c:'2916.12',kr:'아크릴산 에스테르',en:'Esters of acrylic acid',s:'화학',kw:'아크릴산 에스테르 acrylate'},
+   {c:'3004.49',kr:'의약품(알칼로이드 함유, 소매용)',en:'Medicaments containing alkaloids',en2:'',s:'의약',kw:'의약품 propofol 프로포폴 pharmaceutical 약'},
+   {c:'3004.90',kr:'기타 의약품(소매포장)',en:'Other medicaments, retail',s:'의약',kw:'의약품 약 medicine pharmaceutical'},
+   {c:'3101.00',kr:'동식물성 비료',en:'Animal/vegetable fertilizers',s:'비료',kw:'유기질 비료 organic fertilizer'},
+   {c:'3102.10',kr:'요소 비료',en:'Urea fertilizer',s:'비료',kw:'요소 urea 비료'},
+   {c:'3105.20',kr:'복합비료(N·P·K)',en:'Mineral/chemical fertilizers NPK',s:'비료',kw:'복합비료 npk fertilizer'},
+   {c:'3208.90',kr:'도료·바니시(비수성)',en:'Paints/varnishes, non-aqueous',s:'화학',kw:'도료 페인트 paint coating'},
+   {c:'3506.91',kr:'접착제(고무·플라스틱계)',en:'Adhesives, rubber/plastic base',s:'화학',kw:'접착제 adhesive 본드'},
+   {c:'3901.10',kr:'폴리에틸렌(비중<0.94)',en:'Polyethylene SG<0.94',s:'플라스틱',kw:'폴리에틸렌 pe 수지 resin pellet'},
+   {c:'3902.10',kr:'폴리프로필렌',en:'Polypropylene',s:'플라스틱',kw:'폴리프로필렌 pp 수지 resin'},
+   {c:'3903.19',kr:'폴리스티렌',en:'Polystyrene',s:'플라스틱',kw:'폴리스티렌 ps 수지'},
+   {c:'3907.99',kr:'기타 폴리에스테르(1차형태)',en:'Other polyesters, primary form',s:'플라스틱',kw:'분체도료 powder coating 폴리에스테르 polyester resin'},
+   {c:'3920.49',kr:'PVC 판·필름·시트(비발포)',en:'PVC plates/film/sheet, non-cellular',s:'플라스틱',kw:'pvc 필름 인쇄필름 printing film sheet'},
+   {c:'3920.10',kr:'폴리에틸렌 판·필름',en:'PE plates/film/sheet',s:'플라스틱',kw:'pe 필름 비닐 film'},
+   {c:'3923.10',kr:'플라스틱 상자·케이스',en:'Plastic boxes/cases',s:'플라스틱',kw:'플라스틱 박스 case 포장'},
+   {c:'3926.90',kr:'기타 플라스틱 제품',en:'Other articles of plastics',s:'플라스틱',kw:'플라스틱 제품 plastic article'},
+   {c:'4011.10',kr:'승용차용 신품 타이어',en:'New pneumatic tyres, motor cars',s:'고무',kw:'타이어 tire tyre 승용차'},
+   {c:'4011.20',kr:'버스·트럭용 신품 타이어',en:'New pneumatic tyres, bus/lorry',s:'고무',kw:'타이어 tire tyre 트럭 버스 new tires'},
+   {c:'4016.93',kr:'고무 개스킷·씰',en:'Rubber gaskets/seals',s:'고무',kw:'개스킷 씰 gasket rubber'},
+   // 목재·종이·섬유
+   {c:'4407.11',kr:'침엽수 제재목',en:'Coniferous sawn wood',s:'목재',kw:'제재목 목재 lumber wood 원목'},
+   {c:'4412.31',kr:'합판(열대산 표면)',en:'Plywood, tropical face',s:'목재',kw:'합판 plywood 베니어'},
+   {c:'4415.20',kr:'목재 팰릿·상자',en:'Wooden pallets/boxes',s:'목재',kw:'팔레트 팰릿 pallet 목상자 case'},
+   {c:'4801.00',kr:'신문용지',en:'Newsprint',s:'종이',kw:'신문용지 newsprint paper'},
+   {c:'4804.11',kr:'크라프트 라이너지',en:'Kraftliner',s:'종이',kw:'크라프트 kraft 라이너지 골판지'},
+   {c:'4819.10',kr:'골판지 상자',en:'Corrugated cartons',s:'종이',kw:'골판지 박스 carton box 포장'},
+   {c:'5205.12',kr:'면사(정소면)',en:'Cotton yarn, combed',s:'섬유',kw:'면사 cotton yarn 실'},
+   {c:'5208.52',kr:'면직물(날염)',en:'Cotton woven fabric, printed',s:'섬유',kw:'면직물 cotton fabric 원단'},
+   {c:'5209.31',kr:'면직물(85%↑, 염색, 3/4능직)',en:'Cotton woven, dyed twill',s:'섬유',kw:'면직물 면폴리 cotton polyester woven fabric 원단'},
+   {c:'5407.61',kr:'폴리에스테르 직물',en:'Woven polyester filament fabric',s:'섬유',kw:'폴리에스테르 직물 원단 synthetic fabric'},
+   {c:'5603.14',kr:'부직포(150g/㎡ 초과)',en:'Nonwovens >150g/m2',s:'섬유',kw:'부직포 nonwoven'},
+   {c:'6109.10',kr:'면 티셔츠(니트)',en:'Cotton T-shirts, knitted',s:'의류',kw:'티셔츠 tshirt 의류 apparel'},
+   {c:'6203.42',kr:'남성용 면 바지',en:'Men trousers, cotton',s:'의류',kw:'바지 trousers 의류'},
+   {c:'6302.31',kr:'면 침구류',en:'Cotton bed linen',s:'의류',kw:'침구 bed linen 시트'},
+   {c:'6305.33',kr:'폴리에틸렌 포대·자루',en:'PE sacks/bags for packing',s:'섬유',kw:'포대 자루 sack bag 마대'},
+   // 광물·유리·세라믹
+   {c:'2523.29',kr:'포틀랜드 시멘트',en:'Portland cement',s:'광물',kw:'시멘트 cement'},
+   {c:'6802.23',kr:'화강암 가공석',en:'Worked granite',s:'광물',kw:'화강암 석재 granite stone'},
+   {c:'6907.21',kr:'세라믹 타일(흡수율<0.5%)',en:'Ceramic tiles',s:'세라믹',kw:'타일 tile 세라믹 ceramic'},
+   {c:'7005.29',kr:'플로트 판유리',en:'Float glass',s:'유리',kw:'판유리 유리 float glass'},
+   {c:'7007.29',kr:'접합 안전유리',en:'Laminated safety glass',s:'유리',kw:'안전유리 강화유리 safety glass'},
+   // 철강
+   {c:'7208.39',kr:'열연강판(코일)',en:'Hot-rolled steel coil',s:'철강',kw:'열연 hr 강판 코일 hot rolled coil steel'},
+   {c:'7209.17',kr:'냉연강판(0.5~1mm)',en:'Cold-rolled steel sheet',s:'철강',kw:'냉연 cr 강판 cold rolled steel'},
+   {c:'7210.49',kr:'용융아연도금강판(GI)',en:'Galvanized steel sheet',s:'철강',kw:'아연도금 gi galvanized 강판 코일'},
+   {c:'7213.91',kr:'철강 선재(코일)',en:'Steel wire rod, coils',s:'철강',kw:'선재 wire rod 철근'},
+   {c:'7214.20',kr:'이형철근',en:'Deformed steel bars/rebar',s:'철강',kw:'철근 rebar 이형봉강 bar'},
+   {c:'7216.31',kr:'철강 형강(U·I·H)',en:'Steel U/I/H sections',s:'철강',kw:'형강 h빔 beam section 철강'},
+   {c:'7219.34',kr:'스테인리스 냉연강판',en:'Stainless CR flat',s:'철강',kw:'스테인리스 stainless sus 강판'},
+   {c:'7304.19',kr:'철강 이음매없는 관(라인파이프)',en:'Seamless line pipe',s:'철강',kw:'강관 파이프 seamless pipe tube 배관'},
+   {c:'7306.30',kr:'용접강관(원형·철)',en:'Welded steel tube, iron',s:'철강',kw:'용접강관 welded pipe tube 배관'},
+   {c:'7307.19',kr:'철강 관 연결구',en:'Tube/pipe fittings, iron/steel',s:'철강',kw:'피팅 fitting 연결구 플랜지 elbow'},
+   {c:'7308.20',kr:'철강 탑·격자기둥(철구조물)',en:'Steel towers/lattice masts',s:'철강',kw:'철구조물 타워 tower 구조물 steel structure 스틸스트럭처'},
+   {c:'7308.90',kr:'기타 철강 구조물',en:'Other iron/steel structures',s:'철강',kw:'철구조물 structure 프레임 가대 steel structure'},
+   {c:'7309.00',kr:'철강 대형 탱크·용기(300L↑)',en:'Iron/steel tanks/vessels >300L',s:'철강',kw:'탱크 압력용기 pressure vessel tank reservoir 저장조'},
+   {c:'7311.00',kr:'압축·액화가스 용기',en:'Containers for compressed gas',s:'철강',kw:'가스용기 실린더 cylinder gas'},
+   {c:'7312.10',kr:'철강 연선·로프·케이블',en:'Steel wire rope/cable',s:'철강',kw:'와이어로프 rope 케이블 sling 슬링'},
+   {c:'7318.15',kr:'철강 볼트·스크류',en:'Steel bolts/screws',s:'철강',kw:'볼트 스크류 bolt screw 나사 fastener'},
+   {c:'7325.99',kr:'기타 철강 주물제품',en:'Other cast articles of iron/steel',s:'철강',kw:'주물 casting 사출기부품 부품 mould part'},
+   {c:'7326.90',kr:'기타 철강 제품',en:'Other articles of iron/steel',s:'철강',kw:'철강제품 브래킷 프레임 가공품 fabricated steel'},
+   // 비철금속
+   {c:'7407.10',kr:'구리 봉·형재',en:'Copper bars/rods/profiles',s:'비철',kw:'구리 동 copper bar'},
+   {c:'7408.11',kr:'구리 선(정련동)',en:'Refined copper wire',s:'비철',kw:'구리선 동선 copper wire'},
+   {c:'7601.10',kr:'비합금 알루미늄 괴',en:'Unwrought aluminium, not alloyed',s:'비철',kw:'알루미늄 ingot aluminium 잉곳'},
+   {c:'7606.12',kr:'알루미늄 합금 판·시트',en:'Aluminium alloy plates/sheets',s:'비철',kw:'알루미늄 판 시트 aluminium sheet'},
+   {c:'7610.90',kr:'알루미늄 구조물',en:'Aluminium structures',s:'비철',kw:'알루미늄 구조물 프레임 structure profile'},
+   // 공구
+   {c:'8207.30',kr:'프레스·스탬핑용 공구',en:'Tools for pressing/stamping',s:'공구',kw:'금형 프레스공구 press tool die'},
+   {c:'8207.19',kr:'착암·천공용 공구',en:'Rock drilling tools',s:'공구',kw:'드릴공구 boring drilling tool'},
+   // 기계 (84류)
+   {c:'8402.11',kr:'수관식 보일러',en:'Watertube boilers',s:'기계',kw:'보일러 boiler'},
+   {c:'8408.90',kr:'디젤엔진',en:'Compression-ignition engines',s:'기계',kw:'엔진 디젤엔진 diesel engine'},
+   {c:'8413.70',kr:'원심 펌프',en:'Centrifugal pumps',s:'기계',kw:'펌프 pump 원심펌프'},
+   {c:'8414.80',kr:'공기·가스 압축기',en:'Air/gas compressors',s:'기계',kw:'압축기 컴프레서 compressor'},
+   {c:'8414.59',kr:'송풍기·팬',en:'Fans/blowers',s:'기계',kw:'송풍기 팬 fan blower'},
+   {c:'8418.69',kr:'냉동·냉각 설비',en:'Refrigerating equipment',s:'기계',kw:'냉동기 냉각기 refrigeration chiller 냉동설비'},
+   {c:'8419.40',kr:'증류·정류 장치',en:'Distilling/rectifying plant',s:'기계',kw:'증류탑 distillation'},
+   {c:'8421.21',kr:'물 여과·정화기',en:'Water filtering/purifying',s:'기계',kw:'여과기 필터 filter 정수'},
+   {c:'8422.30',kr:'충전·포장 기계',en:'Filling/packing machines',s:'기계',kw:'포장기계 packing filling machine'},
+   {c:'8426.20',kr:'타워 크레인',en:'Tower cranes',s:'기계',kw:'크레인 타워크레인 crane 중량물'},
+   {c:'8426.41',kr:'이동식 크레인(타이어식)',en:'Mobile cranes on tyres',s:'기계',kw:'크레인 이동식크레인 mobile crane 중량물 하역'},
+   {c:'8427.20',kr:'지게차(자주식)',en:'Self-propelled forklift trucks',s:'기계',kw:'지게차 포크리프트 forklift'},
+   {c:'8428.90',kr:'기타 승강·운반 기계',en:'Other lifting/handling machinery',s:'기계',kw:'하역기계 컨베이어 리프트 lifting handling conveyor'},
+   {c:'8429.52',kr:'선회식 굴착기(엑스카베이터)',en:'Excavators, 360° revolving',s:'기계',kw:'굴착기 굴삭기 엑스카베이터 excavator 중장비'},
+   {c:'8429.11',kr:'불도저(무한궤도)',en:'Track-laying bulldozers',s:'기계',kw:'불도저 bulldozer 중장비'},
+   {c:'8431.49',kr:'하역·건설기계 부품',en:'Parts of lifting/earth machinery',s:'기계',kw:'중장비부품 크레인부품 parts machinery'},
+   {c:'8471.30',kr:'휴대용 컴퓨터(노트북)',en:'Portable computers',s:'전자',kw:'노트북 랩탑 laptop computer 컴퓨터'},
+   {c:'8474.20',kr:'파쇄·분쇄 기계',en:'Crushing/grinding machines',s:'기계',kw:'파쇄기 크러셔 crusher grinding'},
+   {c:'8477.10',kr:'플라스틱 사출성형기',en:'Injection-moulding machines',s:'기계',kw:'사출기 사출성형기 injection moulding machine'},
+   {c:'8477.90',kr:'고무·플라스틱 가공기계 부품',en:'Parts of rubber/plastic machinery',s:'기계',kw:'사출기부품 금형 parts injection'},
+   {c:'8479.89',kr:'기타 기계류(고유기능)',en:'Machines with individual functions',s:'기계',kw:'기계 설비 machine equipment nes'},
+   {c:'8479.90',kr:'기타 기계류 부품',en:'Parts of machines nes',s:'기계',kw:'기계부품 tools parts machinery'},
+   {c:'8481.80',kr:'밸브류(콕·기타)',en:'Taps/cocks/valves',s:'기계',kw:'밸브 valve 배관자재'},
+   {c:'8482.10',kr:'볼 베어링',en:'Ball bearings',s:'기계',kw:'베어링 bearing'},
+   {c:'8483.40',kr:'기어·감속기',en:'Gears/gearing/reducers',s:'기계',kw:'기어 감속기 gear reducer'},
+   // 전기 (85류)
+   {c:'8501.53',kr:'교류 전동기(75kW 초과)',en:'AC motors >75kW',s:'전기',kw:'모터 전동기 motor'},
+   {c:'8502.13',kr:'디젤 발전세트(375kVA↑)',en:'Diesel generating sets >375kVA',s:'전기',kw:'발전기 발전세트 generator genset'},
+   {c:'8504.23',kr:'전력 변압기(10,000kVA 초과)',en:'Power transformers >10,000kVA',s:'전기',kw:'변압기 대형변압기 power transformer 초고압 중량물'},
+   {c:'8504.22',kr:'전력 변압기(650~10,000kVA)',en:'Power transformers 650-10,000kVA',s:'전기',kw:'변압기 transformer 배전'},
+   {c:'8504.34',kr:'변압기(500kVA 초과)',en:'Transformers >500kVA',s:'전기',kw:'변압기 transformer'},
+   {c:'8506.50',kr:'리튬 일차전지',en:'Lithium primary cells/batteries',s:'전기',kw:'리튬전지 일차전지 primary battery lithium'},
+   {c:'8507.60',kr:'리튬이온 축전지(2차전지)',en:'Lithium-ion accumulators',s:'전기',kw:'리튬이온 배터리 2차전지 cell battery ess 셀'},
+   {c:'8511.30',kr:'점화용 디스트리뷰터·코일',en:'Distributors/ignition coils',s:'전기',kw:'점화코일 ignition'},
+   {c:'8517.62',kr:'통신·네트워크 기기',en:'Communication/network apparatus',s:'전자',kw:'통신장비 라우터 스위치 network router'},
+   {c:'8524.91',kr:'평판디스플레이 모듈(LCD 등)',en:'Flat panel display modules',s:'전자',kw:'lcd 패널 디스플레이 display panel module'},
+   {c:'8528.72',kr:'컬러 TV 수신기',en:'Colour TV reception apparatus',s:'전자',kw:'tv 티비 텔레비전 television'},
+   {c:'8536.20',kr:'자동 차단기(1000V 이하)',en:'Automatic circuit breakers',s:'전기',kw:'차단기 breaker 배전반'},
+   {c:'8537.10',kr:'배전·제어반(1000V 이하)',en:'Boards/panels for control',s:'전기',kw:'배전반 제어반 판넬 panel switchboard'},
+   {c:'8541.43',kr:'태양전지 모듈(패널)',en:'Photovoltaic cells/modules',s:'전기',kw:'태양광 태양전지 solar pv module 패널'},
+   {c:'8542.31',kr:'프로세서·컨트롤러 IC',en:'Electronic IC processors',s:'전자',kw:'반도체 ic 프로세서 semiconductor chip'},
+   {c:'8544.49',kr:'전기 절연 전선·케이블',en:'Insulated electric conductors',s:'전기',kw:'전선 케이블 cable wire 전력케이블'},
+   {c:'8544.60',kr:'고압 전력케이블(1000V 초과)',en:'Electric conductors >1000V',s:'전기',kw:'고압케이블 power cable 전력케이블'},
+   // 차량·운송장비 (86~89류)
+   {c:'8701.20',kr:'도로 트랙터(트레일러용)',en:'Road tractors for semi-trailers',s:'차량',kw:'트랙터 트레일러헤드 tractor'},
+   {c:'8703.23',kr:'승용차(가솔린 1500~3000cc)',en:'Cars, petrol 1500-3000cc',s:'차량',kw:'승용차 자동차 vehicle car 가솔린'},
+   {c:'8703.32',kr:'승용차(디젤 1500~2500cc)',en:'Cars, diesel 1500-2500cc',s:'차량',kw:'승용차 자동차 vehicle car 디젤 diesel'},
+   {c:'8704.23',kr:'화물차(디젤 20톤 초과)',en:'Diesel trucks >20t',s:'차량',kw:'화물차 트럭 truck 카고'},
+   {c:'8705.10',kr:'크레인 트럭',en:'Mobile crane lorries',s:'차량',kw:'크레인트럭 crane truck'},
+   {c:'8708.29',kr:'차체 부품·부속',en:'Motor vehicle body parts',s:'차량',kw:'자동차부품 auto parts 부품'},
+   {c:'8709.11',kr:'구내 운반차(전동)',en:'Works trucks, electric',s:'차량',kw:'구내운반차 전동카트'},
+   {c:'8716.39',kr:'화물 트레일러·세미트레일러',en:'Goods trailers/semi-trailers',s:'차량',kw:'트레일러 trailer 샤시 chassis'},
+   {c:'8901.90',kr:'화물선·바지선',en:'Cargo vessels/barges',s:'선박',kw:'선박 바지선 vessel barge ship'},
+   {c:'8905.10',kr:'준설선',en:'Dredgers',s:'선박',kw:'준설선 dredger'},
+   // 정밀·의료 (90류)
+   {c:'9018.90',kr:'기타 의료·수의용 기기',en:'Other medical instruments',s:'의료',kw:'의료기기 medical instrument device'},
+   {c:'9022.13',kr:'치과용 X선 장치',en:'Dental X-ray apparatus',s:'의료',kw:'치과 엑스레이 x-ray dental radiographic 방사선'},
+   {c:'9022.14',kr:'의료용 X선 장치',en:'Medical X-ray apparatus',s:'의료',kw:'엑스레이 x-ray 방사선 radiographic'},
+   {c:'9027.80',kr:'이화학 분석기기',en:'Instruments for physical analysis',s:'의료',kw:'분석기 analyzer 계측'},
+   {c:'9031.49',kr:'광학식 측정·검사기기',en:'Optical measuring/checking',s:'의료',kw:'측정기 검사기 measuring inspection'},
+   // 가구·기타
+   {c:'9403.20',kr:'금속제 가구',en:'Metal furniture',s:'기타',kw:'가구 furniture 금속가구 랙 rack'},
+   {c:'9405.40',kr:'기타 전기 조명기구',en:'Other electric lamps/lighting',s:'기타',kw:'조명 램프 lamp lighting led'},
+   {c:'9406.90',kr:'조립식 건축물',en:'Prefabricated buildings',s:'기타',kw:'조립식건물 prefab 모듈러 컨테이너하우스'}
+  ];
+  // 섹션(류) 필터 칩
+  const CATS=['철강','기계','전기','전자','차량','화학','플라스틱','비철','섬유','의료','의약','목재','종이','고무','광물','유리','세라믹','비료','공구','선박','기타'];
+  const fmt=c=>c; // 이미 xxxx.xx
+  function score(item,q){
+    const hay=(item.c+' '+item.kr+' '+item.en+' '+(item.kw||'')).toLowerCase();
+    const t=q.toLowerCase();
+    if(item.c.replace(/\./g,'').startsWith(t.replace(/\./g,'')) && /^[0-9.]+$/.test(t)) return 100;
+    if((item.kr+' '+item.en).toLowerCase()===t) return 90;
+    const words=t.split(/\s+/).filter(Boolean);
+    let sc=0; for(const w of words){ if(hay.includes(w)) sc+=10; }
+    return words.length && sc===words.length*10 ? 60+sc : (sc>0?sc:0);
+  }
+  function search(q,cat){
+    q=(q||'').trim();
+    let list=HSDATA.slice();
+    if(cat) list=list.filter(x=>x.s===cat);
+    if(!q){ return list.sort((a,b)=>a.c.localeCompare(b.c)); }
+    return list.map(x=>({x,sc:score(x,q)})).filter(o=>o.sc>0).sort((a,b)=>b.sc-a.sc).map(o=>o.x);
+  }
+  function cardHTML(x){
+    return `<div class="hs-card">
+      <div class="hs-code">${esc(x.c)}</div>
+      <div class="hs-body">
+        <div class="hs-kr">${esc(x.kr)}</div>
+        <div class="hs-en">${esc(x.en)}</div>
+        <div class="hs-meta">${esc(x.s)}류 · HS ${esc(x.c.slice(0,4))}호</div>
+      </div>
+      <div class="hs-actions">
+        <button class="hs-mini o" onclick="hsCopy('${esc(x.c)}')">복사</button>
+        <button class="hs-mini" onclick="hsOfficial('${esc(x.c)}')">관세청</button>
+      </div>
+    </div>`;
+  }
+  function render(){
+    const q=(document.getElementById('hsQ')||{}).value||'';
+    const cat=window.__hsCat||'';
+    const rows=search(q,cat);
+    const cnt=document.getElementById('hsCnt');
+    if(cnt) cnt.textContent=`결과 ${rows.length}건${cat?(' · '+cat+'류'):''}${q?(' · "'+q+'"'):''}`;
+    const box=document.getElementById('hsRes');
+    if(!box) return;
+    if(!rows.length){ box.innerHTML=`<div class="hs-empty">일치하는 세번이 없습니다.<br>다른 품명(국문/영문) 또는 6자리 세번으로 검색하거나,<br>우측 <b>공식 조회</b>에서 관세청 UNIPASS로 확인하세요.</div>`; return; }
+    box.innerHTML=rows.slice(0,60).map(cardHTML).join('');
+  }
+  window.hsCat=function(c){ window.__hsCat=(window.__hsCat===c?'':c);
+    document.querySelectorAll('.hswrap .hs-chip').forEach(el=>el.classList.toggle('on',el.dataset.cat===window.__hsCat)); render(); };
+  window.hsCopy=function(code){ const t='HS '+code; if(navigator.clipboard){ navigator.clipboard.writeText(code).then(()=>toast&&toast(t+' 복사')); } };
+  window.hsOfficial=function(code){ const n=code.replace(/\./g,''); window.open('https://unipass.customs.go.kr/clip/index.do?t='+encodeURIComponent(code),'_blank'); };
+  window.hsSearch=function(){ render(); };
+  async function loadHist(){
+    const el=document.getElementById('hsHist'); if(!el) return;
+    try{
+      const rows=await q('quote_requests',b=>b.not('hs_code','is',null).order('created_at',{ascending:false}).limit(400));
+      const seen={}; const out=[];
+      (rows||[]).forEach(r=>{ const code=(r.hs_code||'').trim(); if(!code) return; const key=code+'|'+(r.commodity||''); if(seen[key])return; seen[key]=1; out.push({code,commodity:r.commodity||r.cargo_desc||''}); });
+      window.__hsHist=out;
+      if(!out.length){ el.innerHTML=`<div class="pb hs-note">기존 분류 이력이 없습니다.</div>`; return; }
+      el.innerHTML=out.slice(0,40).map(h=>`<div class="hs-hi" onclick="hsUseHist('${esc(h.code)}')"><b>${esc(h.code)}</b><span>${esc((h.commodity||'').slice(0,34))}</span></div>`).join('');
+    }catch(e){ el.innerHTML=`<div class="pb hs-note">이력을 불러오지 못했습니다.</div>`; }
+  }
+  window.hsUseHist=function(code){ const i=document.getElementById('hsQ'); if(i){ i.value=code; render(); window.scrollTo(0,0); } };
+  document.getElementById('main').innerHTML=`<div class="hswrap">
+    <div class="hs-hd">
+      <div class="hs-logo"><img src="${LOGO_URI}" alt="HAMEL"></div>
+      <div><div class="hs-co">HAMEL KOREA<small>FREIGHT FORWARDING</small></div></div>
+      <div class="hs-ti">HS CODE 분류 · 세번조회</div>
+    </div>
+    <div class="hs-search">
+      <input id="hsQ" placeholder="품명(국문/영문) 또는 세번 입력 — 예: 변압기, transformer, 타이어, 8504" autocomplete="off">
+      <button class="hs-sbtn" onclick="hsSearch()">🔍 검색</button>
+    </div>
+    <div class="hs-hint">6자리는 국제 공통(HS) 세번입니다. 국내 수출입 신고용 10자리(HSK)는 관세청 UNIPASS에서 최종 확인하세요.</div>
+    <div class="hs-chips" id="hsChips">${CATS.map(c=>`<span class="hs-chip" data-cat="${c}" onclick="hsCat('${c}')">${c}</span>`).join('')}</div>
+    <div class="hs-cnt" id="hsCnt"></div>
+    <div class="hs-grid">
+      <div class="hs-res" id="hsRes"></div>
+      <div class="hs-side">
+        <div class="hs-panel"><h4>🗂 우리 회사 분류 이력</h4><div class="hs-hist" id="hsHist"><div class="pb hs-note">불러오는 중…</div></div></div>
+        <div class="hs-panel"><h4>🔗 공식 조회</h4>
+          <a class="hs-lnk" href="https://unipass.customs.go.kr/clip/index.do" target="_blank" rel="noopener">관세청 UNIPASS 관세율표</a>
+          <a class="hs-lnk" href="https://www.tradenavi.or.kr" target="_blank" rel="noopener">TradeNAVI 통합무역정보</a>
+          <a class="hs-lnk" href="https://www.customs.go.kr" target="_blank" rel="noopener">관세청 (품목분류)</a>
+          <a class="hs-lnk" href="https://www.hs-tariff.com" target="_blank" rel="noopener">HS-Tariff AI 분류</a>
+        </div>
+        <div class="hs-panel"><h4>💡 사용 안내</h4><div class="pb hs-note">
+          품명·용도로 검색 후 후보 세번을 확인하고, 정확한 10자리 세번과 관세율·요건은 반드시 관세청에서 검증하세요. 오분류 시 관세·요건(수입요건) 리스크가 발생합니다. 애매하면 관세사 자문을 권장합니다.
+        </div></div>
+      </div>
+    </div>
+  </div>`;
+  render(); loadHist();
+};
+
 window.openIncoterms=function(){
   const rows=[['EXW','공장인도','수입자','수출자 공장에서 인수, 이후 전부 수입자'],
    ['FCA','운송인인도','수출자→지정지','지정장소/운송인 인도까지 수출자'],
