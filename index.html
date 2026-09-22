@@ -681,7 +681,7 @@ const DOMAINS=[
  {k:'chat', ic:'💬', t:'데이터 챗봇', badge:'AI', views:[['datachat','💬 데이터 챗봇']]},
  {k:'intake', ic:'📥', t:'인테이크', views:[['intake','📥 인테이크(AI)']]},
  {k:'pipeline', ic:'🗂', t:'파이프라인', views:[['pipeline','🗂 파이프라인']]},
- {k:'pricing', ic:'💲', t:'PRICING', badge:'NEW', views:[['pricematrix','💲 PRICING MATRIX'],['rateinquiry','📨 RATE INQUIRY'],['quoteresp','📄 견적 RESPONSE'],['pcharges','🏭 부대비용']]},
+ {k:'pricing', ic:'💲', t:'PRICING', badge:'NEW', views:[['ratehub','📊 운임 현황'],['pricematrix','💲 PRICING MATRIX'],['rateinquiry','📨 RATE INQUIRY'],['quoteresp','📄 견적 RESPONSE'],['pcharges','🏭 부대비용']]},
  {k:'sales',ic:'📋', t:'RFQ · 견적', expand:true, views:[['rfq','🚚 RFQ·견적비교'],['rfqform','✍ RFQ 양식'],['rfqmk','📝 RFQ 작성'],['shipdocs','📄 선적서류'],['history','📜 히스토리 검색']]},
  {k:'hd',   ic:'🏗', t:'HD 섹터', views:[['hd','🏗 FR·COA 섹터']]},
  {k:'ref',  ic:'📚', t:'기준정보', views:[['rates','💱 요율'],['charges','🏭 국내 부대비용'],['ports','🌐 포트코드']]},
@@ -2957,6 +2957,248 @@ function pmStub(title,desc){ return `<h2>${title}</h2><div class="sub">${desc}</
 VIEWS.rateinquiry=async function(){ $('#main').innerHTML=pmStub('📨 RATE INQUIRY','선사·협력사에 보낼 운임 문의 구성 (양식 대기 중)'); };
 VIEWS.quoteresp=async function(){ $('#main').innerHTML=pmStub('📄 견적 RESPONSE','화주에게 보내는 SEA/AIR/LCL 견적서 (양식 대기 중)'); };
 
+/* ================= 📊 운임 현황 (RateHub) · 네임스페이스 .rhwrap ================= */
+let RH={carrier:'',polF:'',q:'',basis:'',rtype:'',expSoon:false,showExp:false,tab:'grid',_rc:null,_st:null,_cm:null,_lanes:null};
+const RH_CT=['20DV','40DV','40HC','40RF','40FR','20FR'];
+const rhNum=v=>{const n=parseFloat(String(v==null?'':v).replace(/[,\s$]/g,''));return isNaN(n)?null:n;};
+const rhToday=()=>new Date().toISOString().slice(0,10);
+function rhValidToday(r){const t=rhToday();return (!r.valid_from||String(r.valid_from)<=t)&&(!r.valid_to||String(r.valid_to)>=t);}
+function rhExpSoon(vto){if(!vto)return false;const t=new Date(rhToday());const d=new Date(vto);const days=(d-t)/86400000;return days>=0&&days<=7;}
+function rhBasisClass(b){b=(b||'').toUpperCase();if(b.includes('ALL'))return 'rh-all';if(b.includes('O/F')||b==='OF')return 'rh-of';return 'rh-part';}
+async function rhLoad(){
+  if(!RH._rc){ try{ RH._rc=await qAll('rate_cards',b=>b.eq('status','ACTIVE')); }catch(e){ RH._rc=[]; } }
+  if(!RH._st){ try{ RH._st=await q('surcharge_tariff',b=>b.order('carrier')); }catch(e){ RH._st=[]; } }
+  if(!RH._cm){ try{ RH._cm=await q('carrier_master',b=>b.eq('active',true)); }catch(e){ RH._cm=[]; } }
+  return RH._rc;
+}
+function rhBuildLanes(rows){
+  const map={};
+  rows.forEach(r=>{
+    const key=[r.carrier,r.rate_type,r.pol,r.pod,r.service_mode,r.basis,r.valid_from,r.valid_to].join('|');
+    if(!map[key])map[key]={id:r.id,carrier:r.carrier||'?',rate_type:r.rate_type||'',pol:r.pol||'',pod:r.pod||'',region:r.region||'',mode:r.service_mode||'',basis:r.basis||'',incl:r.incl||'',excl:r.excl||'',note:r.note||'',routing:r.routing||r.via||'',tt:r.transit_days,valid_from:r.valid_from,valid_to:r.valid_to,v:{}};
+    map[key].v[r.container_type]=rhNum(r.freight_usd);
+  });
+  return Object.values(map);
+}
+window.rhSet=function(k,v){RH[k]=v;VIEWS.ratehub();};
+window.rhTab=function(t){RH.tab=t;VIEWS.ratehub();};
+window.rhToggle=function(k){RH[k]=!RH[k];VIEWS.ratehub();};
+window.rhSearch=function(){RH.q=(document.getElementById('rhQ')||{}).value||'';rhRenderGrid();};
+window.rhOpenFor=function(pol,pod){RH.polF=pol||'';RH.q=pod||'';RH.carrier='';RH.basis='';RH.rtype='';RH.expSoon=false;RH.showExp=false;RH.tab='grid';go('ratehub');};
+function rhFilterLanes(){
+  let lanes=(RH._lanes||[]).slice();
+  if(RH.carrier)lanes=lanes.filter(l=>l.carrier===RH.carrier);
+  if(RH.polF)lanes=lanes.filter(l=>(l.pol||'').toUpperCase()===RH.polF.toUpperCase());
+  if(RH.basis)lanes=lanes.filter(l=>rhBasisClass(l.basis)===RH.basis);
+  if(RH.rtype)lanes=lanes.filter(l=>(l.rate_type||'')===RH.rtype);
+  if(RH.expSoon)lanes=lanes.filter(l=>rhExpSoon(l.valid_to));
+  const kw=(RH.q||'').trim().toUpperCase();
+  if(kw)lanes=lanes.filter(l=>((l.pod||'')+' '+(l.pol||'')+' '+(l.region||'')+' '+(l.carrier||'')+' '+(l.note||'')).toUpperCase().includes(kw));
+  lanes.sort((a,b)=>(a.carrier+a.pol+a.pod).localeCompare(b.carrier+b.pol+b.pod));
+  return lanes;
+}
+function rhRenderGrid(){
+  const box=document.getElementById('rhGridBox'); if(!box)return;
+  const lanes=rhFilterLanes();
+  const cnt=document.getElementById('rhCnt'); if(cnt)cnt.textContent=`${lanes.length.toLocaleString()} 구간`;
+  if(!lanes.length){ box.innerHTML=`<div class="rh-empty">조건에 맞는 유효 요율이 없습니다. 필터를 완화하거나 검색어를 바꿔보세요.</div>`; return; }
+  const money=v=>v==null?'<span class="rh-dash">–</span>':'$'+v.toLocaleString();
+  const rows=lanes.slice(0,500).map((l,i)=>{
+    const bc=rhBasisClass(l.basis);
+    const exp=rhExpSoon(l.valid_to)?`<span class="rh-badge warn" title="유효 종료 임박">D-${Math.max(0,Math.round((new Date(l.valid_to)-new Date(rhToday()))/86400000))}</span>`:'';
+    const info=(l.incl||l.excl||l.note)?`<button class="rh-i" title="포함/별도/비고" onclick="rhInfo(${i})">ⓘ</button>`:'';
+    return `<tr>
+      <td class="rh-c">${esc(l.carrier)}</td>
+      <td>${esc(l.rate_type||'-')}</td>
+      <td>${esc(l.pol)}</td>
+      <td class="rh-pod">${esc(l.pod)}${exp}</td>
+      <td>${esc(l.mode||'-')}</td>
+      <td class="rh-n">${money(l.v['20DV'])}</td>
+      <td class="rh-n">${money(l.v['40DV'])}</td>
+      <td class="rh-n">${money(l.v['40HC'])}</td>
+      <td class="rh-n">${money(l.v['40RF']!=null?l.v['40RF']:l.v['40FR'])}</td>
+      <td><span class="rh-basis ${bc}">${esc(l.basis||'-')}</span></td>
+      <td class="rh-v">${esc(l.valid_to||'-')}</td>
+      <td class="rh-act">${info}<button class="rh-mini" title="마진 견적가 계산" onclick="rhCalc(${i})">💰</button><button class="rh-mini" title="PRICING MATRIX 레인" onclick="rhToMatrix('${esc((l.pol||'').replace(/'/g,''))}','${esc((l.pod||'').replace(/'/g,''))}')">💲</button></td>
+    </tr>`;
+  }).join('');
+  window.__rhView=lanes.slice(0,500);
+  box.innerHTML=`<table class="rh-tbl"><thead><tr>
+    <th>선사</th><th>유형</th><th>POL</th><th>POD</th><th>MODE</th>
+    <th class="rh-n">20DV</th><th class="rh-n">40DV</th><th class="rh-n">40HC</th><th class="rh-n">RF/FR</th>
+    <th>기준</th><th>유효~</th><th>액션</th></tr></thead><tbody>${rows}</tbody></table>
+    ${lanes.length>500?`<div class="rh-note">상위 500구간만 표시 · 검색으로 좁혀보세요 (전체 ${lanes.length.toLocaleString()})</div>`:''}`;
+}
+window.rhInfo=function(i){const l=(window.__rhView||[])[i];if(!l)return;
+  showModal(`<h3>${esc(l.carrier)} · ${esc(l.pol)} → ${esc(l.pod)}</h3>
+   <div class="d" style="margin-bottom:8px">${esc(l.rate_type||'')} · 기준 <b>${esc(l.basis||'-')}</b> · 유효 ${esc(l.valid_from||'')}~${esc(l.valid_to||'')}</div>
+   <table style="width:100%;font-size:13px;border-collapse:collapse">
+   <tr><td style="padding:6px 8px;background:var(--panel2);font-weight:700;width:70px">포함</td><td style="padding:6px 8px">${esc(l.incl||'-')}</td></tr>
+   <tr><td style="padding:6px 8px;background:var(--panel2);font-weight:700">별도</td><td style="padding:6px 8px;color:var(--loss)">${esc(l.excl||'-')}</td></tr>
+   <tr><td style="padding:6px 8px;background:var(--panel2);font-weight:700">Routing</td><td style="padding:6px 8px">${esc(l.routing||'-')} ${l.tt?('· T/T '+l.tt+'일'):''}</td></tr>
+   <tr><td style="padding:6px 8px;background:var(--panel2);font-weight:700">비고</td><td style="padding:6px 8px">${esc(l.note||'-')}</td></tr>
+   </table>`);
+};
+window.rhToMatrix=function(pol,pod){ try{ if(typeof PM!=='undefined'){ PM.pol=pol; PM.pod=pod; } }catch(e){} go('pricematrix'); };
+window.rhCalc=function(i){const l=(window.__rhView||[])[i];if(!l)return;
+  const cts=RH_CT.filter(ct=>l.v[ct]!=null);
+  const isAll=rhBasisClass(l.basis)==='rh-all';
+  const opts=cts.map(ct=>`<option value="${ct}">${ct} · $${l.v[ct].toLocaleString()}</option>`).join('');
+  showModal(`<h3>💰 견적가 계산 <span class="d" style="font-weight:400">· ${esc(l.carrier)} ${esc(l.pol)}→${esc(l.pod)}</span></h3>
+   <div class="d" style="margin-bottom:10px">기준 <b>${esc(l.basis||'-')}</b> ${isAll?'(운임이 이미 ALL-IN)':'(O/F — 서차지 별도 입력)'} · 통화 USD/컨테이너</div>
+   <div id="rhCalcForm" style="display:grid;grid-template-columns:110px 1fr;gap:8px 12px;align-items:center;font-size:13px">
+     <label>컨테이너</label><select id="rhcCt" onchange="rhCalcRun()">${opts}</select>
+     <label>원가(O/F)</label><input id="rhcBase" type="number" oninput="rhCalcRun()" style="padding:7px 9px;border:1px solid var(--line);border-radius:7px">
+     <label>서차지 합계</label><input id="rhcSc" type="number" value="${isAll?0:''}" placeholder="${isAll?'0 (포함)':'예: 380'}" oninput="rhCalcRun()" style="padding:7px 9px;border:1px solid var(--line);border-radius:7px">
+     <label>마진 %</label><input id="rhcMg" type="number" value="15" oninput="rhCalcRun()" style="padding:7px 9px;border:1px solid var(--line);border-radius:7px">
+   </div>
+   <div id="rhcOut" style="margin-top:14px;padding:12px 14px;background:var(--panel2);border-radius:9px;font-size:14px"></div>
+   <div class="d" style="margin-top:6px">별도(참고): ${esc(l.excl||'-')}</div>`);
+  // init base value
+  const sel=document.getElementById('rhcCt'); if(sel){ document.getElementById('rhcBase').value=l.v[sel.value]; }
+  window.__rhCalcLane=l; rhCalcRun();
+};
+window.rhCalcRun=function(){
+  const l=window.__rhCalcLane; if(!l)return;
+  const ct=(document.getElementById('rhcCt')||{}).value;
+  const baseEl=document.getElementById('rhcBase');
+  if(baseEl&&document.activeElement!==baseEl&&ct&&l.v[ct]!=null&&baseEl.dataset.ct!==ct){ baseEl.value=l.v[ct]; baseEl.dataset.ct=ct; }
+  const base=parseFloat(baseEl.value)||0;
+  const sc=parseFloat((document.getElementById('rhcSc')||{}).value)||0;
+  const mg=parseFloat((document.getElementById('rhcMg')||{}).value)||0;
+  const cost=base+sc;
+  const sell=Math.round(cost*(1+mg/100));
+  const profit=sell-cost;
+  const out=document.getElementById('rhcOut'); if(!out)return;
+  out.innerHTML=`원가 $${cost.toLocaleString()} <span class="d">(O/F ${base.toLocaleString()} + 서차지 ${sc.toLocaleString()})</span> × 마진 ${mg}%
+    <div style="margin-top:6px;font-size:20px;font-weight:800;color:var(--win)">견적가 $${sell.toLocaleString()} <span style="font-size:12px;color:var(--mut);font-weight:600">/ ${esc(ct||'')} · 이익 $${profit.toLocaleString()}</span></div>
+    <button class="rh-mini" style="margin-top:8px" onclick="rhCalcCopy(${sell},'${esc(ct||'')}')">📋 견적가 복사</button>`;
+};
+window.rhCalcCopy=function(sell,ct){const l=window.__rhCalcLane||{};const txt=`${l.carrier||''} ${l.pol||''}→${l.pod||''} ${ct} : USD ${Number(sell).toLocaleString()}/CNTR (ALL-IN 견적가)`;if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast&&toast('견적가 복사'));}};
+function rhKpis(){
+  const lanesAll=RH._lanes||[];
+  const carriers=new Set(lanesAll.map(l=>l.carrier)).size;
+  const soon=lanesAll.filter(l=>rhExpSoon(l.valid_to)).length;
+  // 공백 선사: carrier_master active 중 유효 구간 0
+  const withRates=new Set(lanesAll.map(l=>l.carrier));
+  const gaps=(RH._cm||[]).filter(c=>c.active&&!withRates.has(c.code)).map(c=>c.code);
+  return {lanes:lanesAll.length,carriers,soon,gaps};
+}
+VIEWS.ratehub=async function(){
+  if(!document.getElementById('rhcss')){
+    const st=document.createElement('style'); st.id='rhcss'; st.textContent=`
+.rhwrap{color:var(--txt)}
+.rh-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.rh-kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 14px}
+.rh-kpi .k{font-size:11px;color:var(--mut);font-weight:700}
+.rh-kpi .v{font-size:22px;font-weight:800;margin-top:2px}
+.rh-kpi.warn{border-color:var(--amber,#d97706)}
+.rh-kpi.warn .v{color:var(--amber,#d97706)}
+.rh-kpi.gap{border-color:var(--loss,#dc2626)}
+.rh-kpi.gap .v{color:var(--loss,#dc2626);font-size:14px;line-height:1.4;font-weight:700}
+.rh-tabs{display:flex;gap:6px;margin-bottom:10px}
+.rh-tab{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 14px;font-size:12.5px;cursor:pointer;font-weight:700;color:var(--mut)}
+.rh-tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rh-filters{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.rh-filters input,.rh-filters select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:var(--panel);color:var(--txt)}
+.rh-chip{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;color:var(--mut)}
+.rh-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(37,99,235,.1)}
+.rh-cnt{font-size:12px;color:var(--mut);font-weight:700;margin-left:2px}
+.rh-tblbox{border:1px solid var(--line);border-radius:11px;overflow:auto;max-height:64vh;background:var(--panel)}
+.rh-tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
+.rh-tbl thead th{position:sticky;top:0;background:var(--panel2);z-index:1;padding:8px 9px;text-align:left;font-size:11px;color:var(--mut);border-bottom:1px solid var(--line);white-space:nowrap}
+.rh-tbl td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rh-tbl tbody tr:hover{background:var(--panel2)}
+.rh-tbl .rh-n{text-align:right;font-family:"Consolas",monospace}
+.rh-tbl .rh-c{font-weight:800;color:var(--accent)}
+.rh-pod{font-weight:700}
+.rh-dash{color:var(--mut2,#9aa)}
+.rh-v{font-family:"Consolas",monospace;font-size:11.5px}
+.rh-basis{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:800}
+.rh-basis.rh-all{background:rgba(22,163,74,.15);color:#16a34a}
+.rh-basis.rh-of{background:rgba(217,119,6,.15);color:#d97706}
+.rh-basis.rh-part{background:rgba(37,99,235,.12);color:var(--accent)}
+.rh-badge.warn{background:var(--amber,#d97706);color:#fff;border-radius:5px;padding:1px 5px;font-size:10px;font-weight:800;margin-left:5px}
+.rh-i{border:1px solid var(--line);background:var(--panel2);border-radius:5px;cursor:pointer;font-size:11px;padding:2px 6px;margin-right:4px;color:var(--mut)}
+.rh-mini{border:1px solid var(--line);background:var(--panel);border-radius:6px;cursor:pointer;font-size:12px;padding:3px 7px;margin-right:3px}
+.rh-mini:hover{border-color:var(--accent)}
+.rh-empty{padding:34px;text-align:center;color:var(--mut);font-size:13px}
+.rh-note{padding:8px 12px;font-size:11px;color:var(--mut)}
+.rh-legend{font-size:11px;color:var(--mut);margin:8px 2px 0;line-height:1.6}
+`; document.head.appendChild(st);
+  }
+  $('#main').innerHTML='<div class="rhwrap"><div class="rh-empty">불러오는 중…</div></div>';
+  await rhLoad();
+  const valid=(RH._rc||[]).filter(rhValidToday);
+  RH._lanes=rhBuildLanes(valid);
+  const k=rhKpis();
+  const carriers=[...new Set(RH._lanes.map(l=>l.carrier))].sort();
+  const rtypes=[...new Set(RH._lanes.map(l=>l.rate_type).filter(Boolean))].sort();
+  const pols=[...new Set(RH._lanes.map(l=>l.pol).filter(Boolean))].sort();
+  const head=`<div class="rhwrap">
+   <h2 style="margin:0 0 3px">📊 운임 현황 <span class="d" style="font-weight:400">· RateHub · rate_cards 실시간 · 오늘 유효분</span></h2>
+   <div class="sub" style="margin-bottom:12px">ALL-IN=운임에 서차지 포함 · O/F=해상운임만(서차지 별도) · PARTIAL=일부 포함 — 기준 다르면 단순비교 금지</div>
+   <div class="rh-kpis">
+     <div class="rh-kpi"><div class="k">오늘 유효 구간</div><div class="v">${k.lanes.toLocaleString()}</div></div>
+     <div class="rh-kpi"><div class="k">유효 선사</div><div class="v">${k.carriers}</div></div>
+     <div class="rh-kpi warn"><div class="k">유효 종료 임박 (≤7일)</div><div class="v">${k.soon}</div></div>
+     <div class="rh-kpi gap"><div class="k">운임 공백 선사</div><div class="v">${k.gaps.length?esc(k.gaps.join(', ')):'없음 ✓'}</div></div>
+   </div>
+   <div class="rh-tabs">
+     <div class="rh-tab ${RH.tab==='grid'?'on':''}" onclick="rhTab('grid')">현황표</div>
+     <div class="rh-tab ${RH.tab==='sc'?'on':''}" onclick="rhTab('sc')">서차지 마스터</div>
+     <div class="rh-tab ${RH.tab==='oog'?'on':''}" onclick="rhTab('oog')">OOG</div>
+   </div>`;
+  if(RH.tab==='sc'){ $('#main').innerHTML=head+rhScHTML()+'</div>'; return; }
+  if(RH.tab==='oog'){ $('#main').innerHTML=head+rhOogHTML()+'</div>'; return; }
+  $('#main').innerHTML=head+`
+   <div class="rh-filters">
+     <span class="rh-chip ${!RH.carrier?'on':''}" onclick="rhSet('carrier','')">전체</span>
+     ${carriers.map(c=>`<span class="rh-chip ${RH.carrier===c?'on':''}" onclick="rhSet('carrier','${esc(c)}')">${esc(c)}</span>`).join('')}
+     <span style="width:8px"></span>
+     <select onchange="rhSet('polF',this.value)"><option value="">POL 전체</option>${pols.map(p=>`<option${RH.polF===p?' selected':''}>${esc(p)}</option>`).join('')}</select>
+     <select onchange="rhSet('basis',this.value)"><option value="">기준 전체</option><option value="rh-all"${RH.basis==='rh-all'?' selected':''}>ALL-IN</option><option value="rh-of"${RH.basis==='rh-of'?' selected':''}>O/F</option><option value="rh-part"${RH.basis==='rh-part'?' selected':''}>PARTIAL</option></select>
+     <select onchange="rhSet('rtype',this.value)"><option value="">유형 전체</option>${rtypes.map(t=>`<option${RH.rtype===t?' selected':''}>${esc(t)}</option>`).join('')}</select>
+     <span class="rh-chip ${RH.expSoon?'on':''}" onclick="rhToggle('expSoon')">⏰ 임박만</span>
+     <input id="rhQ" placeholder="POD/지역/비고 검색 (예: HAMBURG, USEC)" value="${esc(RH.q||'')}" oninput="rhSearch()" style="min-width:230px">
+     <span class="rh-cnt" id="rhCnt"></span>
+   </div>
+   <div class="rh-tblbox" id="rhGridBox"></div>
+   <div class="rh-legend">💰 = 마진 얹어 견적가 계산 · 💲 = PRICING MATRIX 레인 비교 · ⓘ = 포함/별도/비고 · <span class="rh-basis rh-all">ALL-IN</span> <span class="rh-basis rh-of">O/F</span> <span class="rh-basis rh-part">PARTIAL</span></div>
+  </div>`;
+  rhRenderGrid();
+};
+function rhScHTML(){
+  const st=(RH._st||[]);
+  if(!st.length)return `<div class="rh-empty">서차지 마스터(surcharge_tariff)가 비어 있습니다.</div>`;
+  const rows=st.map(s=>`<tr>
+    <td class="rh-c">${esc(s.carrier||'')}</td><td>${esc(s.code||'')}</td><td>${esc(s.local_name||'')}</td>
+    <td>${esc(s.trade||'')}</td><td>${esc(s.scope||'')}</td>
+    <td class="rh-n">${s.amt_20!=null?s.amt_20:'-'}</td><td class="rh-n">${s.amt_40!=null?s.amt_40:'-'}</td>
+    <td>${esc(s.unit||'')}</td><td>${s.mandatory?'<b style="color:var(--loss)">필수</b>':'선택'}</td>
+    <td class="rh-v">${esc(s.effective||'')}${s.expiry?('~'+s.expiry):''}</td><td>${esc(s.status||'')}</td></tr>`).join('');
+  return `<div class="rh-tblbox"><table class="rh-tbl"><thead><tr>
+    <th>선사</th><th>코드</th><th>명칭</th><th>항로</th><th>적용</th><th class="rh-n">20'</th><th class="rh-n">40'</th><th>단위</th><th>필수</th><th>발효</th><th>상태</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="rh-legend">ALL-IN 아닌 요율(O/F)은 위 서차지가 별도로 가산됩니다. 견적 전 필수(빨강) 항목 반드시 반영.</div>`;
+}
+function rhOogHTML(){
+  const lanes=rhBuildLanes((RH._rc||[]).filter(r=>String(r.rate_type||'').toUpperCase()==='OOG'));
+  if(!lanes.length)return `<div class="rh-empty">OOG(Flat Rack/Open Top) 요율이 없습니다.</div>`;
+  const rows=lanes.map((l,i)=>`<tr>
+    <td class="rh-c">${esc(l.carrier)}</td><td>${esc(l.pol)}</td><td class="rh-pod">${esc(l.pod)}</td>
+    <td class="rh-n">${l.v['20FR']!=null?'$'+l.v['20FR'].toLocaleString():'-'}</td>
+    <td class="rh-n">${l.v['40FR']!=null?'$'+l.v['40FR'].toLocaleString():'-'}</td>
+    <td>${esc(l.incl||'-')}</td><td style="color:var(--loss)">${esc(l.excl||'-')}</td>
+    <td class="rh-v">${esc(l.valid_to||'-')}</td><td style="max-width:260px;white-space:normal">${esc(l.note||'')}</td></tr>`).join('');
+  return `<div class="rh-tblbox"><table class="rh-tbl"><thead><tr>
+    <th>선사</th><th>POL</th><th>POD</th><th class="rh-n">20FR</th><th class="rh-n">40FR</th><th>포함</th><th>별도</th><th>유효~</th><th>비고</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="rh-legend">IG=규격내 · OH=높이초과 · OW=폭초과 · OWH=폭·높이 동시초과. 규격초과는 선복·언더덱 확인 필수.</div>`;
+}
+
+
+
 /* ================= 협력사 RFQ 양식 작성기 (입력→메일 본문 복사) ================= */
 let RFQF={type:'air', f:{pol:'ICN', remark:'1. DIRECT, TS 요청\n2. 대략적인 t/time 요청', cfs_cntr:"40'HQ * 1"}, vendors:[{v:'',d:''},{v:'',d:''},{v:'',d:''}]};
 const RFQ_TYPES=[['air','✈ AIR'],['truck','🚚 트럭킹'],['cntr','📦 컨테이너'],['cfs','🏭 CFS'],['collect','📊 견적취합']];
@@ -4263,7 +4505,7 @@ VIEWS.rfqmk=function(){
           <tr><td class="lbl">ACCT</td><td><input class="cin" id="rfq_acct" placeholder="화주/계정"></td><td><input class="cin" id="rfq_acctn"></td></tr>
           <tr><td class="lbl">ITEM / COMM</td><td><input class="cin" id="rfq_item" placeholder="품목/커머디티"></td><td><input class="cin" id="rfq_hs" placeholder="HS CODE :"></td></tr>
           <tr><td class="lbl">POL</td><td><input class="cin" id="rfq_pol" placeholder="선적항"></td><td><input class="cin" id="rfq_poln"></td></tr>
-          <tr><td class="lbl">POD</td><td><input class="cin" id="rfq_pod" placeholder="양륙항"></td><td><input class="cin" id="rfq_podn"></td></tr>
+          <tr><td class="lbl">POD</td><td><input class="cin" id="rfq_pod" placeholder="양륙항"></td><td style="display:flex;gap:4px;align-items:center"><input class="cin" id="rfq_podn" style="flex:1"><button type="button" class="rfq-mini" title="이 POL/POD로 운임 현황(RateHub) 조회" onclick="rhOpenFor((document.getElementById('rfq_pol')||{}).value,(document.getElementById('rfq_pod')||{}).value)">💰 요율</button></td></tr>
           <tr><td class="lbl">FINAL DEST</td><td><input class="cin" id="rfq_dest" placeholder="최종목적지 (없으면 -)"></td><td><input class="cin" id="rfq_destn"></td></tr>
           <tr><td class="lbl">INCOTERMS</td><td><select class="cin" id="rfq_inco"><option value="">선택</option><option>EXW</option><option>FCA</option><option>FAS</option><option>FOB</option><option>CFR</option><option>CIF</option><option>CPT</option><option>CIP</option><option>DAP</option><option>DPU</option><option>DDP</option></select></td><td><input class="cin" id="rfq_incon"></td></tr>
           <tr><td class="lbl">TOS / CGO READY</td><td><input class="cin" id="rfq_ready" placeholder="카고레디 (예: 2024-12-18)"></td><td><input class="cin" id="rfq_readyn" placeholder="예: 22일 이후 선적"></td></tr>
