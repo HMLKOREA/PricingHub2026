@@ -211,11 +211,11 @@ tbody tr:nth-child(even){background:#f7f9fc}
     </div>
     <div class="qnote" contenteditable>Please find below the schedule and rate for the earliest available vessel we can proceed with.</div>
     <table class="sea">
-      <thead><tr><th>LINE</th><th>POL</th><th>POD</th><th contenteditable>20'DV</th><th>VALIDITY</th><th>REMARK</th></tr></thead>
+      <thead><tr><th>LINE</th><th>POL</th><th>POD</th><th contenteditable>O/Freight</th><th>VALIDITY</th><th>REMARK</th></tr></thead>
       <tbody id="seaBody"></tbody>
     </table>
-    <div class="rowtools no-print"><button onclick="addSeaRow()">＋ 행추가</button><button onclick="delSeaRow()">－ 행삭제</button></div>
-    <div class="hint">규격 헤더(20'DV)는 클릭해 40'HQ 등으로 바꿀 수 있어요. 여러 구간은 행추가로.</div>
+    <div class="rowtools no-print"><button onclick="addSeaRow()">＋ 행추가</button><button onclick="delSeaRow()">－ 행삭제</button><button id="seaCopyBtn" onclick="copySeaTable(this)">📋 표 복사</button></div>
+    <div class="hint">O/Freight 칸은 선택 규격(20'DV·40'HQ 등)으로 자유 입력 · 헤더 클릭해 라벨 변경 가능 · 여러 구간은 행추가 · 📋 표 복사 → 메일/엑셀에 바로 붙여넣기.</div>
   </div>
 </div>
 
@@ -330,6 +330,41 @@ function seaRow(d){ d=d||['','','','','','']; const tr=document.createElement('t
 function addSeaRow(){ document.getElementById('seaBody').appendChild(seaRow()); }
 function delSeaRow(){ const b=document.getElementById('seaBody'); if(b.rows.length>1)b.deleteRow(b.rows.length-1); }
 [['MAERSK','BUSAN','LONG BEACH','$4,700','ETD 10/3','']].forEach(d=>document.getElementById('seaBody').appendChild(seaRow(d)));
+
+/* ===== 해상견적 표 복사 (메일·엑셀 붙여넣기용 리치 복사) ===== */
+function copySeaTable(btn){
+  const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const ths=[...document.querySelectorAll('#docD table.sea thead th')].map(t=>t.textContent.trim());
+  const rows=[...document.querySelectorAll('#seaBody tr')].map(tr=>[...tr.cells].map(td=>td.textContent.trim()));
+  const sh=(document.querySelector('#docD .meta b')||{}).textContent||'';
+  const bd='1px solid #111';
+  let html=`<div style="font-family:Arial,'Malgun Gothic',sans-serif;color:#111">`+
+    `<div style="font-weight:bold;font-size:14px">HAMEL KOREA · OCEAN QUOTATION 해상운임견적</div>`+
+    (sh&&sh!=='-'?`<div style="font-size:12px;margin:2px 0 6px">SHIPPER: ${esc(sh)}</div>`:`<div style="height:4px"></div>`)+
+    `<table style="border-collapse:collapse;font-size:12px"><thead><tr>`+
+    ths.map(h=>`<th style="border:${bd};background:#ffe600;color:#111;padding:5px 9px">${esc(h)}</th>`).join('')+
+    `</tr></thead><tbody>`+
+    rows.map(r=>`<tr>${r.map((c,i)=>`<td style="border:${bd};padding:5px 9px;${i===3?'text-align:right':''}">${esc(c)}</td>`).join('')}</tr>`).join('')+
+    `</tbody></table></div>`;
+  const plain=[ths.join('\t'),...rows.map(r=>r.join('\t'))].join('\n');
+  const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='복사됨 ✓'; setTimeout(()=>btn.textContent=o,1500); } };
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})})]).then(done,()=>seaFallbackCopy(html,plain,done));
+    } else seaFallbackCopy(html,plain,done);
+  }catch(e){ seaFallbackCopy(html,plain,done); }
+}
+function seaFallbackCopy(html,plain,done){
+  try{ const d=document.createElement('div'); d.contentEditable='true'; d.innerHTML=html; d.style.cssText='position:fixed;left:-9999px;top:0;opacity:0'; document.body.appendChild(d);
+    const r=document.createRange(); r.selectNodeContents(d); const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+    document.execCommand('copy'); s.removeAllRanges(); document.body.removeChild(d); done&&done();
+  }catch(e){ try{ navigator.clipboard.writeText(plain).then(done); }catch(_){ alert('복사 실패 — 표를 드래그해 수동 복사하세요'); } }
+}
+
+/* ===== standalone: ?only=D 면 해당 문서만 표시(탭 숨김) — RFQ·견적 사이드바 임베드용 ===== */
+(function(){ try{ const only=(new URLSearchParams(location.search).get('only')||'').toUpperCase();
+  if(['A','B','C','D'].includes(only)){ showDoc(only); const tb=document.querySelector('.tabs'); if(tb)tb.style.display='none'; }
+}catch(e){} })();
 </script>
 </body>
 </html>
