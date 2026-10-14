@@ -2583,7 +2583,7 @@ function lcColGroups(lane,port,lang){ const P=port||'BUSAN'; lang=lang||'ko';
     {g:'PFS·PSC',cols:[['PFS+PSC','20',"20'"],['PFS+PSC','40',"40'"]]} ];
 }
 const LC_FX=1380;
-function lcUsd5(krw){ const u=(+krw)/LC_FX; return Math.ceil(u/5)*5; }           // KRW→USD, 5단위 올림
+function lcUsd5(krw){ const u=(+krw)/LC_FX*1.1; return Math.ceil(u/5)*5; }        // KRW→USD, VAT10% 포함(×1.1), 5단위 올림
 function lcTextUsd(t){ t=String(t);
   if(/usd|\$|%/i.test(t)) return t;                       // 이미 USD거나 퍼센트
   if(!/\d/.test(t)) return t;                             // 숫자 없음(텍스트)
@@ -2625,7 +2625,7 @@ function lcEmailHTML(model,title){ const bd='1px solid #c9d2dd';
   h+='</tr><tr>'; model.groups.forEach(g=>g.cols.forEach(c=>{ h+=`<th style="border:${bd};background:#eef3fb;padding:5px 9px;text-align:right">${c[2]}</th>`; })); h+='</tr>';
   model.rows.forEach(r=>{ h+=`<tr><td style="border:${bd};padding:5px 9px;font-weight:bold">${r.carrier}${lcScopeShow(r.scope)?` <span style="color:#7a8699;font-weight:normal">(${r.scope})</span>`:''}</td>`;
     r.vals.forEach(v=>{ const f=lcFmt(v); h+=`<td style="border:${bd};padding:5px 9px;text-align:right">${f==null?'–':f}</td>`; }); h+='</tr>'; });
-  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${lcCurOn()?('Unit: USD (1 USD = '+LC_FX.toLocaleString()+' KRW, rounded up to 5) · HAMEL KOREA Domestic Local Charges'):(model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용 기준표')}</div></div>`;
+  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${lcCurOn()?('Unit: USD incl. 10% VAT (1 USD = '+LC_FX.toLocaleString()+' KRW, ×1.1 then rounded up to 5) · HAMEL KOREA Domestic Local Charges'):(model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용 기준표')}</div></div>`;
   return h;
 }
 function lcPlain(model,title){ const L=a=>a.join('\t'); const head=[model.lang==='en'?'Carrier':'선사']; model.groups.forEach(g=>g.cols.forEach(c=>head.push(c[2])));
@@ -2680,7 +2680,7 @@ function lcVertEmail(model,title){ const bd='1px solid #c9d2dd', sizes=model.siz
   model.secs.forEach(s=>{ h+=`<tr><td colspan="${span}" style="border:${bd};background:#dfe9fa;padding:5px 13px;font-weight:bold">${s.title}</td></tr>`;
     s.rows.forEach(r=>{ if(r.single){ h+=`<tr><td style="border:${bd};padding:5px 13px">${r.label}</td><td colspan="${sizes.length}" style="border:${bd};padding:5px 13px;text-align:right">${lcFmt(r.single)}</td></tr>`; }
       else { h+=`<tr><td style="border:${bd};padding:5px 13px">${r.label}</td>${sizes.map(sz=>`<td style="border:${bd};padding:5px 13px;text-align:right">${r.cells[sz]?lcFmt(r.cells[sz]):'–'}</td>`).join('')}</tr>`; } }); });
-  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${lcCurOn()?('Unit: USD (1 USD = '+LC_FX.toLocaleString()+' KRW, rounded up to 5) · HAMEL KOREA Domestic Local Charges'):(model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용')}</div></div>`; return h;
+  h+=`</table><div style="font-size:11px;color:#7a8699;margin-top:6px">${lcCurOn()?('Unit: USD incl. 10% VAT (1 USD = '+LC_FX.toLocaleString()+' KRW, ×1.1 then rounded up to 5) · HAMEL KOREA Domestic Local Charges'):(model.lang==='en'?'Unit: KRW · HAMEL KOREA Domestic Local Charges':'단위: 원(KRW) · 하멜코리아 국내 부대비용')}</div></div>`; return h;
 }
 function lcVertPlain(model,title){ const sizes=model.sizes; const out=[title,[model.lang==='en'?'Item':'항목',...sizes.map(s=>s+"'")].join('\t')];
   model.secs.forEach(s=>{ out.push('['+s.title+']'); s.rows.forEach(r=>{ if(r.single)out.push(r.label+'\t'+String(lcFmt(r.single)).replace(/,/g,'')); else out.push([r.label,...sizes.map(sz=>r.cells[sz]?String(lcFmt(r.cells[sz])).replace(/,/g,''):'-')].join('\t')); }); }); return out.join('\n'); }
@@ -2864,7 +2864,7 @@ VIEWS.charges=async function(){
     }
     controls+='</div>';
     $('#main').innerHTML=`<h2>🏭 국내 부대비용 <span class="d" style="font-weight:400">· 선사별 기준표</span></h2>
-      <div class="sub">직원 정리 기준표 · 단위 ${lcCurOn()?'<b style="color:var(--accent)">USD</b> (1 USD = '+LC_FX.toLocaleString()+' KRW · 5단위 올림)':'원(KRW)'} · 메일 본문 붙여넣기 또는 스크린샷으로 바로 전달</div>
+      <div class="sub">직원 정리 기준표 · 단위 ${lcCurOn()?'<b style="color:var(--accent)">USD · VAT 10% 포함</b> (1 USD = '+LC_FX.toLocaleString()+' KRW · ×1.1 후 5단위 올림)':'원(KRW) · VAT 별도'} · 메일 본문 붙여넣기 또는 스크린샷으로 바로 전달</div>
       ${controls}${table}
       <div class="d" style="margin-top:10px">${note} 값 수정은 기준표(DB)에 반영됩니다.</div>`;
   }catch(e){ $('#main').innerHTML='<div class="empty">불러오기 실패: '+esc(e.message||e)+'</div>'; }
