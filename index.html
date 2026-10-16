@@ -2882,7 +2882,17 @@ window.pmPickPod=function(p){ PM.pod=p; VIEWS.pricematrix(); };
 window.pmFilterPods=function(){ const kw=(document.getElementById('pmkw')?.value||'').trim().toUpperCase(); PM.kw=kw;
   document.querySelectorAll('#pmDir tr[data-pod]').forEach(tr=>{ tr.style.display = (!kw||tr.getAttribute('data-pod').includes(kw))?'':'none'; }); };
 async function pmLoad(){ if(!PM._rc){ try{ PM._rc=await qAll('rate_cards',b=>b.eq('status','ACTIVE')); }catch(e){ PM._rc=[]; } }
+  if(!PM._al){ try{ PM._al=await qAll('v_rate_allin',b=>b.eq('direction','EXPORT').eq('status','ACTIVE')); }catch(e){ PM._al=[]; } }
   if(!PM._bk){ try{ PM._bk=await q('bookings',b=>b.limit(2000)); }catch(e){ PM._bk=[]; } } return PM._rc; }
+function pmBasisBadge(b){ b=(b||'').toUpperCase(); const m={'ALL-IN':['#16a34a','rgba(22,163,74,.15)'],'O/F':['#d97706','rgba(217,119,6,.15)'],'PARTIAL':['var(--accent)','rgba(37,99,235,.12)']}; const c=m[b]||['var(--mut)','var(--panel2)']; return `<span style="display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:800;color:${c[0]};background:${c[1]};white-space:nowrap">${b||'-'}</span>`; }
+window.pmSurInfo=function(key){ const c=(window.__pmLaneCar||{})[key]; if(!c)return; const ct0=Object.keys(c.det)[0]; const d=c.det[ct0]||{};
+  const rows=Object.keys(c.det).map(ct=>{const x=c.det[ct]; return `<tr><td style="padding:4px 8px;font-weight:700">${ct}</td><td style="padding:4px 8px;text-align:right" class="mono">$${(x.ofr||0).toLocaleString()}</td><td style="padding:4px 8px;text-align:right" class="mono">+$${(x.must||0).toLocaleString()}</td><td style="padding:4px 8px;text-align:right" class="mono">${x.cond?('+$'+x.cond.toLocaleString()):'–'}</td><td style="padding:4px 8px;text-align:right;font-weight:800;color:var(--win)" class="mono">$${(x.allin||0).toLocaleString()}</td></tr>`;}).join('');
+  showModal(`<h3>${esc(c.carrier)} · ${esc(PM.pol)}→${esc(PM.pod)} <span class="d" style="font-weight:400">${esc(c.rate_type||'')}</span></h3>
+   <div class="d" style="margin-bottom:8px">기준 ${pmBasisBadge(d.basis)} · 유효 ~${esc(c.valid_to||'-')}</div>
+   <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--panel2)"><th style="padding:5px 8px;text-align:left">규격</th><th style="padding:5px 8px;text-align:right">O/F</th><th style="padding:5px 8px;text-align:right">필수서차지</th><th style="padding:5px 8px;text-align:right">조건부</th><th style="padding:5px 8px;text-align:right">ALL-IN</th></tr></thead><tbody>${rows}</tbody></table>
+   <div style="margin-top:10px;font-size:12px"><b>별도(미포함):</b> <span class="d">${esc(d.excl||'-')}</span></div>
+   ${c.routing?`<div style="margin-top:4px;font-size:12px"><b>Routing:</b> <span class="d">${esc(c.routing)}</span></div>`:''}
+   <div class="d" style="margin-top:8px;font-size:11px">※ ALL-IN = O/F + 필수서차지. 조건부(중량·위험물 등)·별도 로컬은 해당 시 추가.</div>`); };
 function pmBest(rows,ct){ const vals=rows.filter(r=>r.container_type===ct).map(r=>pmNum(r.freight_usd)).filter(v=>v!=null); return vals.length?Math.min(...vals):null; }
 function pmToday(){ return new Date().toISOString().slice(0,10); }
 /* 공유 정렬: 선사 그룹(그룹은 최저가순) · 그룹 내 유효기간 늦은 것 먼저. _first/_grp 플래그 부여 */
@@ -2931,24 +2941,43 @@ VIEWS.pricematrix=async function(){
         <div class="d" style="margin-top:8px">행 클릭 → 선사별 20'/40'/40HC 상세 매트릭스. 최저가는 각 타입 열 최저 운임.</div></div>`;
     return;
   }
-  // ── 레인 매트릭스 (POL+POD) ──
-  const lane=forPol.filter(r=>r.pod===PM.pod);
-  const cts=PM_CT.filter(ct=>lane.some(r=>r.container_type===ct));
-  const carrMap={}; lane.forEach(r=>{ const k=(r.carrier||'?')+'||'+(r.rate_type||''); (carrMap[k]=carrMap[k]||{carrier:r.carrier||'?',rate_type:r.rate_type||'',valid_to:r.valid_to,tt:r.transit_days,routing:r.routing,via:r.via,v:{}}); carrMap[k].v[r.container_type]=pmNum(r.freight_usd); if(r.valid_to&&(!carrMap[k].valid_to||r.valid_to>carrMap[k].valid_to))carrMap[k].valid_to=r.valid_to; });
-  const best={}; cts.forEach(ct=>best[ct]=pmBest(lane,ct));
+  // ── 레인 매트릭스 (POL+POD) · ALL-IN 체계 (v_rate_allin) ──
+  const laneAl=(PM._al||[]).filter(r=>r.pol===PM.pol&&r.pod===PM.pod);
+  const laneRc=forPol.filter(r=>r.pod===PM.pod);
+  const useAl=laneAl.length>0; const src=useAl?laneAl:laneRc;
+  const cts=PM_CT.filter(ct=>src.some(r=>r.container_type===ct));
+  const isAl=useAl&&PM.alOf!=='of';
+  const carrMap={};
+  src.forEach(r=>{ const k=(r.carrier||'?')+'||'+(r.rate_type||'');
+    const ofr=pmNum(r.freight_usd), must=pmNum(r.sur_must)||0, cond=pmNum(r.sur_cond)||0, allinV=pmNum(r.allin_usd);
+    const allin=allinV!=null?allinV:(ofr!=null?ofr+must:null);
+    if(!carrMap[k])carrMap[k]={carrier:r.carrier||'?',rate_type:r.rate_type||'',valid_to:r.valid_to,tt:r.transit_days,routing:r.routing||r.via,basis:r.basis,v:{},det:{}};
+    carrMap[k].det[r.container_type]={ofr:ofr,must:must,cond:cond,allin:(allin!=null?allin:ofr),basis:r.basis,excl:r.excl};
+    carrMap[k].v[r.container_type]=isAl?(allin!=null?allin:ofr):ofr;
+    if(r.valid_to&&(!carrMap[k].valid_to||r.valid_to>carrMap[k].valid_to))carrMap[k].valid_to=r.valid_to; });
   const sortCt=cts.includes('40HC')?'40HC':(cts.includes('40DV')?'40DV':cts[0]);
+  const best={}; cts.forEach(ct=>{ let m=Infinity; Object.values(carrMap).forEach(c=>{const v=c.v[ct]; if(v!=null&&v<m)m=v;}); best[ct]=isFinite(m)?m:null; });
   const carriers=pmSortLane(Object.values(carrMap), sortCt);
-  const cell=(c,ct)=>{ const v=c.v[ct]; if(v==null)return '<td class="num mono" style="color:var(--mut2)">–</td>'; const isBest=best[ct]!=null&&v===best[ct]; return `<td class="num mono" style="${isBest?'color:var(--win);font-weight:800;background:rgba(22,163,74,.08)':''}">$${v.toLocaleString()}${isBest?' ▼':''}</td>`; };
-  const headRow=`<tr><th class="car" style="position:sticky;left:0">선사</th>${cts.map(ct=>`<th class="num">${ct.replace('DV',"'").replace('HC',"HC").replace('FR',"FR").replace('RF',"RF")}</th>`).join('')}<th>Rate</th><th>T/T</th><th>유효</th><th>Routing</th></tr>`;
+  window.__pmLaneCar={}; carriers.forEach(c=>window.__pmLaneCar[c.carrier+'||'+c.rate_type]=c);
+  let flipWarn='';
+  if(useAl){ const bm=metric=>{let bc=null,bv=Infinity; Object.values(carrMap).forEach(c=>{const d=c.det[sortCt]; if(!d)return; const v=metric==='of'?d.ofr:d.allin; if(v!=null&&v<bv){bv=v;bc=c.carrier;}}); return bc;};
+    const ofc=bm('of'),alc=bm('allin'); if(ofc&&alc&&ofc!==alc) flipWarn=`<div class="card" style="border-color:var(--amber,#d97706);background:rgba(217,119,6,.07);margin-bottom:10px"><b style="color:var(--amber,#d97706)">⚠ 순위 역전</b> <span class="d">O/F 최저 <b>${esc(ofc)}</b> ≠ ALL-IN 최저 <b>${esc(alc)}</b> (${sortCt}) — 서차지가 순위를 뒤집었습니다. <b>ALL-IN 기준</b>으로 고르세요.</span></div>`; }
+  const fmt=v=>v==null?'–':'$'+Math.round(v).toLocaleString();
+  const cell=(c,ct)=>{ const d=c.det[ct]; if(!d)return '<td class="num" style="color:var(--mut2)">–</td>';
+    const isBest=best[ct]!=null&&c.v[ct]===best[ct]; const big=isAl?d.allin:d.ofr;
+    const sub=isAl?`O/F ${fmt(d.ofr)}${d.must?` ·서차지 ${fmt(d.must)}`:''}`:(d.must?`+서차지 ${fmt(d.must)} = ${fmt(d.allin)}`:`올인 ${fmt(d.allin)}`);
+    return `<td class="num" style="white-space:nowrap;${isBest?'background:rgba(22,163,74,.08)':''}"><div class="mono" style="font-weight:800;font-size:13px;${isBest?'color:var(--win)':''}">${fmt(big)}${isBest?' ▼':''}</div><div class="d" style="font-size:10px;line-height:1.25">${sub}</div></td>`; };
+  const headRow=`<tr><th class="car" style="position:sticky;left:0">선사</th><th>기준</th>${cts.map(ct=>`<th class="num">${ct.replace('DV',"'")}<div class="d" style="font-size:9px;font-weight:400">${isAl?'ALL-IN':'O/F'}</div></th>`).join('')}<th>조건·상세</th><th>유효</th><th>T/T</th></tr>`;
   const _td=pmToday(); let _gi=-1; let _lastCar=null;
   const bodyRows=carriers.map(c=>{ const exp=c.valid_to&&String(c.valid_to)<_td; const soon=c.valid_to&&String(c.valid_to)===_td;
     if(c.carrier!==_lastCar){ _gi++; _lastCar=c.carrier; }
     const band=(_gi%2===1)?'background:var(--panel2)':''; const dim=exp?'opacity:.5':'';
     const vCol=exp?'color:var(--loss)':(soon?'color:var(--amber,#d97706);font-weight:700':'');
+    const d0=c.det[sortCt]||c.det[cts[0]]||{}; const cond=d0.cond?`<span style="color:var(--amber,#d97706)">+조건 ${fmt(d0.cond)}</span> `:''; const key=(c.carrier+'||'+c.rate_type).replace(/'/g,"\\'");
     const carCell=c._first
       ? `<td class="car" style="position:sticky;left:0;font-weight:800;${band}">${esc(c.carrier)}${c._grp>1?` <span class="pill" style="font-size:9px;padding:0 5px">${c._grp}</span>`:''}</td>`
       : `<td class="car" style="position:sticky;left:0;color:var(--mut2);${band}">〃</td>`;
-    return `<tr style="${band};${dim}">${carCell}${cts.map(ct=>cell(c,ct)).join('')}<td>${esc(c.rate_type||'')}</td><td class="num">${c.tt||'-'}</td><td class="mono" style="white-space:nowrap;${vCol}">${esc(c.valid_to||'-')}${soon?' ·임박':''}</td><td class="d" style="max-width:220px">${esc(c.routing||c.via||'')}</td></tr>`;
+    return `<tr style="${band};${dim}">${carCell}<td style="white-space:nowrap">${pmBasisBadge(d0.basis)}${c.rate_type?`<div class="d" style="font-size:9px">${esc(c.rate_type)}</div>`:''}</td>${cts.map(ct=>cell(c,ct)).join('')}<td class="d" style="font-size:11px;white-space:nowrap">${cond}<button class="btn sm" style="padding:1px 7px;font-size:11px" onclick="pmSurInfo('${key}')">ⓘ 서차지</button></td><td class="mono" style="white-space:nowrap;${vCol}">${esc(c.valid_to||'-')}${soon?' ·임박':''}</td><td class="num">${c.tt||'-'}</td></tr>`;
   }).join('');
   // 레인 과거 실적 (bookings, POD명 부분일치)
   const podU=PM.pod.toUpperCase(); const bk=(PM._bk||[]).filter(b=>String(b.pod||'').toUpperCase().includes(podU)&&(!PM.pol||String(b.pol||'').toUpperCase().includes(PM.pol.toUpperCase())||true)).slice(0,8);
@@ -2958,12 +2987,16 @@ VIEWS.pricematrix=async function(){
       <button class="btn sm" onclick="setPM('pod','')">← 목적항 목록</button>${polSel}
       <span style="font-size:16px;font-weight:800">${esc(PM.pol)} → ${esc(PM.pod)}</span>
       <span class="pill">${carriers.length} 선사</span>
+      ${useAl?`<span class="row" style="gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden">
+        <button class="btn sm" style="border:0;border-radius:0;${isAl?'background:var(--accent);color:#fff':'background:transparent'}" onclick="setPM('alOf','allin')">ALL-IN</button>
+        <button class="btn sm" style="border:0;border-radius:0;${!isAl?'background:var(--accent);color:#fff':'background:transparent'}" onclick="setPM('alOf','of')">O/F</button></span>`:''}
       <span style="flex:1"></span>
       <button class="btn sm" onclick="go('pcharges')">🏭 부대비용</button>
       <button class="btn primary sm" onclick="pmCopyLane()">📋 견적표 복사</button></div>
-    <div class="card" style="border-color:var(--accent)"><div class="cap" style="margin-bottom:6px">최저 운임 요약 — ${esc(PM.pol)} → ${esc(PM.pod)}</div><div style="font-size:14px;font-weight:700;color:var(--win)">${bestLine||'-'}</div></div>
+    ${flipWarn}
+    <div class="card" style="border-color:var(--accent)"><div class="cap" style="margin-bottom:6px">${isAl?'최저 ALL-IN 요약':'최저 O/F 요약'} — ${esc(PM.pol)} → ${esc(PM.pod)} <span class="d" style="display:inline;font-weight:400">${isAl?'(O/F + 필수서차지)':'(순수 해상운임)'}</span></div><div style="font-size:14px;font-weight:700;color:var(--win)">${bestLine||'-'}</div></div>
     <div class="card"><div class="lcwrap" style="max-height:56vh"><table class="lctbl" id="pmLane" style="min-width:auto"><thead>${headRow}</thead><tbody>${bodyRows}</tbody></table></div>
-      <div class="d" style="margin-top:8px">▼ = 타입별 최저가 · USD/컨테이너 · <b>선사별 묶음 정렬(최저가 선사 위, 같은 선사는 유효기간 늦은 것 먼저·〃 표시)</b> · 만료 빨강 · 당일만료 주황(·임박). 부대비용은 별도(상단 부대비용 탭).</div></div>
+      <div class="d" style="margin-top:8px">▼ = 타입별 최저가 · USD/컨테이너 · 큰 숫자 = <b>${isAl?'ALL-IN(O/F + 필수서차지)':'순수 O/F'}</b>, 작은 글씨 = ${isAl?'O/F·서차지 내역':'올인 환산'} · <span style="color:var(--amber,#d97706)">+조건</span> = 조건부 서차지(CFS/DET 등 상황별) · <b>ⓘ 서차지</b> = 타입별 상세 · <b>선사별 묶음 정렬(최저가 선사 위, 같은 선사는 유효기간 늦은 것 먼저·〃)</b> · 만료 빨강 · 당일만료 주황(·임박). ${useAl?'상단 <b>ALL-IN/O/F</b> 버튼으로 기준 전환.':''} 로컬·THC 등 그 외 부대비용은 별도(부대비용 탭).</div></div>
     <div class="card"><h3>📜 이 레인 과거 실적 <span class="pill">${bk.length}</span> <span class="d" style="display:inline">— 우리가 운임을 얼마에 입수했나(매입/Buy) · bookings 기준 · 람세스/히스토리 믹스는 파일 수령 후 보강</span></h3>
       ${bk.length?`<div style="overflow:auto"><table><thead><tr><th>BKG#</th><th>일자</th><th>화주</th><th>컨테이너</th><th class="num">매입(Buy)</th><th class="num">≈ 대당</th></tr></thead><tbody>
         ${bk.map(b=>{const bx=bkBoxes(b);const buy=pmNum(b.purchase);return `<tr><td class="mono" style="white-space:nowrap">${esc(b.bkg_no||'')}</td><td class="mono">${esc(b.bkg_date||'')}</td><td>${esc(b.shipper||'')}</td><td style="white-space:nowrap">${esc(bkCntr(b))}</td><td class="num mono" style="font-weight:700">${buy!=null?fmtW(buy)+'원':'<span style=\"color:var(--mut2)\">미기재</span>'}</td><td class="num mono" style="color:var(--mut)">${(buy!=null&&bx>0)?fmtW(buy/bx)+'원':'-'}</td></tr>`;}).join('')}
