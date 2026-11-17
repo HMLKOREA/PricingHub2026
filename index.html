@@ -2879,6 +2879,55 @@ const bkBoxes=b=>((+b.cntr_20dv||0)+(+b.cntr_40hq||0)+(+b.cntr_20fr||0)+(+b.cntr
 const bkCntr=b=>[['20DV',b.cntr_20dv],['40HQ',b.cntr_40hq],['20FR',b.cntr_20fr],['40FR',b.cntr_40fr]].filter(x=>+x[1]>0).map(x=>x[0]+'×'+(+x[1])).join(', ')||'-';
 window.setPM=function(k,v){ PM[k]=v; if(k==='pol')PM.pod=''; VIEWS.pricematrix(); };
 window.pmPickPod=function(p){ PM.pod=p; VIEWS.pricematrix(); };
+window.pmGo=function(){ const pol=(document.getElementById('pmxPol')||{}).value||PM.pol; const podRaw=((document.getElementById('pmxPod')||{}).value||'').trim();
+  PM.pol=pol;
+  if(podRaw){ const cand=[...new Set((PM._rc||[]).filter(r=>r.pol===pol).map(r=>r.pod).filter(Boolean))];
+    const hit=cand.find(p=>p.toUpperCase()===podRaw.toUpperCase())||cand.find(p=>p.toUpperCase().startsWith(podRaw.toUpperCase()))||cand.find(p=>p.toUpperCase().includes(podRaw.toUpperCase()));
+    if(hit){ PM.pod=hit; VIEWS.pricematrix(); return; }
+    toast('“'+podRaw+'” — 해당 POL에 등록된 운임이 없습니다',true); }
+  PM.pod=''; VIEWS.pricematrix(); };
+function pmHero(pols,forPol){
+  const podNames=[...new Set(forPol.map(r=>r.pod).filter(Boolean))].sort();
+  const dl=podNames.map(p=>`<option value="${esc(p)}">`).join('');
+  const polOpts=pols.map(p=>`<option${p===PM.pol?' selected':''}>${esc(p)}</option>`).join('');
+  const podMap={}; forPol.forEach(r=>{ const p=r.pod; if(!p)return; (podMap[p]=podMap[p]||new Set()).add(r.carrier); });
+  const freq=Object.entries(podMap).map(([p,s])=>[p,s.size]).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const chips=freq.map(([p,n])=>`<button class="pmx-chip" onclick="pmPickPod('${esc(p).replace(/'/g,"\\'")}')"><b>${esc(PM.pol)}</b> → ${esc(p)}<span>${n}선사</span></button>`).join('');
+  return `<style>
+    .pmx-hero{background:linear-gradient(135deg,#1b2a4a,#223763);border-radius:18px;padding:24px 22px 20px;margin-bottom:16px;color:#eaf1fb;position:relative;overflow:hidden}
+    .pmx-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,91,82,.18),transparent 70%);pointer-events:none}
+    .pmx-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff7a73}
+    .pmx-title{font-size:25px;font-weight:800;color:#fff;margin:7px 0 5px;letter-spacing:-.4px;line-height:1.15}
+    .pmx-title span{color:#ff5b52}
+    .pmx-sub{font-size:13px;color:#bccce8;margin:0 0 16px;max-width:60ch}
+    .pmx-search{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    .pmx-search label{display:flex;flex-direction:column;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#9fb2d4;text-transform:uppercase}
+    .pmx-search select,.pmx-search input{padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#17202b;font-size:14px;font-weight:600;min-width:150px;outline:none}
+    .pmx-search input{min-width:220px}
+    .pmx-search select:focus,.pmx-search input:focus{box-shadow:0 0 0 3px rgba(255,91,82,.35)}
+    .pmx-go{padding:12px 20px;border:0;border-radius:10px;background:#ff5b52;color:#fff;font-size:14.5px;font-weight:800;cursor:pointer;white-space:nowrap;transition:transform .12s,box-shadow .12s}
+    .pmx-go:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(255,91,82,.4)}
+    .pmx-freq{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+    .pmx-freqlbl{font-size:11px;color:#8ea2c6;font-weight:700;margin-right:2px}
+    .pmx-chip{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);color:#dce6f7;padding:6px 11px;border-radius:999px;font-size:12px;cursor:pointer;white-space:nowrap;transition:background .12s}
+    .pmx-chip:hover{background:rgba(255,255,255,.18)}
+    .pmx-chip b{color:#fff;font-weight:700}
+    .pmx-chip span{color:#9fb2d4;margin-left:6px;font-size:10.5px}
+    @media(max-width:620px){.pmx-title{font-size:21px}.pmx-search label,.pmx-search select,.pmx-search input{min-width:0;width:100%}.pmx-search label{flex:1 1 100%}.pmx-go{width:100%}}
+  </style>
+  <div class="pmx-hero">
+    <div class="pmx-eyebrow">하멜 PRICING · 올인(ALL-IN) 운임</div>
+    <div class="pmx-title">운임, 3초에 <span>올인</span>까지</div>
+    <p class="pmx-sub">선사별 운임 + 필수서차지 = 실제 지불액(올인). 서차지가 최저가를 뒤집는 레인까지 한 화면에서.</p>
+    <div class="pmx-search">
+      <label>POL<select id="pmxPol" onchange="setPM('pol',this.value)">${polOpts}</select></label>
+      <label>POD (목적항)<input id="pmxPod" list="pmxPodList" placeholder="예: HAMBURG, JEBEL ALI" value="${esc(PM.pod||'')}" onkeydown="if(event.key==='Enter')pmGo()"></label>
+      <datalist id="pmxPodList">${dl}</datalist>
+      <button class="pmx-go" onclick="pmGo()">운임 조회 →</button>
+    </div>
+    ${chips?`<div class="pmx-freq"><span class="pmx-freqlbl">자주 찾는 구간</span>${chips}</div>`:''}
+  </div>`;
+}
 window.pmFilterPods=function(){ const kw=(document.getElementById('pmkw')?.value||'').trim().toUpperCase(); PM.kw=kw;
   document.querySelectorAll('#pmDir tr[data-pod]').forEach(tr=>{ tr.style.display = (!kw||tr.getAttribute('data-pod').includes(kw))?'':'none'; }); };
 async function pmLoad(){ if(!PM._rc){ try{ PM._rc=await qAll('rate_cards',b=>b.eq('status','ACTIVE')); }catch(e){ PM._rc=[]; } }
@@ -2931,10 +2980,12 @@ VIEWS.pricematrix=async function(){
         <td style="font-weight:700;color:var(--accent);white-space:nowrap">${esc(p)}</td>
         <td class="num mono">${money(b20)}</td><td class="num mono">${money(b40)}</td><td class="num mono">${money(bhc)}</td>
         <td class="num mono">${carr}</td></tr>`; }).join('');
-    $('#main').innerHTML=`${head}
-      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${polSel}
-        <input id="pmkw" placeholder="POD 검색 (예: HAMBURG, JEBEL ALI)" value="${esc(PM.kw||'')}" oninput="pmFilterPods()" style="min-width:240px">
-        <span class="pill">${pods.length} 목적항</span></div>
+    $('#main').innerHTML=`${pmHero(pols,forPol)}
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <span style="font-size:15px;font-weight:800">${esc(PM.pol)} 출발 · 목적항 ${pods.length}곳</span>
+        <input id="pmkw" placeholder="목록에서 POD 검색" value="${esc(PM.kw||'')}" oninput="pmFilterPods()" style="min-width:200px">
+        <span style="flex:1"></span>
+        <span class="d">행 클릭 → 선사별 올인 상세</span></div>
       <div class="card"><div class="lcwrap" style="max-height:66vh"><table class="lctbl" style="min-width:auto"><thead>
         <tr><th class="car" style="position:sticky;left:0">POD (목적항)</th><th class="num">20' 최저</th><th class="num">40' 최저</th><th class="num">40HC 최저</th><th class="num">선사수</th></tr></thead>
         <tbody id="pmDir">${rowsHTML}</tbody></table></div>
