@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>하멜코리아 · 견적 허브</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
@@ -515,6 +517,59 @@ table.lctbl tr.lcband td{background:#eaf0fb;font-weight:700;color:var(--txt);bor
 @media(max-width:960px){.rfq-grid{grid-template-columns:1fr}.rfq-side{position:static}}
 @media print{.no-print{display:none!important}.rfq-grid{grid-template-columns:1fr}.rfq-hd{border-radius:0}.rfq-doc{border:0}}
 
+</style>
+<style id="hml-redesign">
+/* ===== HAMEL 네이비 콕핏 — 전면 리디자인 (2026-11) ===== */
+:root{
+ --bg:#e9edf5;--panel:#ffffff;--panel2:#f1f5fb;--line:#e1e8f3;--line2:#d3ddee;
+ --txt:#141f38;--mut:#596780;--mut2:#8b97ad;
+ --navy:#13223f;--navy2:#1b2f54;--accent:#1e50d6;--accent2:#1740ad;--sky:#dce7fb;
+ --red:#e4322b;--red2:#ff5b52;--redsoft:rgba(228,50,43,.1);
+ --win:#15a06a;--amber:#c7791a;--loss:#dc2626;
+ --sh:0 1px 2px rgba(18,28,54,.04),0 2px 10px rgba(18,28,54,.06);
+}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--txt)}
+/* ── 사이드바: 네이비 콕핏 ── */
+.side{background:linear-gradient(185deg,#101b33,#17294c);border-right:0;color:#b7c4dc}
+.side .logo{margin:13px;padding:13px 15px;background:#fff;border-radius:14px;border-bottom:0;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+.side .logo .brandsub{color:var(--mut2)}
+.side nav{padding:4px 10px 10px}
+.side nav a{color:#b7c4dc;font-weight:600;border-radius:10px}
+.side nav a:hover{background:rgba(255,255,255,.07);color:#eaf1fb}
+.side nav a.active{background:linear-gradient(100deg,var(--accent),var(--accent2));color:#fff;font-weight:700;box-shadow:inset 3px 0 0 var(--red),0 5px 16px rgba(30,80,214,.4)}
+.side nav a.subnav{color:#93a3c2}
+.side nav a.subnav:hover{background:rgba(255,255,255,.06);color:#dbe6fb}
+.side nav a.subnav.active{background:rgba(30,80,214,.22);color:#dbe6fb;border-left-color:var(--red)}
+.side nav .navsec{background:rgba(255,255,255,.05);border:0;color:#7286a8;letter-spacing:.12em}
+.side .navbadge{background:var(--red)}
+.tray{border-top:1px solid rgba(255,255,255,.09)}
+.tray-h{color:#9aacca}
+.tools-grid a{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);color:#b7c4dc}
+.tools-grid a:hover{border-color:var(--accent);color:#fff;background:rgba(30,80,214,.28)}
+.side .userbar{border-top:1px solid rgba(255,255,255,.09)}
+.side .userbar .un{color:#eaf1fb}
+.side .userbar .ut{color:#9aacca}
+.side .userbar .av{background:linear-gradient(135deg,var(--accent),var(--red))}
+.side .userbar .lo{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#c3d0e6}
+.side .userbar .lo:hover{background:rgba(228,50,43,.28);color:#fff;border-color:transparent}
+.side .conn{border-top:1px solid rgba(255,255,255,.09);color:#9aacca}
+/* ── 메인: 타이포 · 표면 ── */
+h2,h3{letter-spacing:-.3px}
+.main h2{color:var(--navy);font-weight:800}
+.main h2::before{background:linear-gradient(var(--accent),var(--red))}
+.card{border-radius:16px;box-shadow:var(--sh);border-color:var(--line)}
+.card h3{color:var(--navy);font-weight:800}
+.kpi{border-radius:15px;box-shadow:var(--sh)}
+.kpi .v{font-size:24px;letter-spacing:-.5px;color:var(--navy);font-weight:800}
+.wstabs button{border-radius:11px 11px 0 0;font-family:inherit}
+.btn{border-radius:10px;font-weight:700;font-family:inherit}
+.btn.primary{box-shadow:0 2px 8px rgba(228,50,43,.25)}
+thead th,table.ctbl thead th,th{color:var(--navy);font-weight:800}
+tbody tr:hover{background:#f6f9ff}
+input,select,textarea{font-family:inherit;border-radius:9px}
+.pill{border-radius:999px}
+.segb{font-family:inherit}
+.navToggle{background:var(--navy);color:#fff;border-color:var(--navy2)}
 </style>
 </head>
 <body>
