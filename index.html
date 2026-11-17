@@ -42,7 +42,7 @@ h2{font-size:18px;margin:0 0 4px}
 .sub{color:var(--mut2);font-size:12px;margin-bottom:18px}
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
-.kpi .l{font-size:11px;color:var(--mut);margin-bottom:6px}.kpi .v{font-size:21px;font-weight:750}
+.kpi .l{font-size:11px;color:var(--mut);margin-bottom:6px}.kpi .v{font-size:21px;font-weight:800;color:var(--navy)}
 .kpi .n{font-size:11px;color:var(--mut2);margin-top:4px}
 .kpi.act{cursor:pointer;text-align:left;font:inherit;transition:border-color .12s,box-shadow .12s,transform .08s}
 .kpi.act:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(37,99,235,.10);transform:translateY(-1px)}
@@ -51,20 +51,20 @@ h2{font-size:18px;margin:0 0 4px}
 .fstrip{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:12px;background:var(--panel)}
 .fstrip>div{flex:1 1 130px;min-width:120px;padding:9px 14px;border-right:1px solid var(--line)}
 .fstrip .l{font-size:10.5px;color:var(--mut);margin-bottom:3px}
-.fstrip .v{font-size:15px;font-weight:700;line-height:1.25}
+.fstrip .v{font-size:15px;font-weight:700;line-height:1.25;color:var(--navy)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.05)}
-.card h3{margin:0 0 3px;font-size:14px}.card .d{color:var(--mut2);font-size:11.5px;margin-bottom:12px}
+.card h3{margin:0 0 3px;font-size:14px;color:var(--navy)}.card .d{color:var(--mut2);font-size:11.5px;margin-bottom:12px}
 .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:8px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
 .btn:hover{border-color:var(--accent)}.btn.primary{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 1px 2px rgba(228,50,43,.2)}.btn.primary:hover{background:#c92822;border-color:#c92822}.btn.blue{background:var(--accent);border-color:var(--accent);color:#fff}.btn.blue:hover{background:var(--accent2);border-color:var(--accent2)}
 .btn.win{background:var(--win);border-color:var(--win);color:#fff}.btn.sm{padding:4px 9px;font-size:11.5px}
 .btn.danger{background:var(--loss);border-color:var(--loss);color:#fff}.btn.ghost-danger{color:var(--loss);border-color:var(--loss);background:transparent}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 input,select,textarea{background:#fff;border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;font-size:13px;font-family:inherit}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,80,214,.18)}
 textarea{width:100%;min-height:150px;resize:vertical;line-height:1.6}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
-th{color:var(--mut2);font-size:11px;text-transform:uppercase}
+th{color:var(--navy);font-size:11px;text-transform:uppercase;font-weight:700}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .st-접수{background:rgba(133,146,164,.18);color:var(--mut)}
@@ -116,7 +116,7 @@ table.ctbl thead th{background:var(--panel);position:sticky;top:0;z-index:1}
 .formgrid .fld{gap:5px;min-width:0}
 .formgrid .fld label{font-size:11.5px;color:var(--mut);font-weight:600}
 .formgrid .fld input,.formgrid .fld select,.cnt4 .fld input{width:100%}
-.fsec{grid-column:1/-1;font-size:12px;color:var(--txt);font-weight:700;letter-spacing:.2px;margin:9px 0 0;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.fsec{grid-column:1/-1;font-size:12px;color:var(--navy);font-weight:800;letter-spacing:.2px;margin:9px 0 0;padding-bottom:6px;border-bottom:2px solid var(--sky)}
 .fsec:first-child{margin-top:0}
 .cnt4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .cnt4 .fld{min-width:0}
@@ -240,8 +240,8 @@ tr.stale td{background:rgba(180,83,9,.08)}
 #loginGate input::placeholder{color:#aab4c2}
 #loginGate input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 #loginGate .lgbtn{width:100%;padding:13px;border:0;border-radius:10px;cursor:pointer;font-size:14.5px;font-weight:700;color:#fff;
-  background:linear-gradient(120deg,#2563eb,#3b82f6);box-shadow:0 8px 22px rgba(37,99,235,.28);transition:transform .1s,box-shadow .15s;margin-top:4px}
-#loginGate .lgbtn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(37,99,235,.38)}
+  background:linear-gradient(120deg,#15284e,#1e50d6);box-shadow:0 8px 22px rgba(30,80,214,.3);transition:transform .1s,box-shadow .15s;margin-top:4px}
+#loginGate .lgbtn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(30,80,214,.42)}
 #loginGate .lgbtn:active{transform:none}
 #loginGate .lgbtn:disabled{opacity:.6;cursor:default;transform:none}
 #loginGate .lgerr{color:#dc2626;font-size:12px;min-height:16px;margin:10px 2px 0;text-align:center;font-weight:500}
