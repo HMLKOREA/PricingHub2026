@@ -612,7 +612,9 @@ input,select,textarea{font-family:inherit;border-radius:9px}
       <div class="tray-h" onclick="this.parentNode.querySelector('.tray-body').classList.toggle('hide')">🧰 물류도구 ▾</div>
       <div class="tray-body hide">
         <div class="tools-grid">
-          <a onclick="openCBM()">📦 CBM계산</a>
+          <a onclick="go('logcal')">📅 물류캘린더</a>
+          <a onclick="go('cbmcalc')">📦 CBM계산</a>
+          <a onclick="openCBM()">🧊 3D 적입</a>
           <a onclick="openIncoterms()">📄 인코텀즈</a>
           <a onclick="go('tracking')">🚢 화물추적</a>
           <a onclick="go('hscode')">🔖 HS CODE 분류</a>
@@ -622,7 +624,7 @@ input,select,textarea{font-family:inherit;border-radius:9px}
           <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
           <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
           <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
-          <a href="https://www.forwarder.kr/tariff" target="_blank" rel="noopener">🚛 안전운임</a>
+          <a onclick="go('safetariff')">🚛 안전운임</a>
           <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
         </div>
       </div>
@@ -4400,6 +4402,172 @@ window.runCBM=function(){
   $('#cbmOut').innerHTML=`<div style="font-size:15px">CBM = <b style="color:var(--accent)">${cbm.toFixed(3)} m³</b>`
     +(KG!=null?` · 중량톤 ${(KG/1000).toFixed(3)} → <b style="color:var(--win)">R.TON ${rton.toFixed(3)}</b>`:'')+`</div>
     <div class="d" style="margin-top:6px">R.TON = max(CBM, 중량톤) · 1 CBM = ${(cbm/Q).toFixed(3)}m³/개 × ${Q}개</div>`;
+};
+/* ================= 📦 CBM 계산기 (R.TON · 항공 C.W) — MoPT형 ================= */
+let CBMC={unit:'cm',rows:[{l:'',w:'',h:'',q:'',kg:''}]};
+const CBM_UF={mm:0.1,cm:1,m:100};
+window.cbmcUnit=function(u){ CBMC.unit=u; VIEWS.cbmcalc(); };
+window.cbmcAdd=function(){ CBMC.rows.push({l:'',w:'',h:'',q:'',kg:''}); VIEWS.cbmcalc(); };
+window.cbmcDel=function(i){ CBMC.rows.splice(i,1); if(!CBMC.rows.length)CBMC.rows.push({l:'',w:'',h:'',q:'',kg:''}); VIEWS.cbmcalc(); };
+window.cbmcReset=function(){ CBMC={unit:CBMC.unit,rows:[{l:'',w:'',h:'',q:'',kg:''}]}; VIEWS.cbmcalc(); };
+window.cbmcIn=function(i,f,v){ CBMC.rows[i][f]=v; cbmcCalc(); };
+function cbmcCalc(){ const uf=CBM_UF[CBMC.unit]; let pkg=0,cbm=0,kg=0,volcm=0;
+  CBMC.rows.forEach(r=>{ const l=parseFloat(r.l)||0,w=parseFloat(r.w)||0,h=parseFloat(r.h)||0,q=parseFloat(r.q)||1,g=parseFloat(r.kg)||0;
+    if(l&&w&&h){ const v=(l*uf)*(w*uf)*(h*uf); volcm+=v*q; cbm+=v/1e6*q; } pkg+=q; kg+=g*q; });
+  const vwt=volcm/6000, rton=Math.max(cbm,kg/1000), cw=Math.max(kg,vwt);
+  const S=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  S('cbmcPkg',Math.round(pkg).toLocaleString()); S('cbmcCbm',cbm.toFixed(3)); S('cbmcKg',kg.toFixed(1));
+  S('cbmcRton',rton.toFixed(3)); S('cbmcCw',cw.toFixed(1)); S('cbmcAct',kg.toFixed(1)+'kg'); S('cbmcVol',vwt.toFixed(1)+'kg'); }
+VIEWS.cbmcalc=function(){ const u=CBMC.unit, ul='('+u+')';
+  const rows=CBMC.rows.map((r,i)=>`<div class="cbmc-row"><div class="cbmc-rh"><span>#${i+1}</span>${CBMC.rows.length>1?`<button class="cbmc-x" onclick="cbmcDel(${i})" title="행 삭제">✕</button>`:''}</div>
+    <div class="cbmc-grid">
+      <label>가로 ${ul}<input type="number" inputmode="decimal" value="${esc(r.l)}" oninput="cbmcIn(${i},'l',this.value)"></label>
+      <label>세로 ${ul}<input type="number" inputmode="decimal" value="${esc(r.w)}" oninput="cbmcIn(${i},'w',this.value)"></label>
+      <label>높이 ${ul}<input type="number" inputmode="decimal" value="${esc(r.h)}" oninput="cbmcIn(${i},'h',this.value)"></label>
+      <label>수량 (PKG)<input type="number" inputmode="numeric" value="${esc(r.q)}" oninput="cbmcIn(${i},'q',this.value)"></label>
+      <label>개당 중량 (kg)<input type="number" inputmode="decimal" value="${esc(r.kg)}" oninput="cbmcIn(${i},'kg',this.value)"></label>
+    </div></div>`).join('');
+  $('#main').innerHTML=`<style>
+    .cbmc-row{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--panel2)}
+    .cbmc-rh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;font-weight:800;color:var(--navy)}
+    .cbmc-x{border:0;background:transparent;color:var(--mut2);cursor:pointer;font-size:13px}
+    .cbmc-x:hover{color:var(--red)}
+    .cbmc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+    .cbmc-grid label{display:flex;flex-direction:column;gap:5px;font-size:10.5px;font-weight:700;color:var(--mut);letter-spacing:.02em}
+    .cbmc-grid input{width:100%}
+    .cbmc-tot{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .cbmc-tot>div{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
+    .cbmc-tot .l{font-size:10.5px;color:var(--mut);font-weight:700}
+    .cbmc-tot .v{font-size:21px;font-weight:800;color:var(--navy);margin-top:3px;font-variant-numeric:tabular-nums}
+    .cbmc-res{border-radius:13px;padding:14px 16px;margin-top:12px;display:flex;flex-direction:column;gap:3px}
+    .cbmc-res.sea{background:linear-gradient(120deg,rgba(30,80,214,.1),rgba(30,80,214,.03));border:1px solid rgba(30,80,214,.25)}
+    .cbmc-res.air{background:linear-gradient(120deg,rgba(228,50,43,.08),rgba(228,50,43,.02));border:1px solid rgba(228,50,43,.22)}
+    .cbmc-res .rh{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;color:var(--navy);flex-wrap:wrap;gap:4px}
+    .cbmc-res .rh span{font-size:10.5px;font-weight:600;color:var(--mut2)}
+    .cbmc-res .rv{font-size:31px;font-weight:800;color:var(--navy);letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1.1}
+    .cbmc-res.sea .rv b{color:var(--accent)} .cbmc-res.air .rv b{color:var(--red)}
+    .cbmc-res .rsub{font-size:11.5px;color:var(--mut)}
+    @media(max-width:720px){.cbmc-grid{grid-template-columns:1fr 1fr}.cbmc-tot{grid-template-columns:1fr}}
+  </style>
+  <h2>📦 CBM 계산기 <span class="d" style="font-weight:400;display:inline">· 해상 R.TON · 항공 C.W</span></h2>
+  <div class="sub">입력 즉시 계산 · R/T = max(총 CBM, 총중량÷1,000) · 항공 C.W = max(실중량, 용적중량÷6,000)</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="seg" style="flex:0">단위 ${['mm','cm','m'].map(x=>`<b class="${x===u?'on':''}" onclick="cbmcUnit('${x}')">${x}</b>`).join('')}</div>
+      <button class="btn sm" onclick="cbmcReset()">↺ 초기화</button>
+    </div>
+    ${rows}
+    <button class="btn blue" style="width:100%;margin-top:10px" onclick="cbmcAdd()">+ 행 추가</button>
+    <div class="cbmc-tot">
+      <div><div class="l">TOTAL PKG</div><div class="v" id="cbmcPkg">0</div></div>
+      <div><div class="l">TOTAL CBM (m³)</div><div class="v" id="cbmcCbm">0.000</div></div>
+      <div><div class="l">TOTAL KG</div><div class="v" id="cbmcKg">0.0</div></div>
+    </div>
+    <div class="cbmc-res sea"><div class="rh"><span style="font-size:13px;color:var(--navy)">🚢 해상 · LCL 기준</span><span>R.TON = max(CBM, 중량÷1,000)</span></div><div class="rv"><b id="cbmcRton">0.000</b> R.TON</div></div>
+    <div class="cbmc-res air"><div class="rh"><span style="font-size:13px;color:var(--navy)">✈ 항공 · 중량 기준</span><span>C.W = max(실중량, 용적중량÷6,000)</span></div><div class="rv"><b id="cbmcCw">0.0</b> <span style="font-size:14px;color:var(--mut)">kg (C.W)</span></div><div class="rsub">실중량 <b id="cbmcAct">0.0kg</b> · 용적중량 <b id="cbmcVol">0.0kg</b></div></div>
+  </div>`;
+  cbmcCalc();
+};
+
+/* ================= 📅 물류 캘린더 (주요 교역국 공휴일) — MoPT형 ================= */
+const LC_FLAG=cc=>{try{return (cc||'').toUpperCase().replace(/[A-Z]/g,c=>String.fromCodePoint(127397+c.charCodeAt(0)));}catch(e){return '';}};
+const LC_DOW=['일','월','화','수','목','금','토'];
+function lcIsoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dy=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-dy);const ys=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-ys)/864e5+1)/7);}
+function lcDS(d){return d.toISOString().slice(0,10);}
+let LCAL={ym:null,mode:'cal',cc:null,majorOnly:false,_h:null,_cc:null};
+async function lcalLoad(){ if(!LCAL._h){ try{ LCAL._h=await qAll('logistics_holidays',b=>b.order('holiday_date')); }catch(e){ LCAL._h=[]; }
+    const m={}; LCAL._h.forEach(h=>{ if(!m[h.country_code])m[h.country_code]={cc:h.country_code,cn:h.country_name}; }); LCAL._cc=Object.values(m).sort((a,b)=>a.cn.localeCompare(b.cn,'ko')); } return LCAL._h; }
+window.setLC=function(k,v){ LCAL[k]=v; VIEWS.logcal(); };
+window.lcMonth=function(dl){ let [y,m]=LCAL.ym.split('-').map(Number); m+=dl; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} LCAL.ym=y+'-'+String(m).padStart(2,'0'); VIEWS.logcal(); };
+window.lcToday=function(){ LCAL.ym=new Date().toISOString().slice(0,7); VIEWS.logcal(); };
+window.lcToggleCC=function(cc){ if(!LCAL.cc)LCAL.cc=new Set(LCAL._cc.map(x=>x.cc)); if(LCAL.cc.has(cc))LCAL.cc.delete(cc); else LCAL.cc.add(cc); VIEWS.logcal(); };
+window.lcAllCC=function(on){ LCAL.cc = on? null : new Set(); VIEWS.logcal(); };
+function lcOn(cc){ return LCAL.cc===null || LCAL.cc.has(cc); }
+VIEWS.logcal=async function(){
+  $('#main').innerHTML='<div class="empty">캘린더 불러오는 중…</div>';
+  const H=await lcalLoad();
+  if(!LCAL.ym) LCAL.ym=new Date().toISOString().slice(0,7);
+  const today=new Date(); const todayS=lcDS(today);
+  const fil=h=>lcOn(h.country_code)&&(!LCAL.majorOnly||h.is_major);
+  // 다가오는 주요 연휴
+  const up=H.filter(h=>h.is_major&&lcOn(h.country_code)&&(h.end_date||h.holiday_date)>=todayS&&h.holiday_date<=lcDS(new Date(today.getTime()+120*864e5)))
+    .sort((a,b)=>a.holiday_date.localeCompare(b.holiday_date)).slice(0,7);
+  const dd=ds=>{const n=Math.round((new Date(ds+'T00:00:00')-new Date(todayS+'T00:00:00'))/864e5); return n<=0?'D-DAY':'D-'+n;};
+  const fmtD=ds=>{const d=new Date(ds+'T00:00:00'); return (d.getMonth()+1)+'/'+d.getDate()+'('+LC_DOW[d.getDay()]+')';};
+  const upH=up.length?`<div class="lc-upgrid">`+up.map(h=>`<div class="lc-upc"><div class="fl">${LC_FLAG(h.country_code)}</div><div class="mid"><div class="nm">${esc(h.name)}</div><div class="dt">${esc(h.country_name)} · ${fmtD(h.holiday_date)}${h.end_date&&h.end_date!==h.holiday_date?' ~ '+fmtD(h.end_date):''}</div></div><div class="dday">${dd(h.holiday_date)}</div></div>`).join('')+`</div>`:'<div class="d" style="padding:6px">선택한 국가에 다가오는 주요 연휴가 없습니다.</div>';
+  // 이번주 Week
+  const wk=lcIsoWeek(today); const mon=new Date(today); const wd=mon.getDay()||7; mon.setDate(mon.getDate()-(wd-1)); const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const wkRange=(mon.getMonth()+1)+'/'+mon.getDate()+'('+LC_DOW[mon.getDay()]+') ~ '+(sun.getMonth()+1)+'/'+sun.getDate()+'('+LC_DOW[sun.getDay()]+')';
+  // 국가 필터 칩
+  const ccCount = LCAL.cc===null? LCAL._cc.length : LCAL.cc.size;
+  const chips=LCAL._cc.map(c=>`<button class="lc-cc${lcOn(c.cc)?' on':''}" onclick="lcToggleCC('${c.cc}')">${LC_FLAG(c.cc)} ${esc(c.cn)}</button>`).join('');
+  // 달력 그리드
+  const [yy,mm]=LCAL.ym.split('-').map(Number);
+  const first=new Date(yy,mm-1,1); const start=new Date(first); start.setDate(1-(first.getDay()));
+  // dayMap: date→holidays (expand multi-day)
+  const dayMap={};
+  H.filter(fil).forEach(h=>{ let s=new Date(h.holiday_date+'T00:00:00'), e=new Date((h.end_date||h.holiday_date)+'T00:00:00');
+    for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){ const k=lcDS(d); (dayMap[k]=dayMap[k]||[]).push(h); } });
+  let cells='';
+  for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); const ds=lcDS(d); const inM=d.getMonth()===mm-1;
+    const dow=d.getDay(); const hs=(dayMap[ds]||[]);
+    const isToday=ds===todayS; const hasMaj=hs.some(h=>h.is_major);
+    const numC=dow===0?'color:var(--red)':(dow===6?'color:var(--accent)':'');
+    const chipsH=hs.slice(0,3).map(h=>`<div class="lc-ev${h.is_major?' maj':''}" title="${esc(h.country_name)} · ${esc(h.name)}${h.name_en?' ('+esc(h.name_en)+')':''}">${LC_FLAG(h.country_code)} ${esc(h.name)}</div>`).join('')+(hs.length>3?`<div class="lc-more">+${hs.length-3}</div>`:'');
+    cells+=`<div class="lc-cell${inM?'':' out'}${isToday?' today':''}${hasMaj?' hasmaj':''}"><div class="lc-num" style="${isToday?'':numC}">${d.getDate()}</div>${chipsH}</div>`;
+  }
+  // 목록 뷰
+  const monthHs=H.filter(fil).filter(h=>h.holiday_date.slice(0,7)===LCAL.ym).sort((a,b)=>a.holiday_date.localeCompare(b.holiday_date));
+  const listH=monthHs.map(h=>`<div class="lc-lrow"><span class="dt">${fmtD(h.holiday_date)}${h.end_date&&h.end_date!==h.holiday_date?'~'+fmtD(h.end_date):''}</span><span class="fl">${LC_FLAG(h.country_code)}</span><span class="cn">${esc(h.country_name)}</span><span class="nm">${esc(h.name)}${h.is_major?' <span class="lc-majb">주요</span>':''}</span></div>`).join('')||'<div class="d" style="padding:10px">이 달 공휴일 없음</div>';
+
+  $('#main').innerHTML=`<style>
+    .lc-wkbox{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#eaf1fb;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .lc-wkbox b{color:#fff}.lc-wkbox .wk{font-size:20px;font-weight:800;color:var(--red2)}
+    .lc-upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:9px}
+    .lc-upc{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px;box-shadow:var(--sh)}
+    .lc-upc .fl{font-size:21px;width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:10px}
+    .lc-upc .mid{flex:1;min-width:0}
+    .lc-upc .nm{font-weight:800;color:var(--navy);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lc-upc .dt{font-size:11px;color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lc-upc .dday{background:var(--red);color:#fff;font-weight:800;font-size:11.5px;padding:3px 9px;border-radius:8px;white-space:nowrap}
+    .lc-cell.today .lc-num{background:var(--accent);color:#fff;width:21px;height:21px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+    .lc-cell.hasmaj{border-left:3px solid var(--red)}
+    .lc-cell:hover{border-color:var(--accent)}
+    .lc-cc{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;font-size:11.5px;cursor:pointer;color:var(--mut);white-space:nowrap}
+    .lc-cc.on{background:var(--sky);color:var(--accent);border-color:transparent;font-weight:700}
+    .lc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .lc-dow{text-align:center;font-size:11px;font-weight:800;padding:6px 0;color:var(--mut)}
+    .lc-cell{min-height:92px;border:1px solid var(--line);border-radius:9px;padding:5px;background:var(--panel);display:flex;flex-direction:column;gap:3px;overflow:hidden}
+    .lc-cell.out{background:var(--panel2);opacity:.55}
+    .lc-cell.today{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+    .lc-num{font-size:12px;font-weight:700;color:var(--ink)}
+    .lc-ev{font-size:10.5px;background:var(--panel2);border-radius:5px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+    .lc-ev.maj{background:var(--redsoft);color:var(--red);font-weight:700}
+    .lc-more{font-size:10px;color:var(--mut2)}
+    .lc-lrow{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);font-size:13px}
+    .lc-lrow .dt{min-width:92px;color:var(--mut);font-variant-numeric:tabular-nums;font-weight:600}
+    .lc-lrow .fl{font-size:16px}.lc-lrow .cn{min-width:72px;color:var(--mut)}.lc-lrow .nm{font-weight:700;color:var(--navy)}
+    .lc-majb{background:var(--redsoft);color:var(--red);font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px}
+    @media(max-width:720px){.lc-cell{min-height:70px}.lc-ev{font-size:9px}.lc-lrow .cn{display:none}}
+  </style>
+  <h2>📅 물류 캘린더 <span class="d" style="font-weight:400;display:inline">· 주요 교역국 공휴일</span></h2>
+  <div class="sub">18개 교역국 공휴일 — 항만·통관·공장 휴무로 이어지는 주요 연휴(춘절·뗏·설·송끄란 등)를 강조. 국가를 골라 달력/목록으로 보세요.</div>
+  <div class="lc-wkbox"><span>이번 주 =</span> <span class="wk">Week ${wk}</span> <b>${wkRange}</b> <span style="margin-left:auto;font-size:11px;color:#9fb2d4">ISO 8601 기준</span></div>
+  <div class="card" style="background:linear-gradient(180deg,rgba(228,50,43,.05),transparent)">
+    <h3 style="margin:0 0 6px">🔥 다가오는 주요 물류 연휴</h3>${upH}</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="row" style="gap:6px"><span class="pill">국가 ${ccCount}/${LCAL._cc.length}</span>
+        <button class="btn sm" onclick="lcAllCC(true)">전체</button><button class="btn sm" onclick="lcAllCC(false)">해제</button>
+        <label class="row" style="gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" ${LCAL.majorOnly?'checked':''} onchange="setLC('majorOnly',this.checked)"> 주요 연휴만</label></div>
+      <div class="seg" style="flex:0"><b class="${LCAL.mode==='list'?'on':''}" onclick="setLC('mode','list')">목록</b><b class="${LCAL.mode==='cal'?'on':''}" onclick="setLC('mode','cal')">달력</b></div>
+    </div>
+    <div class="row" style="gap:6px;margin-bottom:12px">${chips}</div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="row" style="gap:6px"><button class="btn sm" onclick="lcMonth(-1)">◀</button><b style="font-size:16px;color:var(--navy)">${yy}년 ${mm}월</b><button class="btn sm" onclick="lcMonth(1)">▶</button><button class="btn sm" onclick="lcToday()">오늘</button></div>
+    </div>
+    ${LCAL.mode==='cal'?`<div class="lc-grid">${LC_DOW.map((w,i)=>`<div class="lc-dow" style="${i===0?'color:var(--red)':(i===6?'color:var(--accent)':'')}">${w}</div>`).join('')}${cells}</div>`:`<div>${listH}</div>`}
+  </div>`;
 };
 /* ================= 📦 CBM 3D 적입 시뮬레이터 (물류도구) ================= */
 VIEWS.cbm=function(){
