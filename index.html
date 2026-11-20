@@ -6,6 +6,8 @@
 <title>하멜코리아 · 견적 허브</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
@@ -623,7 +625,7 @@ input,select,textarea{font-family:inherit;border-radius:9px}
           <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
           <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
           <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
-          <a href="https://www.forwarder.kr/curr/port.php" target="_blank" rel="noopener">⚓ 항구위치</a>
+          <a onclick="go('portloc')">⚓ 항구위치</a>
           <a onclick="go('safetariff')">🚛 안전운임</a>
           <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
         </div>
@@ -4573,6 +4575,69 @@ VIEWS.logcal=async function(){
     </div>
     ${LCAL.mode==='cal'?`<div class="lc-grid">${LC_DOW.map((w,i)=>`<div class="lc-dow" style="${i===0?'color:var(--red)':(i===6?'color:var(--accent)':'')}">${w}</div>`).join('')}${cells}</div>`:`<div>${listH}</div>`}
   </div>`;
+};
+/* ================= ⚓ 항구 위치 (세계 항만 지도) — 자체 구축 ================= */
+let PLOC={region:'ALL',q:'',majorOnly:false,_p:null,_map:null,_mk:null};
+const PLOC_REG=[['ALL','전체'],['EA','아시아'],['SA','동남아'],['ME','중동'],['EU','유럽'],['AF','아프리카'],['NA','북미'],['LA','중남미'],['OC','오세아니아']];
+async function plocLoad(){ if(!PLOC._p){ try{ PLOC._p=await qAll('ports_atlas',b=>b.order('country').order('name_ko')); }catch(e){ PLOC._p=[]; } } return PLOC._p; }
+window.plocRegion=function(r){ PLOC.region=r; plocApply(); };
+window.plocMajor=function(v){ PLOC.majorOnly=v; plocApply(); };
+window.plocSearchIn=function(v){ PLOC.q=v; plocApply(); };
+window.plocFly=function(id){ const p=(PLOC._p||[]).find(x=>x.id===id); if(p&&PLOC._map){ PLOC._map.flyTo([p.lat,p.lng],7,{duration:.8}); } };
+function plocFilter(){ const q=(PLOC.q||'').trim().toLowerCase();
+  return (PLOC._p||[]).filter(p=>(PLOC.region==='ALL'||p.region===PLOC.region)&&(!PLOC.majorOnly||p.is_major)&&(!q||(p.name_ko||'').toLowerCase().includes(q)||(p.name_en||'').toLowerCase().includes(q)||(p.unlocode||'').toLowerCase().includes(q)||(p.country||'').toLowerCase().includes(q))); }
+function plocApply(){ const list=plocFilter();
+  if(PLOC._map&&PLOC._mk){ PLOC._mk.clearLayers(); const pts=[];
+    list.forEach(p=>{ const mj=p.is_major; const m=L.circleMarker([p.lat,p.lng],{radius:mj?6:3.5,color:mj?'#e4322b':'#1e50d6',weight:1,fillColor:mj?'#e4322b':'#1e50d6',fillOpacity:mj?.9:.6});
+      m.bindPopup('<b>'+esc(p.name_ko)+'</b> '+esc(p.name_en)+(p.unlocode?'<br><span style="color:#1e50d6;font-weight:700">'+esc(p.unlocode)+'</span>':'')+'<br><span style="color:#888">'+esc(p.country)+'</span>'); m.addTo(PLOC._mk); pts.push([p.lat,p.lng]); });
+    if(pts.length&&(PLOC.region!=='ALL'||PLOC.q||PLOC.majorOnly)){ try{ PLOC._map.fitBounds(pts,{padding:[30,30],maxZoom:6}); }catch(e){} } }
+  const byC={}; list.forEach(p=>{ (byC[p.country]=byC[p.country]||[]).push(p); });
+  const countries=Object.keys(byC).sort((a,b)=>a.localeCompare(b,'ko'));
+  const lh=countries.map(c=>`<div class="ploc-cg"><div class="ploc-ch">${esc(c)} <span>${byC[c].length}</span></div>${byC[c].map(p=>`<div class="ploc-row" onclick="plocFly(${p.id})"><span class="ko">${p.is_major?'<i class="mj"></i>':''}${esc(p.name_ko)}</span><span class="en">${esc(p.name_en)}</span><span class="u">${esc(p.unlocode||'')}</span></div>`).join('')}</div>`).join('');
+  const le=document.getElementById('plocList'); if(le)le.innerHTML=lh||'<div class="d" style="padding:12px">검색 결과 없음</div>';
+  const cc=document.getElementById('plocCnt'); if(cc)cc.textContent=list.length.toLocaleString();
+  PLOC_REG.forEach(([r])=>{ const e=document.getElementById('prc_'+r); if(e)e.classList.toggle('on',r===PLOC.region); }); }
+VIEWS.portloc=async function(){
+  if(PLOC._map){ try{PLOC._map.remove();}catch(e){} PLOC._map=null; }
+  $('#main').innerHTML='<div class="empty">항구 지도 불러오는 중…</div>';
+  const P=await plocLoad();
+  const cnt={ALL:0}; PLOC_REG.forEach(([r])=>cnt[r]=cnt[r]||0); P.forEach(p=>{cnt.ALL++;cnt[p.region]=(cnt[p.region]||0)+1;});
+  const chips=PLOC_REG.map(([r,ko])=>`<button id="prc_${r}" class="ploc-rc${r===PLOC.region?' on':''}" onclick="plocRegion('${r}')">${ko} <span>${cnt[r]||0}</span></button>`).join('');
+  $('#main').innerHTML=`<style>
+    #plocMap{height:440px;border-radius:14px;border:1px solid var(--line);z-index:0}
+    .ploc-rc{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--mut)}
+    .ploc-rc.on{background:linear-gradient(100deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+    .ploc-rc span{opacity:.75;font-size:11px;margin-left:2px}
+    .ploc-list{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:4px;background:var(--panel)}
+    .ploc-ch{font-size:12px;font-weight:800;color:var(--navy);padding:8px 8px 4px;position:sticky;top:0;background:var(--panel)}
+    .ploc-ch span{color:var(--mut2);font-weight:600}
+    .ploc-row{display:grid;grid-template-columns:1fr auto;gap:1px 8px;padding:6px 8px;border-radius:8px;cursor:pointer;align-items:center}
+    .ploc-row:hover{background:var(--panel2)}
+    .ploc-row .ko{font-weight:700;color:var(--ink);font-size:13px}
+    .ploc-row .ko .mj{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:5px;vertical-align:middle}
+    .ploc-row .en{color:var(--mut);font-size:11px;grid-column:1}
+    .ploc-row .u{grid-row:1/3;color:var(--accent);font-weight:800;font-size:11.5px;font-variant-numeric:tabular-nums}
+    .ploc-wrap{display:grid;grid-template-columns:1fr 340px;gap:14px}
+    @media(max-width:860px){.ploc-wrap{grid-template-columns:1fr}#plocMap{height:320px}.ploc-list{max-height:340px}}
+  </style>
+  <h2>⚓ 항구 위치 <span class="d" style="font-weight:400;display:inline">· 세계 주요 항만 지도</span></h2>
+  <div class="sub">전 세계 ${cnt.ALL}개 항구(주요 ${P.filter(p=>p.is_major).length}곳) · UN/LOCODE·좌표 · 지역·검색 · 하멜 자체 구축</div>
+  <div class="card">
+    <div class="row" style="gap:7px;flex-wrap:wrap;margin-bottom:11px">${chips}</div>
+    <div class="row" style="gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <input type="text" placeholder="항구명·UN/LOCODE·국가 검색 (예: 부산, KRPUS, 베트남)" value="${esc(PLOC.q)}" oninput="plocSearchIn(this.value)" style="flex:1;min-width:220px">
+      <label class="row" style="gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" ${PLOC.majorOnly?'checked':''} onchange="plocMajor(this.checked)"> 주요 항만만</label>
+      <span class="pill">표시 <b id="plocCnt">0</b>곳</span>
+    </div>
+    <div class="ploc-wrap"><div id="plocMap"></div><div class="ploc-list" id="plocList"></div></div>
+    <div class="d" style="font-size:11px;margin-top:8px">● <span style="color:var(--red)">레드</span>=주요 항만 · <span style="color:var(--accent)">블루</span>=일반 · 지도/타일 © OpenStreetMap · 목록 클릭 시 지도 이동</div>
+  </div>`;
+  if(window.L){
+    PLOC._map=L.map('plocMap',{worldCopyJump:true,minZoom:2}).setView([26,40],2);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'© OpenStreetMap'}).addTo(PLOC._map);
+    PLOC._mk=L.layerGroup().addTo(PLOC._map);
+    setTimeout(()=>{ try{PLOC._map.invalidateSize();}catch(e){} plocApply(); },80);
+  } else { const e=document.getElementById('plocMap'); if(e)e.innerHTML='<div class="empty">지도 로드 실패 — 목록으로 이용하세요.</div>'; PLOC._map=null; plocApply(); }
 };
 /* ================= 📦 CBM 3D 적입 시뮬레이터 (물류도구) ================= */
 VIEWS.cbm=function(){
