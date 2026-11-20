@@ -621,10 +621,10 @@ input,select,textarea{font-family:inherit;border-radius:9px}
           <a onclick="go('tracking')">🚢 화물추적</a>
           <a onclick="go('hscode')">🔖 HS CODE 분류</a>
           <a onclick="go('rfqmk')">📝 RFQ 견적작성</a>
-          <a href="https://www.forwarder.kr/curr/index.php?curr=ex_rate" target="_blank" rel="noopener">$ 고시환율</a>
-          <a href="https://www.forwarder.kr/curr/index.php?curr=tracking" target="_blank" rel="noopener">🔎 통관조회</a>
-          <a href="https://www.forwarder.kr/freight/index/scfi" target="_blank" rel="noopener">📊 운임지수</a>
-          <a href="https://www.forwarder.kr/curr/terminal.php" target="_blank" rel="noopener">🏭 터미널정보</a>
+          <a onclick="go('fxrate')">💱 고시환율</a>
+          <a onclick="go('customs')">🔎 통관조회</a>
+          <a onclick="go('freight')">📊 운임지수</a>
+          <a onclick="go('terminals')">🏭 터미널정보</a>
           <a onclick="go('portloc')">⚓ 항구위치</a>
           <a onclick="go('safetariff')">🚛 안전운임</a>
           <a href="https://www.forwarder.kr/curr/surcharge.php" target="_blank" rel="noopener">📋 부대비용</a>
@@ -4638,6 +4638,97 @@ VIEWS.portloc=async function(){
     PLOC._mk=L.layerGroup().addTo(PLOC._map);
     setTimeout(()=>{ try{PLOC._map.invalidateSize();}catch(e){} plocApply(); },80);
   } else { const e=document.getElementById('plocMap'); if(e)e.innerHTML='<div class="empty">지도 로드 실패 — 목록으로 이용하세요.</div>'; PLOC._map=null; plocApply(); }
+};
+/* ================= 💱 관세청 고시환율 — 자체 구축 ================= */
+let FXV={_d:null};
+async function fxLoad(){ if(!FXV._d){ try{ FXV._d=await qAll('fx_gosi',b=>b.order('code')); }catch(e){ FXV._d=[]; } } return FXV._d; }
+window.fxConv=function(){ const d=FXV._d||[]; const cv=(document.getElementById('fxCur')||{}).value; const c=d.find(x=>x.code===cv); const a=parseFloat((document.getElementById('fxAmt')||{}).value)||0; const o=document.getElementById('fxOut'); if(o&&c)o.textContent=Math.round(a*(+c.import_rt||0)).toLocaleString()+' 원'; };
+VIEWS.fxrate=async function(){
+  const d=await fxLoad();
+  const majors=['USD','EUR','JPY','CNY','GBP','AUD'];
+  const mc=majors.map(code=>{const r=d.find(x=>x.code===code); return r?`<div class="fxcard"><div class="c">${code} <span>${esc(r.country)}</span></div><div class="v">${(+r.import_rt).toLocaleString(undefined,{minimumFractionDigits:2})}</div><div class="u">원 / ${code} 1</div></div>`:'';}).join('');
+  const wk=d[0]?`${d[0].week_from} ~ ${d[0].week_to}`:'';
+  const rows=d.map(r=>`<tr><td><b>${esc(r.code)}</b></td><td>${esc(r.en)}</td><td>${esc(r.country)}</td><td class="num">${(+r.import_rt).toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="num">${(+r.export_rt).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`).join('');
+  $('#main').innerHTML=`<style>
+    .fxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px;margin-bottom:16px}
+    .fxcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--sh)}
+    .fxcard .c{font-size:12px;font-weight:800;color:var(--navy)} .fxcard .c span{color:var(--mut2);font-weight:600;font-size:10.5px}
+    .fxcard .v{font-size:22px;font-weight:800;color:var(--accent);margin-top:4px;font-variant-numeric:tabular-nums}
+    .fxcard .u{font-size:10.5px;color:var(--mut)}
+  </style>
+  <h2>💱 관세청 고시환율 <span class="d" style="font-weight:400;display:inline">· 주간 과세환율</span></h2>
+  <div class="sub">적용 주간 <b>${wk}</b> · 수입/수출 과세환율(원/외화 1단위) · 통화 ${d.length}종 · 하멜 자체 구축</div>
+  <div class="fxgrid">${mc}</div>
+  <div class="card"><h3>환율 계산기</h3>
+    <div class="row" style="gap:9px;align-items:center;flex-wrap:wrap"><input id="fxAmt" type="number" value="1000" oninput="fxConv()" style="width:150px">
+      <select id="fxCur" onchange="fxConv()">${d.map(r=>`<option value="${esc(r.code)}"${r.code==='USD'?' selected':''}>${esc(r.code)} · ${esc(r.country)}</option>`).join('')}</select>
+      <span>→</span><span class="pill" style="font-size:16px;padding:6px 14px"><b id="fxOut">0 원</b></span></div>
+    <div class="d" style="margin-top:6px">수입 과세환율 기준 환산</div></div>
+  <div class="card"><div class="lcwrap" style="max-height:52vh"><table><thead><tr><th>코드</th><th>통화</th><th>국가</th><th class="num">수입환율</th><th class="num">수출환율</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="d" style="font-size:11px;margin-top:6px">※ 관세청 주간 고시 과세환율 · 매주 갱신(자동 갱신은 스케줄러 연결 가능)</div></div>`;
+  fxConv();
+};
+/* ================= 📊 운임지수 — 자체 구축 ================= */
+VIEWS.freight=async function(){
+  let d=[]; try{ d=await qAll('freight_index'); }catch(e){}
+  const order=['SCFI','CCFI','KCCI','BDI']; d.sort((a,b)=>order.indexOf(a.code)-order.indexOf(b.code));
+  const cards=d.map(r=>{const up=(+r.chg)>=0; return `<div class="ficard"><div class="code">${esc(r.code)}</div><div class="nm">${esc(r.name)}</div><div class="val">${(+r.value).toLocaleString()}</div><div class="chg ${up?'up':'dn'}">${up?'▲':'▼'} ${Math.abs(+r.chg).toLocaleString()} (${up?'+':''}${r.chg_pct}%)</div></div>`;}).join('');
+  const asof=d[0]?d[0].asof:'';
+  $('#main').innerHTML=`<style>
+    .figrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:13px}
+    .ficard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+    .ficard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+    .ficard .code{font-size:13px;font-weight:800;color:var(--accent);letter-spacing:.03em}
+    .ficard .nm{font-size:11.5px;color:var(--mut);margin-top:2px}
+    .ficard .val{font-size:30px;font-weight:800;color:var(--navy);margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+    .ficard .chg{font-size:13px;font-weight:800;margin-top:3px}
+    .ficard .chg.up{color:var(--loss)} .ficard .chg.dn{color:var(--accent)}
+  </style>
+  <h2>📊 운임지수 <span class="d" style="font-weight:400;display:inline">· 주요 해상운임 지표</span></h2>
+  <div class="sub">기준일 <b>${asof}</b> · SCFI·CCFI·KCCI·BDI · 하멜 자체 구축</div>
+  <div class="figrid">${cards}</div>
+  <div class="card" style="margin-top:16px"><h3>지표 설명</h3>
+    <div class="d" style="line-height:1.9"><b>SCFI</b> 상하이→전세계 컨테이너 현물 운임(주간) · <b>CCFI</b> 중국발 컨테이너 종합운임 · <b>KCCI</b> 한국형 컨테이너 운임 · <b>BDI</b> 건화물선(벌크) 운임.<br>※ 상승=<span style="color:var(--loss)">빨강</span>(운임↑)·하락=<span style="color:var(--accent)">파랑</span> · 주간 갱신(자동 반영은 스케줄러 연결 가능).</div></div>`;
+};
+/* ================= 🏭 터미널 정보 — 자체 구축 ================= */
+let TMV={region:'전체',_d:null};
+async function tmLoad(){ if(!TMV._d){ try{ TMV._d=await qAll('terminals',b=>b.order('region').order('name')); }catch(e){ TMV._d=[]; } } return TMV._d; }
+window.tmRegion=function(r){ TMV.region=r; VIEWS.terminals(); };
+VIEWS.terminals=async function(){
+  const d=await tmLoad();
+  const regions=['전체',...[...new Set(d.map(t=>t.region))]];
+  const list=TMV.region==='전체'?d:d.filter(t=>t.region===TMV.region);
+  const chips=regions.map(r=>`<button class="ploc-rc${r===TMV.region?' on':''}" onclick="tmRegion('${esc(r)}')">${esc(r)} <span>${r==='전체'?d.length:d.filter(t=>t.region===r).length}</span></button>`).join('');
+  const rows=list.map(t=>`<div class="tmrow"><div class="tmmain"><span class="code">${esc(t.code||'')}</span><b>${esc(t.name)}</b><span class="rg">${esc(t.region)}</span></div><div class="tmsub">장치장코드 <b class="yard">${esc(t.yard||'-')}</b>${t.site?` · <a href="${esc(t.site)}" target="_blank" rel="noopener" class="tmlink">운영사 사이트 ↗</a>`:''}</div></div>`).join('');
+  $('#main').innerHTML=`<style>
+    .tmrow{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;background:var(--panel);box-shadow:var(--sh)}
+    .tmmain{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+    .tmmain .code{background:var(--sky);color:var(--accent);font-weight:800;font-size:11px;padding:2px 8px;border-radius:7px}
+    .tmmain b{font-size:15px;color:var(--navy)} .tmmain .rg{font-size:11px;color:var(--mut);margin-left:auto;background:var(--panel2);padding:2px 8px;border-radius:6px}
+    .tmsub{font-size:12px;color:var(--mut);margin-top:6px} .tmsub .yard{color:var(--ink);font-variant-numeric:tabular-nums} .tmlink{color:var(--accent);font-weight:700}
+  </style>
+  <h2>🏭 터미널 정보 <span class="d" style="font-weight:400;display:inline">· 국내 컨테이너 터미널</span></h2>
+  <div class="sub">부산·인천·평택·광양·울산·군산 ${d.length}곳 · 코드·장치장코드·운영사 사이트 · 하멜 자체 구축</div>
+  <div class="card"><div class="row" style="gap:7px;flex-wrap:wrap;margin-bottom:12px">${chips}</div>${rows||'<div class="d">데이터 없음</div>'}</div>`;
+};
+/* ================= 🔎 통관 조회 — 관세청 UNI-PASS 연계 ================= */
+window.customsGo=function(){ window.open('https://unipass.customs.go.kr/csp/index.do','_blank','noopener'); };
+VIEWS.customs=function(){
+  $('#main').innerHTML=`<h2>🔎 통관 조회 <span class="d" style="font-weight:400;display:inline">· 관세청 UNI-PASS</span></h2>
+  <div class="sub">수입·수출 통관 진행상태는 관세청 UNI-PASS 실시간 시스템 소관 · 하멜 자체 연계 UI</div>
+  <div class="card">
+    <h3>화물 통관 진행정보 조회</h3>
+    <div class="d" style="line-height:1.9;margin-bottom:12px">아래 번호 중 하나로 조회합니다.<br>• <b>화물관리번호</b> · <b>B/L 번호</b> · <b>수입/수출 신고번호</b></div>
+    <div class="row" style="gap:9px;flex-wrap:wrap"><input id="cusNo" type="text" placeholder="화물관리번호 / B/L / 신고번호" style="flex:1;min-width:240px">
+      <button class="btn primary" onclick="customsGo()">관세청 UNI-PASS 열기 →</button></div>
+    <div class="d" style="font-size:11px;margin-top:10px">※ 통관 진행정보는 관세청 실시간 시스템 소관입니다. 버튼을 누르면 UNI-PASS가 새 창으로 열립니다. (번호 자동전달은 관세청 Open API 연동 시 가능)</div>
+  </div>
+  <div class="card"><h3>관세청 바로가기</h3>
+    <div class="tools-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+      <a href="https://unipass.customs.go.kr/csp/index.do" target="_blank" rel="noopener">UNI-PASS 메인</a>
+      <a href="https://www.customs.go.kr" target="_blank" rel="noopener">관세청 홈</a>
+      <a href="https://unipass.customs.go.kr/clip/index.do" target="_blank" rel="noopener">관세청 전자통관</a>
+    </div></div>`;
 };
 /* ================= 📦 CBM 3D 적입 시뮬레이터 (물류도구) ================= */
 VIEWS.cbm=function(){
