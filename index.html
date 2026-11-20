@@ -4470,7 +4470,7 @@ VIEWS.cbmcalc=function(){ const u=CBMC.unit, ul='('+u+')';
 };
 
 /* ================= 📅 물류 캘린더 (주요 교역국 공휴일) — MoPT형 ================= */
-const LC_FLAG=cc=>{try{return (cc||'').toUpperCase().replace(/[A-Z]/g,c=>String.fromCodePoint(127397+c.charCodeAt(0)));}catch(e){return '';}};
+const LC_FLAG=cc=>`<img class="flg" loading="lazy" src="https://flagcdn.com/h40/${(cc||'').toLowerCase()}.png" alt="${esc((cc||'').toUpperCase())}">`;
 const LC_DOW=['일','월','화','수','목','금','토'];
 function lcIsoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dy=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-dy);const ys=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-ys)/864e5+1)/7);}
 function lcDS(d){return d.toISOString().slice(0,10);}
@@ -4521,6 +4521,11 @@ VIEWS.logcal=async function(){
   const listH=monthHs.map(h=>`<div class="lc-lrow"><span class="dt">${fmtD(h.holiday_date)}${h.end_date&&h.end_date!==h.holiday_date?'~'+fmtD(h.end_date):''}</span><span class="fl">${LC_FLAG(h.country_code)}</span><span class="cn">${esc(h.country_name)}</span><span class="nm">${esc(h.name)}${h.is_major?' <span class="lc-majb">주요</span>':''}</span></div>`).join('')||'<div class="d" style="padding:10px">이 달 공휴일 없음</div>';
 
   $('#main').innerHTML=`<style>
+    .flg{height:13px;width:auto;border-radius:2px;vertical-align:-2px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+    .lc-upc .fl .flg{height:24px;border-radius:3px}
+    .lc-cc .flg{height:12px;margin-right:3px}
+    .lc-ev .flg{height:10px;margin-right:2px}
+    .lc-lrow .fl .flg{height:15px}
     .lc-wkbox{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#eaf1fb;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
     .lc-wkbox b{color:#fff}.lc-wkbox .wk{font-size:20px;font-weight:800;color:var(--red2)}
     .lc-upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:9px}
